@@ -30,8 +30,9 @@ cosmos-strategy-platform/
 │   ├── technical_spec.md     # Technical systems, API, & Schema designs (This file)
 │   └── architecture.md       # High-level architecture and system components
 │
-├── ABG.Brand Compass.Phase2.V1.pdf           # Source PDF document for RAG ingestion
-└── ABG.Madura.Brand Compass.Phase1.V2.pdf    # Source PDF document for RAG ingestion
+├── archives/                 # Source PDF documents for RAG ingestion
+│   ├── ABG.Brand Compass.Phase2.V1.pdf
+│   └── ABG.Madura.Brand Compass.Phase1.V2.pdf
 ```
 
 ---
@@ -130,7 +131,7 @@ CREATE TABLE IF NOT EXISTS responses (
 ## 5. RAG Engine Implementation
 
 1. **Document Ingestion**:
-   * Extracts text from local files (`ABG.Madura.Brand Compass.Phase1.V2.pdf` and `ABG.Brand Compass.Phase2.V1.pdf`).
+   * Extracts text from files in the `archives/` folder (`ABG.Madura.Brand Compass.Phase1.V2.pdf` and `ABG.Brand Compass.Phase2.V1.pdf`).
    * Generates 384-dimensional dense vectors for page/slide layouts.
    * Caches results in `data/vector_db.json` for immediate lookup.
 2. **Cosine Similarity Search**:

@@ -13,6 +13,7 @@ A clean, modular layout separates the functional code from configuration and pla
 * **[backend/](file:///d:/GitHub/Cosmos%20Strategy%20Platform/backend/)**: Python FastAPI web server, local SQLite database management, and AWS Bedrock RAG evaluation pipeline.
 * **[frontend/](file:///d:/GitHub/Cosmos%20Strategy%20Platform/frontend/)**: Modern, responsive client interface designed with vanilla CSS variables and ES6+ JavaScript.
 * **[data/](file:///d:/GitHub/Cosmos%20Strategy%20Platform/data/)**: Relational storage (`cosmos_platform.db`) and local precomputed SentenceTransformer vector database index (`vector_db.json`).
+* **[archives/](file:///d:/GitHub/Cosmos%20Strategy%20Platform/archives/)**: Source PDF documents used by the RAG vector ingestion engine.
 * **[plan/](file:///d:/GitHub/Cosmos%20Strategy%20Platform/plan/)**: Product lifecycle and architecture specifications:
   * [BRD.md](file:///d:/GitHub/Cosmos%20Strategy%20Platform/plan/BRD.md) — Business Requirements Document
   * [functional_spec.md](file:///d:/GitHub/Cosmos%20Strategy%20Platform/plan/functional_spec.md) — Functional workflows and user persona maps
@@ -57,7 +58,7 @@ Run the database script once to generate the schema and seed the initial managem
 ```bash
 python database.py
 ```
-*Note: During startup, the application parses the root project PDFs (`ABG.Madura...` and `ABG.Brand...`) to compute local embeddings and caches them to `data/vector_db.json` automatically.*
+*Note: During startup, the application parses the PDFs in the `archives/` directory (`ABG.Madura...` and `ABG.Brand...`) to compute local embeddings and caches them to `data/vector_db.json` automatically.*
 
 ### 3. Run the Development Server
 Start the Uvicorn engine:

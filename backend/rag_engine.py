@@ -59,7 +59,7 @@ class RagEngine:
         records = []
 
         for filename, phase_name in pdf_files:
-            file_path = os.path.join(BASE_DIR, filename)
+            file_path = os.path.join(BASE_DIR, "archives", filename)
             if not os.path.exists(file_path):
                 print(f"Warning: PDF file not found at: {file_path}. Skipping.")
                 continue
