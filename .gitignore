@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+ENV/
+env/
+
+# Databases
+data/cosmos_platform.db
+*.db
+*.sqlite
+
+# IDEs
+.vscode/
+.idea/
+
+# OS-specific
+Thumbs.db
+Desktop.ini
+.DS_Store
