@@ -1,63 +1,108 @@
 # Functional Specification — Cosmos Strategic Capability Platform
 
+**Last Updated:** 2026-08-24 (major revision — incorporates the Aug 24 stakeholder review meeting and the same-day System Flow & Roles brainstorm)
+
 ---
 
-**Note (2026-08-24):** the "case" language throughout this document (e.g. "business case/project" in 2.2) is being formalized as a first-class **Project** entity, with the four roles below enforced via real login rather than being conceptual. Full design: [`docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md`](../../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md). Not yet built — see `documentation/product/roadmap.md`.
+**Provenance note**: the learning-flow detail in section 2.3 below comes directly from a stakeholder review meeting (transcript: `archives/Meeting transcript 24Aug.txt`) walking through the Insights module's intended experience in depth. It is materially more detailed than the version of this document that existed before 2026-08-24 — this is a rewrite, not an incremental edit. Full technical design: [Users/Projects/Engagement KB Spec](../../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md) (roles, project lifecycle) and [Neon Postgres + pgvector Spec](../../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md) (storage). None of this is built yet — see `documentation/product/roadmap.md`.
+
+---
 
 ## 1. User Roles & Hierarchy
 
-The platform supports four primary user personas with distinct permissions and interactive capabilities. These are enforced **per project** — the same person can hold different roles on different engagements (e.g. Consultant on one, Peer observer on another):
+Three roles, one of them global and two per-project:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       User Persona Permissions              │
-├──────────────────────┬──────────────────────────────────────┤
-│ Role                 │ Permitted Actions                    │
-├──────────────────────┼──────────────────────────────────────┤
-│ Admin / Consultant   │ Author processes, questions, stages. │
-│ Owner (e.g., CMO)    │ Submits answers, self-evaluates.     │
-│ Reviewer (e.g., CEO) │ Reviews locked answers, adds feedback│
-│ Peer (e.g., COO)     │ Read-only view of locked answers.    │
-└──────────────────────┴──────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│                         User Roles                                    │
+├───────────────┬─────────┬─────────────────────────────────────────────┤
+│ Role          │ Scope   │ Does                                        │
+├───────────────┼─────────┼─────────────────────────────────────────────┤
+│ SystemAdmin   │ Global  │ Creates projects, assigns the leading        │
+│               │         │ Consultant.                                 │
+│ Consultant    │ Project │ Preps the engagement (industry context,      │
+│               │         │ documents, case studies), activates it,     │
+│               │         │ assigns ClientUsers.                        │
+│ ClientUser    │ Project │ Works through the learning flow: answers     │
+│               │         │ questions, solves case studies, self-        │
+│               │         │ evaluates.                                  │
+└───────────────┴─────────┴─────────────────────────────────────────────┘
 ```
+
+**Note on scope**: earlier drafts of this document described `Owner`/`Reviewer`/`Peer` as three separate client-side roles. That's deferred in favor of a single `ClientUser` role for the POC — the sign-off and read-only-visibility workflows those implied still matter to the product vision, they're just not needed to build the core one-on-one loop described below. See the Users/Projects/Engagement KB Spec's Out of Scope section.
 
 ---
 
 ## 2. Core Functional Modes
 
-### 2.1 Framework Authoring Mode (Admin/Consultant Interface)
-Allows facilitators or client administrators to define the strategic process.
-* **Process Modeler**: Create, read, update, and delete strategic processes (e.g. "Madura Brand Compass V2").
-* **Stage Builder**: Define the chronological sequence of stages (e.g. Aim, Opportunity, Consumer, Insights).
-* **Question & Guidance Designer**:
-  * Input the "restlessness-arousing" questions.
-  * Assign a target ownership role (who answers) and a reviewer role (who signs off).
-  * Attach guidance modules (text explanations, matrices, case studies, or slide templates).
+### 2.1 Project Setup (SystemAdmin)
 
-### 2.2 Framework Execution Mode (Client Workspace)
-The execution workspace where corporate teams perform their strategic analysis. Requires login; a user only sees projects they're a member of.
-* **Project Dashboard**: Pick an active project/engagement (e.g., "Blazar Hair Care Entry") from the projects the logged-in user belongs to.
-* **Dashboard / Progress Wizard**: Displays status indicators for each stage and question (e.g. *Not Started, Draft, Submitted, Self-Evaluated, Approved*).
-* **Q&A Execution Workspace**:
-  * Displays the question and its associated guidance.
-  * Input field for answers (text and data arrays).
-* **Guided Self-Evaluation Interface**:
-  * Triggers when the user clicks "Evaluate Answer".
-  * Surfaces comparative benchmark responses retrieved via RAG, drawing on both the shared Framework Knowledge Base and this project's own Engagement Knowledge Base (see 2.4) — each cited slide/snippet labeled by source.
-  * Captures the user's **Self-Evaluation Notes** and **Self-Evaluation Rating** (*Needs Work, Satisfactory, Strong*).
-* **Peer Visibility Panel**: Shows locked, submitted answers of peers to drive reputational accountability without enabling online comments (forcing one-on-one collaboration).
+- Creates a project: name, customer name, which process/module it runs (e.g. Insights), and who leads it.
+- Assigns a `Consultant` to the project. A project starts in `Draft` status — invisible and inaccessible to any `ClientUser` until the Consultant activates it.
 
-### 2.3 Output Compilation Mode (Brief Compiler)
-* Gathers all final responses, matrices, and evaluations from a completed process.
-* Compiles the data into a downloadable, structured **Strategic Briefing Document** (formatted in Markdown or HTML) which outlines the slide decks/outputs.
+### 2.2 Engagement Preparation (Consultant)
 
-### 2.4 Engagement Knowledge Base (Consultant Interface)
+Everything the Consultant does *before* a workshop starts — matches the meeting's clear distinction between prep work and the live/async learning experience.
 
-Lets the Consultant leading an engagement bring the customer's own materials into the platform so guidance and benchmarks reflect this specific customer, not just the generic Cosmos framework decks.
+- **Industry context**: records notes on the client's industry and B2B vs. B2C positioning. This calibrates question language and example selection — per the meeting, this divergence has only actually been observed in the Sales/Business Development module, not in Brand, Innovation, or Communication. **Deliberately not** deep company research: "all the information that is relevant should always be salient in the people's minds" — the system doesn't try to pre-load company-specific knowledge beyond what the client team itself brings.
+- **Document upload**: uploads the client's own artifacts (prior strategy decks, financials, interview notes, meeting audio) into the project's Engagement Knowledge Base — see the Users/Projects/Engagement KB Spec.
+- **Case study authoring** — two case studies per module, both prepared by the Consultant, not left to individual ClientUsers to invent:
+  - **External case study**: a hypothetical, "off-category" scenario unrelated to the client's actual business — no intimacy, provided data only, so the ClientUser reasons from what's given rather than personal familiarity.
+  - **Internal case study**: the client's real, current, unsolved business problem — supplied by the organization (not each individual user), since a workshop can't rely on many separate users each proposing their own case.
+  - **Hidden resolution**: for each case study, the Consultant also prepares (or has the platform help draft) a resolution — what the organization actually did, and what they should have done per Cosmos's frameworks. This stays hidden from the ClientUser until after they've submitted their own answer.
+  - **Seeded provocations**: a short battery of 4-5 "big thought" perspectives per internal case study, prepared ahead of time, used to trigger deeper thinking during the case study discussion — this stands in for what a live facilitator does by embedding themselves in a workshop breakout group to push thinking from inside rather than lecturing.
+- **Assign ClientUsers**, then **activate** the project (`Draft` → `Active`).
 
-* **Artifact Upload**: Consultant-only. Accepts documents (PDF, Word, PowerPoint) and meeting audio, scoped to the current project only — never shared with other engagements.
-* **Artifact Status List**: Shows each uploaded artifact's ingestion status (*Uploaded, Processing, Indexed, Failed, Transcript Needed*). Audio that couldn't be auto-transcribed prompts the consultant to paste a transcript manually rather than failing silently.
-* **Transparent retrieval**: once indexed, an artifact's content is automatically available to the Guided Self-Evaluation Interface (2.2) — there's no separate search step during the workshop itself.
+### 2.3 Guided Learning Flow (ClientUser)
+
+The core one-on-one experience — confirmed explicitly as one-on-one, not group/workshop, in the review meeting (whether it can *also* work as a live-workshop tool is an open, separately-tracked question, not designed here). Framed like a short course (e.g. "a six-hour desk job" for the Insights module), reached via login.
+
+**a. Baseline calibration (first, before any questions)**
+
+The system asks the ClientUser to define a handful of core concepts for the module (e.g. for Insights: what is an insight? what is a brand? what's the difference between innovation and incremental? what is strategy?). This is **not** a right/wrong debate — it's scored against *this organization's own* definitions of those terms (drawn from the Consultant's uploaded materials), framed constructively (e.g. "your understanding is already close to how this organization defines it"). The point is alignment on the org's specific language, not correcting the user's general knowledge.
+
+**b. Per-question flow**
+
+For each restlessness-arousing question:
+1. Theory/nuance in simple language.
+2. 1-2 real-world examples of brands/businesses that appear to have handled this well — limited to what's **deducible from externally observable, customer-facing material** (ads, product, packaging), never from internal case studies or Harvard-style write-ups. Sector can lightly bias example selection (roughly 10-15% of examples drawn from the client's own category, not more — enough to feel relevant without becoming "too close to home").
+3. Two exercises: one **serious** (e.g. analyze 4-5 real brands against the concept) and one **fun/demystifying** (e.g. "was choosing to join this call instead of doing something else a strategic or tactical choice?") — the fun exercise exists specifically to strip the concept of jargon and show it's not abstract.
+4. No forced right answer on exercises: the system offers its own answer + rationale; the user can agree, disagree, or ignore, with a limited AI-mediated back-and-forth — framed as a moment of reflection, never as litigation over who's right.
+
+**c. Adaptive question difficulty**
+
+If a user pushes back that a question is "too easy" or "we've heard this a hundred times," the system probes with a concrete prompt (e.g. "what would the answer be for your brand?"). If that probe answer is genuinely sophisticated, the question can evolve to arouse more restlessness; if it comes back generic, the system holds firm that the original question is still apt. Guardrails apply — this isn't unlimited escalation.
+
+**d. Actionability check**
+
+The system pushes back on eloquent-but-vague answers ("this may be a great input for a book, but how would you actually deploy it?") — demanding a concrete, followable next step rather than accepting polish as substance.
+
+**e. Keyword-agnostic answer mapping**
+
+Critical requirement from the meeting: the system must **never** under-score an answer for lacking jargon. A conceptually sound answer given in plain language should be explicitly mapped back to the framework's terms ("here's how what you said maps to our principles") — so the user sees their answer was actually strong, rather than assuming it was wrong because it didn't "look like" the model answer.
+
+**f. Case study resolution**
+
+After a section's questions (typically 3-6), the user solves the **external** case study, then the **internal** one. For each: the user submits their answer, then the hidden resolution (prepared in 2.2) is revealed — what the organization actually did, and what they should have done. A limited, token/interaction-capped AI-mediated debate follows, framed around **insufficiency, not right/wrong** — especially important for the internal case study, where users are more likely to become defensive since it's their own real business problem being discussed with a machine rather than a human moderator. The seeded provocations from 2.2 are available to the system to trigger deeper thinking if the user's answer is shallow.
+
+**g. Self-evaluation — user-driven, with a corpus-relative signal**
+
+Confirmed explicitly: **the system does not grade the user.** The self-evaluation report card is generated by the user, not the system (rating themselves on dimensions like depth, framework adherence, etc.). What the system *does* add: a relative signal computed against the full historical database of answers across the platform — e.g. "you rated yourself 4/5, but on depth of answer, similar answers in the database tend to fall around 2/5" — framed as a constructive nudge ("you might want to work through a few more examples"), never as an adversarial evaluation.
+
+**h. Org-way gap surfacing — implied per-question, explicit at module end**
+
+Per-question, if a user's answer diverges from what this organization's own frameworks emphasize (e.g. staying at a surface "behavioral insight" level when the org's Insight Spiral tool expects the user to reach cultural/societal levels too), the gap stays **salient but implied** — the system nudges toward completeness ("have you considered the cultural dimension?") without ever stating "you did this wrong." Making it explicit mid-flow risks the user becoming defensive, exactly as it would in a live workshop.
+
+Only at the **end of a module** does the gap become explicit, framed as a **Start / Stop / Continue** reflection: "based on this module, what will you start doing, stop doing, and continue doing?" This is the one moment the platform is allowed to make the gap plain — because it's framed as the user's own realization and commitment, not a verdict.
+
+**i. Human escalation, by exception**
+
+An optional, extra-cost path to a short (~20 minute) live discussion with a human consultant, offered when a user's trajectory diverges significantly from what's expected across several sections — analogous to a chatbot escalating to a human agent. Not expected to be used often; provided as a safety valve, not a core flow.
+
+### 2.4 Output Compilation Mode (Brief Compiler)
+
+- Gathers all final responses, case study resolutions, and Start/Stop/Continue reflections from a completed process.
+- Compiles the data into a downloadable, structured **Strategic Briefing Document** (Markdown or HTML).
 
 ---
 
@@ -68,24 +113,45 @@ Lets the Consultant leading an engagement bring the customer's own materials int
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Owner
+    actor User as ClientUser
     participant Sys as Platform UI
     participant BE as Backend API
-    participant DB as SQLite DB
-    participant RAG as RAG / Vector Engine
+    participant DB as Neon Postgres
+    participant RAG as pgvector Retrieval (Framework + Engagement KB)
 
     User->>Sys: Enters strategic answer & clicks "Request Evaluation"
-    Sys->>BE: POST /api/evaluate {project_id, question_id, user_answer} (authenticated)
-    BE->>RAG: Retrieve context slides from Framework + Engagement KBs (similarity match)
-    RAG-->>BE: Return slide texts and source IDs
-    BE->>BE: Run LLM comparative benchmark analysis
-    BE-->>Sys: Return RAG references & benchmark answers
-    Sys->>User: Displays user answer side-by-side with benchmarks
+    Sys->>BE: POST /api/evaluate {project_id, question_id, user_answer} (authenticated, project must be Active)
+    BE->>RAG: Retrieve context chunks from both knowledge bases (excludes case_study_resolution artifacts)
+    RAG-->>BE: Return tagged chunks (source: framework | customer_document)
+    BE->>BE: Run LLM comparative benchmark analysis (Level 1/2/3), keyword-agnostic mapping of the user's own answer
+    BE-->>Sys: Return tagged citations & benchmark answers
+    Sys->>User: Displays user answer side-by-side with benchmarks, sources labeled
     User->>Sys: Reviews benchmarks, writes self-evaluation notes & selects status
     User->>Sys: Clicks "Save Self-Evaluation"
-    Sys->>BE: POST /api/response/save {self_evaluation_notes, self_evaluation_status}
+    Sys->>BE: POST /api/response/save {project_id, self_evaluation_notes, self_evaluation_status}
     BE->>DB: Upsert Response Record
-    BE-->>Sys: Confirmation & Update Dashboard Status
+    BE-->>Sys: Confirmation, corpus-relative depth signal, & updated Dashboard Status
+```
+
+### 3.2 Engagement Preparation Workflow (new)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as SystemAdmin
+    actor Cons as Consultant
+    actor Client as ClientUser
+    participant BE as Backend API
+
+    Admin->>BE: POST /api/projects (assigns Consultant) -> status: Draft
+    Cons->>BE: PATCH /api/projects/{id} (industry_context)
+    Cons->>BE: POST /api/projects/{id}/artifacts (documents, purpose=reference)
+    Cons->>BE: POST /api/projects/{id}/artifacts (purpose=case_study_external)
+    Cons->>BE: POST /api/projects/{id}/artifacts (purpose=case_study_internal)
+    Cons->>BE: POST /api/projects/{id}/artifacts (purpose=case_study_resolution)
+    Cons->>BE: POST /api/projects/{id}/members (assigns ClientUser)
+    Cons->>BE: POST /api/projects/{id}/activate -> status: Active
+    Client->>BE: GET /api/projects (project now visible)
 ```
 
 ---
@@ -93,5 +159,20 @@ sequenceDiagram
 ## 4. UI/UX General Requirements
 
 * **Premium Theme**: Clean dark/light mode with a high-contrast layout, HSL color tokens, and Google Fonts integration (Outfit or Inter).
-* **Side-by-Side Comparison Workspace**: Split-screen view during self-evaluation to ensure user response, retrieved slides, and LLM-generated comparative benchmarks are viewable together.
+* **Side-by-Side Comparison Workspace**: Split-screen view during self-evaluation to ensure user response, retrieved context (source-labeled), and LLM-generated comparative benchmarks are viewable together.
 * **Micro-Animations**: Hover states, slide transitions, and loading skeletons while LLM benchmarks are being fetched.
+* **Non-adversarial tone throughout**: every system-generated nudge (baseline calibration, actionability check, org-way gap surfacing, corpus-relative depth signal) must read as constructive reflection, never as grading or correction. This is a recurring, explicit requirement across the review meeting, not a one-off detail — worth treating as a design principle for any future copy in this flow.
+
+---
+
+## 5. Long-Term Product Vision (context, not POC scope)
+
+The review meeting situated the Insights module (everything above) as the first of **five planned modules**, sharing the same underlying corpus/framework engine but with dramatically different user experiences:
+
+1. **Capability Building** (this document's scope — the Insights POC).
+2. **Management Process Building**.
+3. **Organization Transparency Building**.
+4. **Performance & Potential Evaluation**.
+5. **DIY Consulting**.
+
+Per the meeting: "if the same corpus can lead to four or five different business ideas, then it has far more legs to travel on without much additional effort" — the five modules aren't independent products, they're different lenses on one system. None of modules 2-5 are designed yet; a follow-up stakeholder call is scheduled to go deeper into them. This section exists so that Insights-module decisions aren't made in a vacuum that later turns out to conflict with the other four.
