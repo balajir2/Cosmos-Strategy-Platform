@@ -1,5 +1,6 @@
 import os
 import json
+import contextlib
 from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer
 import boto3
@@ -33,13 +34,10 @@ class RagEngine:
 
     def vector_db_size(self):
         """Returns the number of indexed chunks in the Framework Knowledge Base."""
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM framework_kb_chunks;")
-        count = cursor.fetchone()[0]
-        cursor.close()
-        conn.close()
-        return count
+        with contextlib.closing(get_db_connection()) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) FROM framework_kb_chunks;")
+                return cursor.fetchone()[0]
 
     def load_or_build_index(self):
         """Builds the Framework Knowledge Base if it's empty."""
@@ -125,38 +123,34 @@ class RagEngine:
         self._insert_chunks(records, embeddings)
 
     def _insert_chunks(self, records, embeddings):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        for record, emb in zip(records, embeddings):
-            cursor.execute(
-                """
-                INSERT INTO framework_kb_chunks (source_file, phase, slide_number, text, embedding)
-                VALUES (%s, %s, %s, %s, %s);
-                """,
-                (record["source_file"], record["phase"], record["slide_number"], record["text"], emb),
-            )
-        conn.commit()
-        cursor.close()
-        conn.close()
+        with contextlib.closing(get_db_connection()) as conn:
+            with conn.cursor() as cursor:
+                for record, emb in zip(records, embeddings):
+                    cursor.execute(
+                        """
+                        INSERT INTO framework_kb_chunks (source_file, phase, slide_number, text, embedding)
+                        VALUES (%s, %s, %s, %s, %s);
+                        """,
+                        (record["source_file"], record["phase"], record["slide_number"], record["text"], emb),
+                    )
+            conn.commit()
 
     def search(self, query: str, top_k: int = 3):
         """pgvector cosine-distance search against the Framework Knowledge Base."""
         query_vector = self.embedding_model.encode(query)
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id, source_file, phase, slide_number, text, 1 - (embedding <=> %s) AS score
-            FROM framework_kb_chunks
-            ORDER BY embedding <=> %s
-            LIMIT %s;
-            """,
-            (query_vector, query_vector, top_k),
-        )
-        rows = cursor.fetchall()
-        cursor.close()
-        conn.close()
+        with contextlib.closing(get_db_connection()) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, source_file, phase, slide_number, text, 1 - (embedding <=> %s) AS score
+                    FROM framework_kb_chunks
+                    ORDER BY embedding <=> %s
+                    LIMIT %s;
+                    """,
+                    (query_vector, query_vector, top_k),
+                )
+                rows = cursor.fetchall()
 
         hits = []
         for row_id, source_file, phase, slide_number, text, score in rows:

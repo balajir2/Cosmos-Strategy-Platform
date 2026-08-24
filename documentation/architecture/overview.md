@@ -2,13 +2,13 @@
 
 **Last Updated:** 2026-08-24
 
-This document describes four things: the **current POC architecture** (implemented, three-tier, SQLite-backed — Section 1), the **target Framework Factory architecture** (proposed in the original pivot plan — Section 2), the **Users, Projects & Engagement Knowledge Base** layer on Neon Postgres + pgvector (designed, not yet implemented — Section 3), and the **Guided Learning Flow** design from the Aug 24 stakeholder review (designed, not yet implemented — Section 4). See `documentation/product/roadmap.md` for what's actually built today.
+This document describes four things: the **current POC architecture** (implemented, three-tier, now Neon Postgres-backed as of Phase 0 — Section 1), the **target Framework Factory architecture** (proposed in the original pivot plan — Section 2), the **Users, Projects & Engagement Knowledge Base** layer on Neon Postgres + pgvector (designed, mostly not yet implemented — Section 3), and the **Guided Learning Flow** design from the Aug 24 stakeholder review (designed, not yet implemented — Section 4). See `documentation/product/roadmap.md` for what's actually built today.
 
 ## 1. Current POC Architecture
 
 ### 1.1 High-Level Overview
 
-Three-tier architecture: a Client Interface, an API Application Layer, and a dual-data storage subsystem (relational SQLite and vector JSON).
+Three-tier architecture: a Client Interface, an API Application Layer, and a single Neon Postgres database (relational tables + `pgvector` vector storage) — SQLite and the flat-file vector JSON were retired in Phase 0 (2026-08-24).
 
 ```
  ┌────────────────────────────────────────────────────────┐
@@ -26,14 +26,15 @@ Three-tier architecture: a Client Interface, an API Application Layer, and a dua
         ▼                    ▼                    ▼
  ┌──────────────┐    ┌──────────────┐    ┌────────────────┐
  │  3a. RAG     │    │  3b. LLM     │    │  3c. SQL DB    │
- │ Embedding    │    │ AWS Bedrock  │    │  sqlite3 Core  │
+ │ Embedding    │    │ AWS Bedrock  │    │ Neon Postgres  │
  └──────┬───────┘    └──────────────┘    └────────┬───────┘
         │                                         │
         ▼                                         ▼
- ┌──────────────┐                        ┌────────────────┐
- │ Vector DB    │                        │  Relational DB │
- │ vector_db.json│                       │  cosmos_platform.db
- └──────────────┘                        └────────────────┘
+ ┌──────────────────────────────────────────────────────┐
+ │      One Neon Postgres database (pgvector-enabled)    │
+ │  framework_kb_chunks (vectors) · processes/stages/    │
+ │  questions/guidance (relational)                       │
+ └────────────────────────────────────────────────────────┘
 ```
 
 ### 1.2 Component Breakdown
@@ -46,27 +47,28 @@ Three-tier architecture: a Client Interface, an API Application Layer, and a dua
 
 **Application API Layer (`backend/main.py`)** — FastAPI microservice:
 - Routing Controller: CRUD paths for configurations and evaluation transactions.
-- Database Manager (`backend/database.py`): SQLite connection, DDL, and seeding.
-- RAG Orchestrator (`backend/rag_engine.py`): search indexing, PDF extraction, vector loading, distance calculation.
+- Database Manager (`backend/database.py`): Neon Postgres connection, DDL, and seeding.
+- RAG Orchestrator (`backend/rag_engine.py`): `pgvector` search, PDF extraction/ingestion, cosine-distance query via SQL.
 - Generative Gateway: talks to AWS Bedrock via `boto3` to invoke Claude models, with a local heuristic fallback when no AWS credentials are configured.
 
-**Storage Layer (`data/`)**:
-- `cosmos_platform.db` (SQLite): processes, stages, questions, guidance, and response/self-evaluation records.
-- `vector_db.json` (flat file): precomputed 384-dimensional page vectors from the source consulting decks in `archives/`.
+**Storage Layer**: one Neon Postgres database (`DATABASE_URL`), `pgvector` extension enabled:
+- `processes`, `stages`, `questions`, `guidance`: seeded process/stage/question configuration.
+- `framework_kb_chunks` (`pgvector`, HNSW-indexed): precomputed 384-dimensional slide vectors from the source consulting decks in `archives/`.
+- No `responses` table exists yet — response/self-evaluation persistence lands in Phase B (see `documentation/product/roadmap.md`).
 
 ### 1.3 Core Data Flow — Workspace Q&A and Guided Self-Evaluation
 
 1. User writes an answer for a question in a case and triggers an evaluation request.
 2. The API retrieves the question's `search_query` and embeds it using `SentenceTransformer`.
-3. The embedding is compared against the cached vectors in `vector_db.json` using cosine similarity.
+3. The embedding is compared against `framework_kb_chunks` rows via a `pgvector` cosine-distance query.
 4. The top 3 matching slide contexts are fetched.
 5. The API sends the question, the user's answer, and the retrieved context slides to AWS Bedrock.
 6. The LLM returns a structured JSON containing Level 1 (Superficial), Level 2 (Needs-based), and Level 3 (Insight-driven) benchmark answers, plus targeted diagnostic questions.
 7. The frontend displays these comparative benchmarks to the user.
 8. The user updates their response, logs self-reflection notes, sets a self-evaluation rating, and saves.
-9. The backend writes the response, self-evaluation, and status to SQLite.
+9. The backend writes the response, self-evaluation, and status to a `responses` table.
 
-*(Note: steps 5-9 describe the **target** behavior once the migration checklist lands — see `documentation/product/roadmap.md`. Today, `/api/evaluate` still returns the older single `rating`/`critique`/`recommendations` shape.)*
+*(Note: steps 1-3 are implemented, on Neon Postgres + `pgvector`, as of Phase 0. Steps 5-9 describe **target** behavior once the migration checklist lands — see `documentation/product/roadmap.md`. Today, `/api/evaluate` still returns the older single `rating`/`critique`/`recommendations` shape, and step 9's `responses` table doesn't exist yet — it lands in Phase B.)*
 
 ## 2. Target Architecture: The Framework Factory (Proposed, Not Yet Built)
 
@@ -91,7 +93,7 @@ graph TD
     end
 ```
 
-This diagram uses PostgreSQL rather than SQLite. **Update, 2026-08-24**: this is no longer a "beyond the POC" consideration — [`docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md`](../../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md) commits to Neon Postgres + `pgvector` as the near-term target, replacing SQLite entirely (not just for multi-tenant scale later) — see Section 3.1 below.
+This diagram uses PostgreSQL, which is no longer just a "beyond the POC" consideration — [`docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md`](../../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md) committed to Neon Postgres + `pgvector` as the near-term target, and Phase 0 of that migration (the `processes`/`stages`/`questions`/`guidance` tables plus the Framework Knowledge Base) is now **done** — see Section 1 and Section 3.1 below. The `Responses`/`Roles` portion of this diagram is still target-only (Phases A/B).
 
 ### Proposed Data Schema & Entities
 
@@ -101,7 +103,7 @@ This diagram uses PostgreSQL rather than SQLite. **Update, 2026-08-24**: this is
 - **GuidanceModule**: `id`, `question_id`, `type` (e.g., "Matrix", "Case Study"), `content_reference`.
 - **Response**: `id`, `question_id`, `client_case_id`, `submitted_text`, `submitted_data`, `self_evaluation_notes`, `self_evaluation_status`, `status` (Draft, Locked, Reviewed).
 
-The POC's actual schema (SQLite, scoped to what's needed now) is documented in full in `documentation/development/technical-spec.md` — it is the authoritative near-term schema; the entities above are the longer-term superset.
+The POC's actual schema (Neon Postgres, scoped to what's needed now) is documented in full in `documentation/development/technical-spec.md` — it is the authoritative near-term schema; the entities above are the longer-term superset.
 
 ### Three Proposed Operating Modes
 
@@ -111,13 +113,13 @@ The POC's actual schema (SQLite, scoped to what's needed now) is documented in f
 
 Only a subset of Framework Execution Mode is in scope for the current POC (see `documentation/product/roadmap.md`); Authoring Mode and multi-tenant Peer Visibility are future work.
 
-## 3. Users, Projects & Engagement Knowledge Base (Designed, Not Yet Built)
+## 3. Users, Projects & Engagement Knowledge Base (Designed; Phase 0 Done, Phases A/B/C Not Yet Built)
 
-Full design: [`docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md`](../../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md). This is the concrete near-term implementation of the "Hierarchy & Role Configurator" and "Client Strategic Team" boxes sketched in Section 2's target diagram above — it replaces the informal `client_case_id` string with a real `Project` entity and adds an auth layer neither Section 1 nor Section 2 specified.
+Full design: [`docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md`](../../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md). This is the concrete near-term implementation of the "Hierarchy & Role Configurator" and "Client Strategic Team" boxes sketched in Section 2's target diagram above — it replaces the informal `client_case_id` string with a real `Project` entity and adds an auth layer neither Section 1 nor Section 2 specified. Of this section, only the database platform move (Phase 0) is built; Users, Projects, and the Engagement Knowledge Base itself (Phases A/B/C) are designed but not implemented.
 
 ### 3.1 Two Knowledge Bases, One Database
 
-- **Framework Knowledge Base** (Section 1, implemented today as a flat file; target is Postgres): the shared Cosmos methodology materials — currently the Brand Compass decks in `archives/` → `data/vector_db.json`; target is the `framework_kb_chunks` table (`pgvector`, HNSW-indexed). One global index, common to every project.
+- **Framework Knowledge Base** (Section 1; **done** as of Phase 0): the shared Cosmos methodology materials — migrated from the Brand Compass decks in `archives/` → `data/vector_db.json` (flat file) into the `framework_kb_chunks` table (`pgvector`, HNSW-indexed). One global index, common to every project.
 - **Engagement Knowledge Base** (new, planned): a *per-project* index of the customer's own artifacts — documents and meeting audio — uploaded by the Consultant running that engagement. Target storage is the `project_kb_chunks` table, isolated per project by a `WHERE project_id = ...` clause rather than by which flat file happens to be open. Case studies (external, internal, hidden resolution) are `project_artifacts` rows distinguished by a `purpose` field, not a separate entity.
 
 During evaluation, retrieval merges both via `pgvector` cosine-distance queries: the shared framework context plus whatever the consultant has ingested for this specific customer, each result tagged by source (`"framework"` vs. `"customer_document"`) so it's visible in the UI what actually informed a given AI benchmark. Chunks from a `case_study_resolution`-purpose artifact are always excluded from this automatic retrieval — see Section 4 below.

@@ -45,10 +45,10 @@ documentation/
 
 ## Status Snapshot
 
-- **Phase**: Insights POC — specs complete, code migration not started.
-- **Running code** still reflects the pre-pivot design (hardcoded Blazar/Basil cases, legacy rating/critique/recommendations output).
+- **Phase**: Insights POC — specs complete; Phase 0 (Database Platform) done, the rest of the code migration not started.
+- **Running code** (`backend/main.py`) still reflects the pre-pivot design (hardcoded Blazar/Basil cases, legacy rating/critique/recommendations output). `backend/database.py` and `backend/rag_engine.py`, however, already run on Neon Postgres + `pgvector`.
 - **Scope expanded 2026-08-24**: a design for real Users, Projects (replacing the ad hoc "case" concept), and a per-project Engagement Knowledge Base was added, ahead of the existing DB/API/frontend migration checklist — see [Design Spec](../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md).
-- **Database platform decided 2026-08-24**: Neon Postgres + `pgvector` replaces SQLite + flat-file vector storage for the entire data layer — see [Design Spec](../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md).
+- **Database platform decided and built 2026-08-24 (Phase 0)**: Neon Postgres + `pgvector` replaces SQLite + flat-file vector storage for `processes`/`stages`/`questions`/`guidance` and the Framework Knowledge Base. The Users/Projects/Engagement KB portion of the data layer (Phases A/B/C) is still planned — see [Design Spec](../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md).
 - **Learning-flow design added 2026-08-24**: a stakeholder review meeting substantially detailed the Insights module's actual user experience — see [Functional Spec](./product/functional-spec.md).
 - **Test bed**: not yet built as of 2026-08-24 — see [Roadmap](./product/roadmap.md).
 

@@ -35,11 +35,11 @@ The core loop is **Guided Self-Evaluation**:
 
 The benchmarks above aren't generic LLM output — they're grounded in real prior consulting materials, so the consultant leading an engagement isn't relying on the AI's imagination or on manually digging through old decks mid-session with the customer. As of 2026-08-24, this is **two knowledge bases**, one built, one designed but not yet built:
 
-**Framework Knowledge Base** (built, in use today; storage platform changing):
-- **What's in it**: the source decks in `archives/` — currently the Aditya Birla Group Brand Compass Phase 1 and Phase 2 materials. These are parsed slide-by-slide, converted into local embeddings (no external API), and cached in `data/vector_db.json` today.
-- **How it's used live**: every time a user answers a question, the platform automatically runs a similarity search over this knowledge base and surfaces the most relevant slides as context for the AI's benchmark generation — retrieval happens transparently, in the background, every time.
-- **Runs offline by design**: if AWS credentials aren't configured, or the source PDFs are ever missing, the system falls back gracefully (a local heuristic critique, or a small synthetic knowledge base) rather than failing outright.
-- **Storage platform decided, not yet built**: moving from the flat `data/vector_db.json` file to a Neon Postgres database using the `pgvector` extension — cheaper than AWS-native Postgres for this project's sporadic, workshop-driven usage, and gives proper indexed vector search instead of a Python loop. Full rationale: [Neon Postgres + pgvector Spec](docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md).
+**Framework Knowledge Base** (built, in use today; storage platform migrated 2026-08-24):
+- **What's in it**: the source decks in `archives/` — currently the Aditya Birla Group Brand Compass Phase 1 and Phase 2 materials. These are parsed slide-by-slide, converted into local embeddings (no external API), and stored in a Neon Postgres database today.
+- **How it's used live**: every time a user answers a question, the platform automatically runs a `pgvector` similarity search over this knowledge base and surfaces the most relevant slides as context for the AI's benchmark generation — retrieval happens transparently, in the background, every time.
+- **Runs offline by design**: if AWS credentials aren't configured, or the source PDFs are ever missing, the system falls back gracefully (a local heuristic critique, or a small synthetic knowledge base) rather than failing outright. A live `DATABASE_URL` (Neon) is required either way — the flat-file fallback that used to allow zero-network operation no longer exists.
+- **Storage platform**: migrated (Phase 0) from a flat `data/vector_db.json` file to a Neon Postgres database using the `pgvector` extension — cheaper than AWS-native Postgres for this project's sporadic, workshop-driven usage, and gives proper indexed vector search instead of a Python loop. Full rationale: [Neon Postgres + pgvector Spec](docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md).
 - This is one shared, global knowledge base of Cosmos's own methodology materials — the same for every engagement.
 
 **Engagement Knowledge Base** (designed, not yet built — closes a gap a stakeholder flagged: *"every engagement with the customer references and documents the enterprise artifacts... I see no way in the current documents this knowledge is indexed and made available to the consultant during the strategy workshops"*):
@@ -79,22 +79,22 @@ Revised 2026-08-24 from an earlier four-role draft (Admin/Consultant, Owner, Rev
 
 ## Project Status
 
-**As of 2026-08-24: specs are complete, code migration has not started — and the scope of what's specified grew twice more the same day.**
+**As of 2026-08-24: specs are complete; Phase 0 (Database Platform) is done, the rest of code migration has not started — and the scope of what's specified grew twice more the same day.**
 
-The business case, functional spec, technical spec, and architecture are all fully written and describe a target design — a configurable, DB-driven "Framework Factory" generating Level 1/2/3 comparative benchmarks, now with real Users, Projects, a per-project Engagement Knowledge Base, a Neon Postgres storage platform, and the full Guided Learning Flow detailed above, following a stakeholder review meeting the same day. The **running code does not implement any of this yet**. Today it still runs an earlier, simpler version:
+The business case, functional spec, technical spec, and architecture are all fully written and describe a target design — a configurable, DB-driven "Framework Factory" generating Level 1/2/3 comparative benchmarks, now with real Users, Projects, a per-project Engagement Knowledge Base, a Neon Postgres storage platform, and the full Guided Learning Flow detailed above, following a stakeholder review meeting the same day. **The running code implements the database platform migration (Phase 0) but nothing else on this list yet.** Today `backend/main.py` still runs an earlier, simpler version:
 
 - Two hardcoded example cases (Blazar hair-color market entry, Basil apparel) instead of a configurable process/stage/question schema, and no `Project` entity at all.
 - A single `rating` / `critique` / `recommendations` evaluation output instead of the Level 1/2/3 comparative benchmarks described above — no baseline calibration, no case study resolution flow, no Start/Stop/Continue reflection.
-- No self-evaluation notes/status persistence, no brief-generation endpoint.
+- No self-evaluation notes/status persistence, no brief-generation endpoint, no `responses` table of any kind (see Technical Spec).
 - **No login, no user accounts, no role enforcement of any kind.** Anyone with network access to the app can do anything — the role table above describes the design, not current behavior.
-- No Engagement Knowledge Base — only the shared Framework Knowledge Base exists, and it's still SQLite + a flat file, not Neon Postgres.
+- No Engagement Knowledge Base — only the shared Framework Knowledge Base exists. It's already on Neon Postgres + `pgvector` (Phase 0, done); the per-project Engagement Knowledge Base itself (Phase C) doesn't exist yet.
 
 This gap is intentional and tracked, not accidental — see the Roadmap below.
 
 ## Roadmap
 
 **Foundational work — Database Platform, Users, Projects & Engagement Knowledge Base** (new as of 2026-08-24, precedes everything below):
-0. **Phase 0 — Database Platform**: migrate off SQLite + flat-file vectors onto Neon Postgres + `pgvector`, including the already-implemented process/stage/question tables. [Design spec](docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md).
+0. **[DONE] Phase 0 — Database Platform**: migrated off SQLite + flat-file vectors onto Neon Postgres + `pgvector`, including the already-implemented process/stage/question tables. [Design spec](docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md).
 1. **Phase A — Users & Auth**: accounts, login, JWT sessions.
 2. **Phase B — Projects**: formalizes the ad hoc case concept into a real `Project` with a `Draft`→`Active` lifecycle and per-project role membership (`SystemAdmin`/`Consultant`/`ClientUser`); this is also where the `responses` table's `self_evaluation_notes`/`self_evaluation_status` migration happens.
 3. **Phase C — Engagement Knowledge Base**: per-project artifact ingestion (documents, audio, purpose-tagged case studies), merged retrieval, the Engagement Documents UI.
@@ -132,9 +132,8 @@ Full detail, checklists with live status, and success criteria: [documentation/p
 
 ```
 Cosmos Strategy Platform/
-├── backend/         # Python FastAPI server, SQLite, RAG/Bedrock evaluation pipeline
+├── backend/         # Python FastAPI server, Neon Postgres + pgvector, RAG/Bedrock evaluation pipeline
 ├── frontend/         # Vanilla HTML/CSS/ES6 client
-├── data/              # SQLite DB + precomputed vector index (target: Neon Postgres + pgvector)
 ├── archives/          # Source PDFs for RAG ingestion
 ├── documentation/     # Full knowledge base — see documentation/README.md
 ├── docs/superpowers/  # Design specs & implementation plans (e.g. Users/Projects/Engagement KB)

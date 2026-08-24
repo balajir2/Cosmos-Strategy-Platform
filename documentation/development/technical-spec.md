@@ -17,8 +17,8 @@ Cosmos Strategy Platform/
 │
 ├── backend/                   # Python FastAPI codebase
 │   ├── main.py                  # API endpoints & server configuration
-│   ├── database.py              # DB connection & seed logic (SQLite today, Neon Postgres once Phase A/B lands)
-│   ├── rag_engine.py            # SentenceTransformer & AWS Bedrock RAG client (Framework Knowledge Base)
+│   ├── database.py              # Neon Postgres connection, DDL & seed logic (Phase 0, done)
+│   ├── rag_engine.py            # SentenceTransformer, pgvector search & AWS Bedrock RAG client (Framework Knowledge Base)
 │   ├── project_knowledge_base.py  # Planned (Phase C) — per-project ingestion pipeline (Engagement Knowledge Base)
 │   └── requirements.txt         # Backend Python dependencies
 │
@@ -26,10 +26,6 @@ Cosmos Strategy Platform/
 │   ├── index.html               # Main interface markup
 │   ├── style.css                # Vanilla CSS design tokens & animations
 │   └── app.js                   # Frontend routing, API communication, & DOM bindings
-│
-├── data/                      # Data stores (current, pre-migration)
-│   ├── cosmos_platform.db       # SQLite database file (gitignored, generated) — retired once Neon lands
-│   └── vector_db.json           # Framework Knowledge Base — precomputed embeddings from archives/ — retired once Neon lands
 │
 ├── archives/                  # Source PDFs for the Framework Knowledge Base
 │   ├── ABG.Brand Compass.Phase2.V1.pdf
@@ -45,9 +41,9 @@ Cosmos Strategy Platform/
 ## 2. Technology Stack
 
 * **Backend Framework**: Python FastAPI (Uvicorn server).
-* **Database (current)**: SQLite (via standard Python `sqlite3` driver) — being retired.
-* **Database (target)**: Neon Postgres with the `pgvector` extension for both knowledge bases — see the Neon spec. `psycopg2-binary` (or `asyncpg`) as the driver, `pgvector` Python package for the vector type. Connection via a `DATABASE_URL` environment variable.
-* **Embeddings Model**: `SentenceTransformer("all-MiniLM-L6-v2")` (local execution) — unchanged by the Neon move; only the storage/query backend for the resulting vectors changes.
+* **Database (current)**: Neon Postgres with the `pgvector` extension (`psycopg2-binary` driver, `pgvector` Python package for the vector type, `DATABASE_URL` environment variable). Covers `processes`/`stages`/`questions`/`guidance` and the Framework Knowledge Base (`framework_kb_chunks`) — migrated off SQLite + a flat-file vector JSON in Phase 0 (2026-08-24). See the Neon spec.
+* **Database (target)**: the same Neon Postgres database additionally holds `users`, `projects`, `project_members`, `responses`, `project_artifacts`, and `project_kb_chunks` (Engagement Knowledge Base) once Phases A/B/C land — see Section 3.2.
+* **Embeddings Model**: `SentenceTransformer("all-MiniLM-L6-v2")` (local execution) — unchanged by the Neon move; only the storage/query backend for the resulting vectors changed.
 * **LLM Engine**: AWS Bedrock Runtime Client (using Anthropic Claude 3.5 Sonnet / local heuristic fallback).
 * **Frontend**: HTML5, Vanilla JavaScript (ES6+), and custom CSS.
 * **Auth (planned, Phase A)**: `passlib[bcrypt]` for password hashing, `python-jose` (or `PyJWT`) for JWT issuance/verification.
@@ -58,56 +54,67 @@ Cosmos Strategy Platform/
 
 ## 3. Database Schema
 
-### 3.1 Currently implemented (SQLite — being retired)
+### 3.1 Currently implemented (Neon Postgres — Phase 0, done)
+
+Migrated from SQLite to Postgres in Phase 0 (2026-08-24); the shape is unchanged, only the column types and autoincrement mechanism moved to Postgres idiom (`BIGSERIAL`, `TIMESTAMPTZ`):
 
 ```sql
 CREATE TABLE IF NOT EXISTS processes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS stages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    process_id INTEGER NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    process_id BIGINT NOT NULL REFERENCES processes(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
-    sequence_order INTEGER NOT NULL,
-    FOREIGN KEY (process_id) REFERENCES processes (id) ON DELETE CASCADE
+    sequence_order INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS questions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    stage_id INTEGER NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    stage_id BIGINT NOT NULL REFERENCES stages(id) ON DELETE CASCADE,
     level TEXT NOT NULL,
     text TEXT NOT NULL,
     search_query TEXT,
     owner_role TEXT NOT NULL,
-    reviewer_role TEXT,
-    FOREIGN KEY (stage_id) REFERENCES stages (id) ON DELETE CASCADE
+    reviewer_role TEXT
 );
 
 CREATE TABLE IF NOT EXISTS guidance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    question_id INTEGER NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    question_id BIGINT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
     type TEXT NOT NULL, -- 'Framework', 'Case Study', 'Tool'
-    content TEXT NOT NULL,
-    FOREIGN KEY (question_id) REFERENCES questions (id) ON DELETE CASCADE
+    content TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS framework_kb_chunks (
+    id BIGSERIAL PRIMARY KEY,
+    source_file TEXT NOT NULL,
+    phase TEXT NOT NULL,
+    slide_number INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    embedding VECTOR(384) NOT NULL,
+    UNIQUE (source_file, slide_number)
+);
+CREATE INDEX IF NOT EXISTS framework_kb_chunks_embedding_idx
+ON framework_kb_chunks USING hnsw (embedding vector_cosine_ops);
 ```
 
-**Note**: `processes`, `stages`, `questions`, and `guidance` are defined in `backend/database.py` today, but `backend/main.py` doesn't yet query them — it still serves the hardcoded `CASES_DATA` dict. See the Roadmap for status.
+**Note**: `processes`, `stages`, `questions`, and `guidance` are defined and seeded in `backend/database.py` today, but `backend/main.py` doesn't yet query them — it still serves the hardcoded `CASES_DATA` dict. See the Roadmap for status.
 
-The `responses` table **currently implemented** still uses the legacy shape (`client_case_id` TEXT, `rating`/`critique`/`recommendations`) — see `backend/database.py`. Section 3.2 below is the target shape; not built yet.
+**No `responses` table currently exists.** The old SQLite `database.py` had a legacy-shaped one (`client_case_id` TEXT, `rating`/`critique`/`recommendations`), but Phase 0's Postgres rewrite dropped it rather than recreating it — nothing in `backend/` reads or writes it today (`main.py` never persists evaluations, it only returns them). Section 3.2 below is the target/planned shape (`project_id`-based, `self_evaluation_notes`/`self_evaluation_status`), which lands in Phase B, not before.
 
 ### 3.2 Target schema (Neon Postgres + pgvector)
 
-This is the authoritative going-forward schema — reproduced here from the Neon spec for convenience; that spec is the source of truth if the two ever diverge.
+This is the authoritative full future-state schema — reproduced here from the Neon spec for convenience; that spec is the source of truth if the two ever diverge. **`processes`/`stages`/`questions`/`guidance` and `framework_kb_chunks` are already live (Section 3.1, Phase 0, done)** and reproduced here only for completeness of the full picture; `users`, `projects`, `project_members`, `responses`, `project_artifacts`, and `project_kb_chunks` remain planned (Phases A/B/C).
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Framework content (migrates from SQLite as-is in shape)
+-- Framework content (already migrated from SQLite, Phase 0 — see Section 3.1)
 CREATE TABLE processes (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -197,7 +204,7 @@ CREATE TABLE project_artifacts (
     uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Framework Knowledge Base — replaces data/vector_db.json
+-- Framework Knowledge Base — already replaces the old data/vector_db.json flat file (Phase 0, done — see Section 3.1)
 CREATE TABLE framework_kb_chunks (
     id BIGSERIAL PRIMARY KEY,
     source_file TEXT NOT NULL,
@@ -256,25 +263,25 @@ Case studies (external, internal, hidden resolution) are `project_artifacts` row
 
 ## 5. RAG Engine Implementation
 
-### 5.1 Framework Knowledge Base — current implementation (SQLite/flat-file era)
+### 5.1 Framework Knowledge Base — current implementation (Neon Postgres + pgvector, Phase 0, done)
 
-1. **Document Ingestion**: extracts text from files in `archives/`, generates 384-dimensional dense vectors per slide, caches results in `data/vector_db.json`.
-2. **Cosine Similarity Search**: $\text{similarity} = \frac{A \cdot B}{\|A\| \|B\|}$ — loads the JSON file into memory, computes similarity against every row in a Python loop, returns the top 3.
-3. **LLM Comparison Prompting**: Claude compares the user's answer to the retrieved context and outputs a Level 1/2 (superficial) contrast, a Level 3 (deep, restlessness-arousing) contrast, and targeted self-reflection questions.
-
-### 5.2 Framework Knowledge Base — target implementation (Neon Postgres + pgvector)
-
-Same embedding model, different storage/query backend:
-
-1. **Ingestion**: unchanged extraction/embedding step; instead of writing to `vector_db.json`, inserts rows into `framework_kb_chunks`.
-2. **Retrieval**: an indexed SQL query replaces the in-memory loop:
+1. **Ingestion**: extracts text from files in `archives/`, generates 384-dimensional dense vectors per slide (`SentenceTransformer("all-MiniLM-L6-v2")`), inserts rows into `framework_kb_chunks` (runs once, on first `python main.py` start after the table is empty).
+2. **Retrieval**: an indexed SQL query via `pgvector`'s HNSW index — no in-memory loop:
    ```sql
    SELECT source_file, phase, slide_number, text
    FROM framework_kb_chunks
    ORDER BY embedding <=> :query_embedding
    LIMIT 3;
    ```
-3. **LLM Comparison Prompting**: unchanged in shape, now also performs the keyword-agnostic answer mapping described in the functional spec (Section 2.3.e) — the user's plain-language answer is explicitly mapped back to framework terminology rather than scored on jargon presence.
+3. **LLM Comparison Prompting**: Claude compares the user's answer to the retrieved context and outputs a Level 1/2 (superficial) contrast, a Level 3 (deep, restlessness-arousing) contrast, and targeted self-reflection questions. The keyword-agnostic answer mapping described in the functional spec (Section 2.3.e) — mapping the user's plain-language answer back to framework terminology rather than scoring on jargon presence — is target behavior, not yet implemented.
+
+### 5.2 Framework Knowledge Base — pre-Phase-0 implementation (historical, retired 2026-08-24)
+
+Kept here for reference only; no longer how the app works. Before Phase 0:
+
+1. **Document Ingestion**: extracted text from files in `archives/`, generated 384-dimensional dense vectors per slide, cached results in `data/vector_db.json`.
+2. **Cosine Similarity Search**: $\text{similarity} = \frac{A \cdot B}{\|A\| \|B\|}$ — loaded the JSON file into memory, computed similarity against every row in a Python loop, returned the top 3.
+3. **LLM Comparison Prompting**: same shape as 5.1 above.
 
 ### 5.3 Engagement Knowledge Base (planned, Phase C)
 

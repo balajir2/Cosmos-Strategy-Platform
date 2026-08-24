@@ -6,8 +6,18 @@ from pgvector.psycopg2 import register_vector
 load_dotenv()
 
 
+def _require_database_url():
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError(
+            "DATABASE_URL is not set. Copy .env.example to .env at the repo root "
+            "and set it to your Neon Postgres connection string."
+        )
+    return database_url
+
+
 def get_db_connection():
-    database_url = os.environ["DATABASE_URL"]
+    database_url = _require_database_url()
     conn = psycopg2.connect(database_url)
     register_vector(conn)
     return conn
@@ -15,7 +25,7 @@ def get_db_connection():
 
 def init_db():
     # First, create a basic connection to create the extension
-    database_url = os.environ["DATABASE_URL"]
+    database_url = _require_database_url()
     conn = psycopg2.connect(database_url)
     cursor = conn.cursor()
 
@@ -74,7 +84,8 @@ def init_db():
         phase TEXT NOT NULL,
         slide_number INTEGER NOT NULL,
         text TEXT NOT NULL,
-        embedding VECTOR(384) NOT NULL
+        embedding VECTOR(384) NOT NULL,
+        UNIQUE (source_file, slide_number)
     );
     """)
 

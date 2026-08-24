@@ -45,15 +45,15 @@ This file is the single consolidated reference for working on this codebase — 
 
 # Part 2: Architecture
 
-Three-tier: Presentation (vanilla HTML/CSS/JS) → Application API (FastAPI) → storage. Storage today is SQLite + a flat-file vector JSON; **target storage is one Neon Postgres database with `pgvector`** for both knowledge bases, decided 2026-08-24 — see [Neon Postgres + pgvector Spec](docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md). Full detail, diagrams, and the proposed longer-term "Framework Factory" architecture: [Architecture Overview](documentation/architecture/overview.md).
+Three-tier: Presentation (vanilla HTML/CSS/JS) → Application API (FastAPI) → storage. **Storage is now one Neon Postgres database with `pgvector`** for the Framework Knowledge Base — decided and built 2026-08-24 (Phase 0) — see [Neon Postgres + pgvector Spec](docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md). The Engagement Knowledge Base's `pgvector` tables (`project_kb_chunks`, etc.) are still target-only, not yet built. Full detail, diagrams, and the proposed longer-term "Framework Factory" architecture: [Architecture Overview](documentation/architecture/overview.md).
 
-**Core data flow (target — see Part 5 for what's actually implemented today):**
+**Core data flow (mix of implemented and target — see Part 5 for what's actually implemented today):**
 1. User submits an answer to a strategic question.
-2. Backend embeds the question's `search_query` with `SentenceTransformer` and runs cosine similarity search over `data/vector_db.json`.
-3. Top 3 matching slide contexts + the question + the user's answer go to AWS Bedrock (Claude).
-4. Bedrock returns Level 1/2/3 comparative benchmark answers.
-5. User self-evaluates against the benchmarks, logs notes and a status rating, and saves.
-6. Backend persists the response and self-evaluation to SQLite.
+2. Backend embeds the question's `search_query` with `SentenceTransformer` and runs a `pgvector` cosine-distance query over the `framework_kb_chunks` table (Neon Postgres) — **implemented**.
+3. Top 3 matching slide contexts + the question + the user's answer go to AWS Bedrock (Claude) — **implemented**.
+4. Bedrock returns Level 1/2/3 comparative benchmark answers — **target**; today the response is a single `rating`/`critique`/`recommendations` shape.
+5. User self-evaluates against the benchmarks, logs notes and a status rating, and saves — **target**, not built.
+6. Backend persists the response and self-evaluation to a `responses` table — **target**; no `responses` table exists today (see Part 4).
 
 **Graceful degradation**: no AWS credentials → local heuristic critique fallback. No/unparseable archive PDFs → synthetic in-memory vector dataset. This means the app (and its tests) run fully offline.
 
@@ -63,8 +63,7 @@ Three-tier: Presentation (vanilla HTML/CSS/JS) → Application API (FastAPI) →
 
 # Part 3: Tech Stack & Directory Structure
 
-**Backend (current)**: Python 3.10+, FastAPI, SQLite (`sqlite3`), `SentenceTransformer("all-MiniLM-L6-v2")` for local embeddings, `boto3` for AWS Bedrock (Claude 3.5 Sonnet).
-**Backend (target)**: SQLite → Neon Postgres (`psycopg2-binary`/`asyncpg` + `pgvector` Python package, `DATABASE_URL` env var) — replaces both the relational store and the flat-file vector index.
+**Backend (current)**: Python 3.10+, FastAPI, Neon Postgres + `pgvector` (`psycopg2-binary`, `DATABASE_URL` env var) for both the relational tables and the Framework Knowledge Base vector index, `SentenceTransformer("all-MiniLM-L6-v2")` for local embeddings, `boto3` for AWS Bedrock (Claude 3.5 Sonnet). SQLite and the flat-file vector JSON were retired in Phase 0 (2026-08-24).
 **Frontend**: HTML5, vanilla CSS3, ES6+ JavaScript — no framework, no build step.
 **Testing**: `pytest` + FastAPI `TestClient` (`httpx`) — planned, not yet built (see Part 5).
 **Planned additions**: `passlib[bcrypt]` + `python-jose` (auth), `python-docx`/`python-pptx` (Engagement KB document parsing), AWS Transcribe via `boto3` (Engagement KB audio) — see [Technical Spec §2](documentation/development/technical-spec.md).
@@ -77,16 +76,13 @@ Cosmos Strategy Platform/
 ├── documentation/            # full knowledge base — see Part 7
 ├── backend/
 │   ├── main.py                # FastAPI app & routes
-│   ├── database.py             # SQLite connection, DDL, seed data
-│   ├── rag_engine.py           # SentenceTransformer + Bedrock RAG client
+│   ├── database.py             # Neon Postgres connection, DDL, seed data
+│   ├── rag_engine.py           # SentenceTransformer + pgvector search + Bedrock RAG client
 │   └── requirements.txt
 ├── frontend/
 │   ├── index.html
 │   ├── app.js
 │   └── style.css
-├── data/
-│   ├── cosmos_platform.db      # SQLite (gitignored, generated) — retired once Neon lands
-│   └── vector_db.json          # precomputed embeddings (generated, checked in) — retired once Neon lands
 ├── archives/                  # source PDFs + meeting transcripts for RAG ingestion / design source material
 ├── docs/superpowers/specs/    # design specs (Users/Projects/Engagement KB, Neon Postgres)
 └── tests/                     # pytest suite — planned, see Part 6
@@ -98,7 +94,7 @@ Cosmos Strategy Platform/
 
 **This section describes the CURRENT (pre-migration) schema and API.** The target schema/API is specified in [Technical Spec](documentation/development/technical-spec.md) and tracked in [Roadmap](documentation/product/roadmap.md) — they differ from what's below.
 
-**Current `responses` table** (`backend/database.py`): `id`, `question_id`, `client_case_id`, `submitted_text`, `status`, `rating`, `critique`, `recommendations`, `updated_at`. (Target: replace `rating`/`critique`/`recommendations` with `self_evaluation_notes` and `self_evaluation_status`.)
+**No `responses` table currently exists.** The old SQLite `database.py` had one (`id`, `question_id`, `client_case_id`, `submitted_text`, `status`, `rating`, `critique`, `recommendations`, `updated_at`), but Phase 0's Postgres rewrite of `database.py` dropped it rather than recreating it — nothing in `backend/` reads or writes it today (`main.py` never persists evaluations, it only returns them). It's superseded by Phase B's `project_id`-based redesign (`self_evaluation_notes`/`self_evaluation_status` instead of `rating`/`critique`/`recommendations`) — see [Technical Spec §3.2](documentation/development/technical-spec.md) for the target shape.
 
 **Current API** (`backend/main.py`):
 
@@ -117,9 +113,9 @@ Target endpoints not yet implemented: `GET /api/process/{process_id}` (DB-backed
 
 # Part 5: Current Status & Roadmap
 
-**As of 2026-08-24: specs are complete, code migration has not started.** The BRD, functional spec, technical spec, and architecture docs all describe the target Framework Factory design; `backend/main.py` and `backend/database.py` still run the old hardcoded Blazar/Basil case-study critic.
+**As of 2026-08-24: specs are complete; Phase 0 (Database Platform) is done, the rest of the migration has not started.** The BRD, functional spec, technical spec, and architecture docs all describe the target Framework Factory design; `backend/main.py` still runs the old hardcoded Blazar/Basil case-study critic. `backend/database.py` and `backend/rag_engine.py`, however, have already been migrated off SQLite + flat-file storage onto Neon Postgres + `pgvector` (Phase 0) — see the Foundational Work section of the Roadmap.
 
-**Scope grew twice more on 2026-08-24**: first, a gap was identified — there was no way for a consultant to bring a customer's own enterprise artifacts into an engagement, and no real user/auth model at all. A new design ([spec](docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md)) adds Users, Projects (replacing `client_case_id`), and a per-project Engagement Knowledge Base, in phases (0: DB platform, A: Auth, B: Projects, C: Engagement KB). Second, the database platform itself was decided: Neon Postgres + `pgvector` ([spec](docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md)), replacing SQLite + flat files for the *entire* data layer, including the already-implemented `processes`/`stages`/`questions`/`guidance` tables. A same-day stakeholder review meeting also produced the Guided Learning Flow design (Part 1). All of this **precedes** the pre-existing "Database Layer Overhaul" and "Backend API Integration" roadmap items — see the roadmap for how they've been revised.
+**Scope grew twice more on 2026-08-24**: first, a gap was identified — there was no way for a consultant to bring a customer's own enterprise artifacts into an engagement, and no real user/auth model at all. A new design ([spec](docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md)) adds Users, Projects (replacing `client_case_id`), and a per-project Engagement Knowledge Base, in phases (0: DB platform, A: Auth, B: Projects, C: Engagement KB). Second, the database platform itself was decided: Neon Postgres + `pgvector` ([spec](docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md)), replacing SQLite + flat files for the *entire* data layer, including the already-implemented `processes`/`stages`/`questions`/`guidance` tables. **Phase 0 of that migration (the DB platform itself, plus the Framework Knowledge Base) has since been built and is done** — Phases A/B/C (Auth, Projects, Engagement KB) remain not started. A same-day stakeholder review meeting also produced the Guided Learning Flow design (Part 1). All of this **precedes** the pre-existing "Database Layer Overhaul" and "Backend API Integration" roadmap items — see the roadmap for how they've been revised.
 
 The automated test bed described in Part 3/6 is also **not yet built** — it's planned (pytest + FastAPI TestClient against the current API contract) but pending explicit go-ahead to start writing code.
 
@@ -132,8 +128,9 @@ Full checklist (Users/Projects/Engagement KB phases, DB layer, backend API, fron
 **Setup & run**: see [Quick Start](documentation/guides/quick-start.md) for full steps. Summary:
 ```bash
 cd backend && python -m venv venv && <activate> && pip install -r requirements.txt
-python database.py   # init DB + build vector index (first run downloads embedding model)
-python main.py        # serves API + frontend at http://localhost:8000
+# copy .env.example to .env at the repo root and set DATABASE_URL first — see Quick Start
+python database.py   # creates schema + seeds process/stage/question data in Neon
+python main.py        # serves API + frontend at http://localhost:8000; also builds the Framework Knowledge Base index on first run
 ```
 
 **Tests**: once the test bed lands, run `pytest` from the repo root. See [Test Strategy](documentation/testing/test-strategy.md) for coverage and known limitations (tests will be pinned to the pre-migration API contract and will need rewriting once the roadmap's API overhaul lands).

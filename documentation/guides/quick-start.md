@@ -18,15 +18,28 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 2. Initialize the Database & Vector Index
+## 2. Configure the Database (Neon Postgres + pgvector)
+
+The backend requires a `DATABASE_URL` environment variable — a Neon Postgres connection string. Copy `.env.example` to `.env` at the repo root and fill in the real value (never commit `.env`):
+
+```bash
+cp .env.example .env
+# then edit .env and set DATABASE_URL to your Neon connection string
+```
+
+**Coming next**: `JWT_SECRET_KEY` will be required once Phase A (Users & Auth) lands — not required yet, the app has no login today.
+
+## 3. Initialize the Database & Framework Knowledge Base
 
 ```bash
 python database.py
 ```
 
-This creates `data/cosmos_platform.db` and seeds the initial process/stage/question configuration. On first run it also parses the PDFs in `archives/` (`ABG.Madura...` and `ABG.Brand...`), computes embeddings, and caches them to `data/vector_db.json`. This step downloads the `all-MiniLM-L6-v2` embedding model the first time it runs — it needs internet access once, then works offline.
+This creates the `processes`/`stages`/`questions`/`guidance`/`framework_kb_chunks` tables in your Neon database (including the `pgvector` extension and an HNSW index) and seeds the initial process/stage/question configuration.
 
-## 3. Run the Development Server
+Running `python main.py` (next step) then ingests the PDFs in `archives/` (`ABG.Madura...` and `ABG.Brand...`) into `framework_kb_chunks` on first start, if that table is empty: it parses the PDFs, computes embeddings, and inserts one row per slide. This step downloads the `all-MiniLM-L6-v2` embedding model the first time it runs — it needs internet access once, then works offline for embedding (Neon access is still required for every DB query).
+
+## 4. Run the Development Server
 
 ```bash
 python main.py
@@ -34,7 +47,7 @@ python main.py
 
 The API runs at `http://localhost:8000`; the frontend is served automatically at `/`.
 
-## 4. Run the Tests
+## 5. Run the Tests
 
 From the repo root (not `backend/`):
 
@@ -47,23 +60,5 @@ See `documentation/testing/test-strategy.md` for what's covered and what isn't y
 ## Troubleshooting
 
 - **No AWS credentials configured**: expected during local development. `/api/evaluate` falls back to a local heuristic critique instead of calling Bedrock — see `documentation/architecture/overview.md`.
-- **First `python database.py` run is slow**: it's parsing two large PDFs and computing embeddings for every slide. Subsequent runs load the cached `data/vector_db.json` instead and are fast.
-
-## Database Setup (Neon Postgres + pgvector)
-
-The backend now requires a `DATABASE_URL` environment variable — a Neon Postgres connection string. Copy `.env.example` to `.env` at the repo root and fill in the real value (never commit `.env`):
-
-```bash
-cp .env.example .env
-# then edit .env and set DATABASE_URL to your Neon connection string
-```
-
-Then initialize the schema and seed data (from `backend/`):
-
-```bash
-python database.py
-```
-
-This creates the `processes`/`stages`/`questions`/`guidance`/`framework_kb_chunks` tables (including the `pgvector` extension and an HNSW index) and seeds the initial Brand Compass configuration. Running `python main.py` will then ingest the `archives/` PDFs into `framework_kb_chunks` on first start if that table is empty — this step downloads the `all-MiniLM-L6-v2` embedding model the first time it runs.
-
-**Coming next**: `JWT_SECRET_KEY` will be required once Phase A (Users & Auth) lands — not required yet, the app has no login today.
+- **`DATABASE_URL is not set` error**: you skipped step 2. Copy `.env.example` to `.env` at the repo root and set `DATABASE_URL` to your Neon Postgres connection string.
+- **First `python main.py` run is slow**: it's parsing two large PDFs and computing embeddings for every slide before inserting them into `framework_kb_chunks`. Subsequent runs see the table already populated and skip ingestion, so they're fast.

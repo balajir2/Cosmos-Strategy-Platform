@@ -9,7 +9,6 @@ ENV/
 env/
 
 # Databases
-data/cosmos_platform.db
 *.db
 *.sqlite
 
