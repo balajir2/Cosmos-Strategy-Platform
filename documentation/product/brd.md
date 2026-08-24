@@ -2,6 +2,8 @@
 
 ---
 
+**Validation note (2026-08-24)**: the diagnosis and solution philosophy below were independently restated, almost verbatim, by the stakeholders (cosmostrategy) in the Aug 24 review meeting (`archives/Meeting transcript 24Aug.txt`) — this document's core framing holds. That meeting also situated this POC as the first of five planned modules sharing one underlying system; see the note at the end of Section 5.
+
 ## 1. Executive Summary & Objective
 
 The **Cosmos Strategic Capability Platform** is a digital solution designed to scale a high-impact management capability-building methodology. Historically delivered as premium, facilitator-led consulting workshops, the platform's goal is to transition this intellectual property (IP) into a self-serve, interactive SaaS product—enabling **DIY (Do-It-Yourself) Consulting** for enterprise clients.
@@ -59,6 +61,8 @@ Once implemented, the structured Q&A model drives five distinct organizational o
 To validate the DIY consulting model before committing to a full multi-tenant build, the project will begin with a targeted POC:
 * **Initial Focus Area**: The **Insights Module** (spanning the beginning stages of SWOT, Opportunity, and Consumer Analysis through the Insight Spiral).
 * **Core Hypothesis**: An LLM-backed RAG engine can provide enough comparative depth to support **Guided Self-Evaluation** without requiring a live human facilitator.
+
+**Long-term context (2026-08-24)**: the Insights Module is the first of five planned modules on the same underlying platform — capability building (this POC), management process building, organization transparency building, performance & potential evaluation, and DIY consulting — each with a distinct user experience despite sharing one corpus. Full detail: `documentation/product/functional-spec.md` §5. Not designed yet beyond this POC.
 
 ---
 
