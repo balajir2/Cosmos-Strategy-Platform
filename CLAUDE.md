@@ -21,6 +21,7 @@ This file is the single consolidated reference for working on this codebase — 
 - [Technical Spec](documentation/development/technical-spec.md) — DB schema & API contract
 - [Quick Start](documentation/guides/quick-start.md) — get it running locally
 - [Test Strategy](documentation/testing/test-strategy.md) — what's tested and how
+- [Users/Projects/Engagement KB Design Spec](docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md) — the newest, largest piece of planned scope
 
 ---
 
@@ -35,7 +36,7 @@ This file is the single consolidated reference for working on this codebase — 
 
 **POC Scope**: the **Insights Module** — SWOT, Opportunity, and Consumer Analysis through the Insight Spiral — validating the hypothesis that an LLM-backed RAG engine can support Guided Self-Evaluation without a live human facilitator.
 
-**User personas** (full detail: [Functional Spec](documentation/product/functional-spec.md)): Admin/Consultant (authors processes), Owner e.g. CMO (submits & self-evaluates answers), Reviewer e.g. CEO (reviews locked answers), Peer e.g. COO (read-only visibility for reputational accountability).
+**User personas** (full detail: [Functional Spec](documentation/product/functional-spec.md)): Admin/Consultant (authors processes), Owner e.g. CMO (submits & self-evaluates answers), Reviewer e.g. CEO (reviews locked answers), Peer e.g. COO (read-only visibility for reputational accountability). As of 2026-08-24, these roles are being formalized as real per-project memberships (not just concepts) — see Part 5.
 
 ---
 
@@ -53,6 +54,8 @@ Three-tier: Presentation (vanilla HTML/CSS/JS) → Application API (FastAPI) →
 
 **Graceful degradation**: no AWS credentials → local heuristic critique fallback. No/unparseable archive PDFs → synthetic in-memory vector dataset. This means the app (and its tests) run fully offline.
 
+**Planned addition (not yet built)**: real Users, Projects (replacing the ad hoc `client_case_id`), and a per-project **Engagement Knowledge Base** — a consultant uploads a customer's own documents/audio for one engagement, retrieved alongside the shared Framework Knowledge Base above, isolated from every other project. Full design: [Users/Projects/Engagement KB Spec](docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md), architecture detail: [Architecture Overview §3](documentation/architecture/overview.md).
+
 ---
 
 # Part 3: Tech Stack & Directory Structure
@@ -60,6 +63,7 @@ Three-tier: Presentation (vanilla HTML/CSS/JS) → Application API (FastAPI) →
 **Backend**: Python 3.10+, FastAPI, SQLite (`sqlite3`), `SentenceTransformer("all-MiniLM-L6-v2")` for local embeddings, `boto3` for AWS Bedrock (Claude 3.5 Sonnet).
 **Frontend**: HTML5, vanilla CSS3, ES6+ JavaScript — no framework, no build step.
 **Testing**: `pytest` + FastAPI `TestClient` (`httpx`) — planned, not yet built (see Part 5).
+**Planned additions**: `passlib[bcrypt]` + `python-jose` (auth), `python-docx`/`python-pptx` (Engagement KB document parsing), AWS Transcribe via `boto3` (Engagement KB audio) — see [Technical Spec §2](documentation/development/technical-spec.md).
 
 ```
 Cosmos Strategy Platform/
@@ -102,15 +106,19 @@ Cosmos Strategy Platform/
 
 Target endpoints not yet implemented: `GET /api/process/{process_id}` (DB-backed stages/questions), `POST /api/response/save`, `GET /api/process/{process_id}/brief`. Full DDL and target endpoint contracts: [Technical Spec](documentation/development/technical-spec.md).
 
+**Also planned (not yet implemented)**: `users`, `projects`, `project_members`, and `project_artifacts` tables; `POST /api/auth/register`/`login`; `GET`/`POST /api/projects`; `POST/GET/DELETE /api/projects/{id}/artifacts`. `responses.client_case_id` becomes `responses.project_id`. `GET /api/cases` and `GET /api/case/{case_id}` are planned for removal, replaced by the `/api/projects` endpoints. Full detail: [Technical Spec §3-4](documentation/development/technical-spec.md).
+
 ---
 
 # Part 5: Current Status & Roadmap
 
 **As of 2026-08-24: specs are complete, code migration has not started.** The BRD, functional spec, technical spec, and architecture docs all describe the target Framework Factory design; `backend/main.py` and `backend/database.py` still run the old hardcoded Blazar/Basil case-study critic.
 
+**Scope grew on 2026-08-24**: a gap was identified — there was no way for a consultant to bring a customer's own enterprise artifacts into an engagement, and no real user/auth model at all. A new design ([spec](docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md)) adds Users, Projects (replacing `client_case_id`), and a per-project Engagement Knowledge Base, in three phases (A: Auth, B: Projects, C: Engagement KB). This now **precedes** the pre-existing "Database Layer Overhaul" and "Backend API Integration" roadmap items — see the roadmap for how they've been revised.
+
 The automated test bed described in Part 3/6 is also **not yet built** — it's planned (pytest + FastAPI TestClient against the current API contract) but pending explicit go-ahead to start writing code.
 
-Full checklist (DB layer, backend API, frontend GUI): [Roadmap](documentation/product/roadmap.md). Don't assume anything in that checklist is done without checking it — it's a live document, check it before starting related work.
+Full checklist (Users/Projects/Engagement KB phases, DB layer, backend API, frontend GUI): [Roadmap](documentation/product/roadmap.md). Don't assume anything in that checklist is done without checking it — it's a live document, check it before starting related work.
 
 ---
 

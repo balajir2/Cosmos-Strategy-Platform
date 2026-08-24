@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Planned
 - Automated test bed (`pytest` + FastAPI `TestClient`) against the current pre-migration API — scaffolding designed, pending go-ahead to write code.
+- Users, Projects & Engagement Knowledge Base: real auth, a `Project` entity replacing the ad hoc `client_case_id`, per-project role membership, and a per-project knowledge base for consultant-uploaded customer documents/audio, blended into retrieval alongside the existing Framework Knowledge Base. Design spec: `docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md`. Precedes and revises the items below.
 - Insights POC migration: DB layer overhaul, backend API overhaul, frontend GUI overhaul (see `documentation/product/roadmap.md`).
 
 ## [0.1.0] - 2026-08-24
