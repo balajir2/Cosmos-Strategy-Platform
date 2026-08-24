@@ -49,10 +49,21 @@ See `documentation/testing/test-strategy.md` for what's covered and what isn't y
 - **No AWS credentials configured**: expected during local development. `/api/evaluate` falls back to a local heuristic critique instead of calling Bedrock — see `documentation/architecture/overview.md`.
 - **First `python database.py` run is slow**: it's parsing two large PDFs and computing embeddings for every slide. Subsequent runs load the cached `data/vector_db.json` instead and are fast.
 
-## Coming Soon: Auth & Database Setup
+## Database Setup (Neon Postgres + pgvector)
 
-Once the Foundational Work lands (see `documentation/product/roadmap.md`), running the backend will require two additional environment variables:
-- `JWT_SECRET_KEY` — signs login tokens.
-- `DATABASE_URL` — a Neon Postgres connection string (replaces the current SQLite file; see [Neon Postgres + pgvector Spec](../../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md)).
+The backend now requires a `DATABASE_URL` environment variable — a Neon Postgres connection string. Copy `.env.example` to `.env` at the repo root and fill in the real value (never commit `.env`):
 
-Neither is required yet — the app has no login and still uses a local SQLite file today.
+```bash
+cp .env.example .env
+# then edit .env and set DATABASE_URL to your Neon connection string
+```
+
+Then initialize the schema and seed data (from `backend/`):
+
+```bash
+python database.py
+```
+
+This creates the `processes`/`stages`/`questions`/`guidance`/`framework_kb_chunks` tables (including the `pgvector` extension and an HNSW index) and seeds the initial Brand Compass configuration. Running `python main.py` will then ingest the `archives/` PDFs into `framework_kb_chunks` on first start if that table is empty — this step downloads the `all-MiniLM-L6-v2` embedding model the first time it runs.
+
+**Coming next**: `JWT_SECRET_KEY` will be required once Phase A (Users & Auth) lands — not required yet, the app has no login today.
