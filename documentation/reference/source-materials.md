@@ -12,5 +12,6 @@ Everything in `archives/` is raw input to the RAG ingestion pipeline (`backend/r
 | `archives/ABG.Brand Compass.Phase2.V1.pdf` | Phase 2 Aditya Birla Group Brand Compass deck. | Same as above. |
 | `archives/Relevant slides Phase 1 file.txt` | Short note listing which Phase 1 slides are relevant. | Reference only — not currently parsed by any code. |
 | `archives/Strategy Platform Meeting 19Aug.txt` | Transcript/notes from the August 19, 2026 project kickoff meeting. | Historical context for the original concept — see `documentation/product/concept-synthesis.md`, which was derived from this meeting. |
+| `archives/Meeting transcript 24Aug.txt` | Transcript of the August 24, 2026 stakeholder product review meeting. | Source material for the Guided Learning Flow design in `documentation/product/functional-spec.md` §2.3 — not parsed by any code, a human-read source document. |
 
 These are large binary/text files; they are the source of truth for the vector database, not something to hand-edit. To regenerate `data/vector_db.json` from scratch, delete it and re-run `python database.py` (see `documentation/guides/quick-start.md`).

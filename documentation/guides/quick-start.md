@@ -49,6 +49,10 @@ See `documentation/testing/test-strategy.md` for what's covered and what isn't y
 - **No AWS credentials configured**: expected during local development. `/api/evaluate` falls back to a local heuristic critique instead of calling Bedrock — see `documentation/architecture/overview.md`.
 - **First `python database.py` run is slow**: it's parsing two large PDFs and computing embeddings for every slide. Subsequent runs load the cached `data/vector_db.json` instead and are fast.
 
-## Coming Soon: Auth Setup
+## Coming Soon: Auth & Database Setup
 
-Once the Users/Projects/Engagement Knowledge Base work lands (see `documentation/product/roadmap.md`), running the backend will also require a `JWT_SECRET_KEY` environment variable for signing login tokens. Not required yet — the app has no login today.
+Once the Foundational Work lands (see `documentation/product/roadmap.md`), running the backend will require two additional environment variables:
+- `JWT_SECRET_KEY` — signs login tokens.
+- `DATABASE_URL` — a Neon Postgres connection string (replaces the current SQLite file; see [Neon Postgres + pgvector Spec](../../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md)).
+
+Neither is required yet — the app has no login and still uses a local SQLite file today.

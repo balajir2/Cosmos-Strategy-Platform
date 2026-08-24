@@ -18,6 +18,7 @@ Welcome to the Cosmos Strategic Capability Platform documentation. This is the i
 | See what the source PDFs are | [Source Materials](./reference/source-materials.md) |
 | Read the original ideation doc | [Concept Synthesis](./product/concept-synthesis.md) |
 | Understand the Users/Projects/Engagement Knowledge Base design | [Design Spec](../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md) |
+| Understand the database platform choice (Neon + pgvector) | [Design Spec](../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md) |
 | See the version history | [CHANGELOG](../CHANGELOG.md) |
 
 ## Documentation Structure
@@ -47,6 +48,8 @@ documentation/
 - **Phase**: Insights POC — specs complete, code migration not started.
 - **Running code** still reflects the pre-pivot design (hardcoded Blazar/Basil cases, legacy rating/critique/recommendations output).
 - **Scope expanded 2026-08-24**: a design for real Users, Projects (replacing the ad hoc "case" concept), and a per-project Engagement Knowledge Base was added, ahead of the existing DB/API/frontend migration checklist — see [Design Spec](../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md).
+- **Database platform decided 2026-08-24**: Neon Postgres + `pgvector` replaces SQLite + flat-file vector storage for the entire data layer — see [Design Spec](../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md).
+- **Learning-flow design added 2026-08-24**: a stakeholder review meeting substantially detailed the Insights module's actual user experience — see [Functional Spec](./product/functional-spec.md).
 - **Test bed**: not yet built as of 2026-08-24 — see [Roadmap](./product/roadmap.md).
 
 Full detail: [Roadmap](./product/roadmap.md).

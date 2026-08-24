@@ -37,9 +37,11 @@ From the original implementation plan's verification section — tracked here so
 - Frontend testing approach is not yet scoped — `frontend/` is vanilla JS with no test runner configured today.
 
 **From the Users/Projects/Engagement Knowledge Base spec** ([`docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md`](../../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md)) — will need its own dedicated test files once built, distinct from the pre-migration tests above since this is new behavior, not a contract change:
-- Auth: register/login, invalid credentials rejected, a protected route without a token returns 401.
-- Authorization: a role-mismatched request returns 403; a user only sees projects where they have a `project_members` row; a non-member gets no visibility into a project at all.
-- Engagement Knowledge Base: artifact upload/list correctly scoped to `project_id`; retrieval results carry the correct `source` tag (`"framework"` vs. `"customer_document"`) for both knowledge bases.
+- Auth: register/login, invalid credentials rejected, a protected route without a token returns 401, a non-admin gets 403 on `POST /api/projects`.
+- Authorization: a role-mismatched request returns 403; a `ClientUser` gets 403 on learning-flow endpoints while a project is `Draft`; a user only sees projects where they have a `project_members` row; a non-member gets no visibility into a project at all.
+- Engagement Knowledge Base: artifact upload/list correctly scoped to `project_id` and `purpose`; retrieval results carry the correct `source` tag (`"framework"` vs. `"customer_document"`) for both knowledge bases and never include a `case_study_resolution`-purpose chunk.
+
+**From the Neon Postgres + pgvector spec** ([`docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md`](../../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md)) — this also changes *how* the whole test bed runs, once it lands: tests move from zero-network SQLite to a dedicated Neon test branch (or a local Postgres+pgvector container). Not decided which — see that spec's "Local Development & Testing" section.
 
 ## Manual Verification
 
