@@ -2,6 +2,7 @@
 
 **Date:** 2026-08-24
 **Status:** Approved for planning
+**Revised:** 2026-08-24 (same day) — see "Revision: System Flow & Roles" below. The role model, project lifecycle, and case-study handling described in the original sections below have been updated in place to match; this isn't a changelog of a past decision, it's the current design.
 
 ## Goal
 
@@ -19,12 +20,39 @@ This spec **supersedes and extends** `documentation/product/roadmap.md`'s existi
 
 1. **Auth**: simple built-in auth (email/password, hashed, JWT-based sessions) — no SSO/cloud identity provider for now, consistent with the project's lean, local-first, offline-capable stack. SSO is explicit future work, not a silent gap.
 2. **Project model**: Project **replaces** the current case concept entirely. `responses.client_case_id` (TEXT) becomes `responses.project_id` (INTEGER FK), and every case-shaped reference elsewhere in the codebase and docs follows.
-3. **Role scope**: roles are **per-project**, via a `project_members` join table — the same person can be a Consultant on one engagement and a Peer observer on another.
+3. **Role scope**: roles are **per-project**, via a `project_members` join table — the same person can be a Consultant on one engagement and a ClientUser on another. (Original wording said "Peer observer" — see Revision below for why the role set simplified.)
 4. **Engagement Knowledge Base scope** (carried over from the prior Engagement KB sketch, now re-keyed to `project_id`):
    - Artifact types: documents (PDF/DOCX/PPTX/TXT) **and** audio/meeting transcripts.
    - Retrieval: merged automatically with the shared Framework Knowledge Base on every evaluation call, tagged by source in the UI.
    - Storage: extends the existing lightweight local pattern (`SentenceTransformer` + flat JSON index) — one index per project, no new infrastructure.
    - Upload access: Consultant role only, now actually enforceable via real auth (previously this was aspirational).
+
+## Revision: System Flow & Roles
+
+A second brainstorming pass, same day, walked through the actual end-to-end flow: who creates a project, who preps an engagement before a workshop starts, and who answers questions. That surfaced three changes to the design above:
+
+1. **A distinct global `SystemAdmin` role.** Project creation is an administrative act, separate from running the engagement — a `SystemAdmin` provisions a project and assigns which user leads it as `Consultant`. This role is **global** (`users.is_admin`), not a `project_members` row, because it has to act before the project — and therefore before any membership row — exists.
+2. **The client-side role set simplifies to one role: `ClientUser`.** `Owner`, `Reviewer`, and `Peer` are dropped from the POC role enum. They're not abandoned as a vision — see Out of Scope — just not needed to build the core loop right now, and premature to design in detail before the core one-on-one flow (see the companion functional-spec.md revision) is real.
+3. **A `Draft` → `Active` project lifecycle**, and **case studies are tagged Engagement KB uploads, not a new entity.** A `Consultant` preps a `Draft` project (industry context, reference documents, external/internal case studies, the hidden resolution) before any `ClientUser` can access it. Case studies don't get their own table — they're `project_artifacts` rows distinguished by a new `purpose` field, keeping ingestion and retrieval on one unified mechanism.
+
+### Revised Flow
+
+1. **SystemAdmin** creates the project (`POST /api/projects`, status starts at `Draft`) and assigns a `Consultant`.
+2. **Consultant** preps the engagement: sets `industry_context`, uploads reference documents, uploads and tags the external case study, internal case study, and hidden resolution (via `purpose`), assigns `ClientUser`(s), then calls `POST /api/projects/{id}/activate` (`Draft` → `Active`).
+3. **ClientUser** works through the learning flow — blocked with 403 until the project is `Active`.
+
+### Data Model Deltas
+
+```sql
+ALTER TABLE users ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0;
+ALTER TABLE projects ADD COLUMN industry_context TEXT; -- consultant's notes on B2B/B2C, sector — informs question language & example curation
+ALTER TABLE project_artifacts ADD COLUMN purpose TEXT NOT NULL DEFAULT 'reference';
+-- purpose: 'reference' | 'case_study_external' | 'case_study_internal' | 'case_study_resolution'
+```
+
+The full DDL below (Data Model section) reflects these deltas already applied — this section explains *why*, the section below is the *current* state.
+
+**On the hidden resolution**: an artifact with `purpose = 'case_study_resolution'` is deliberately excluded from the normal blended retrieval used during question-answering (see Retrieval section below) — it's only surfaced at a dedicated reveal step after a `ClientUser` submits their case study answer, matching the meeting's "hidden text: what they actually did / what they should have done" design.
 
 ## Data Model
 
@@ -39,6 +67,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     full_name TEXT NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT 1,
+    is_admin BOOLEAN NOT NULL DEFAULT 0,  -- SystemAdmin: global, can create projects. See Revision above.
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
@@ -51,9 +80,10 @@ CREATE TABLE IF NOT EXISTS projects (
     name TEXT NOT NULL,                  -- e.g. "Blazar India Market Entry"
     customer_name TEXT NOT NULL,
     description TEXT,
-    status TEXT NOT NULL DEFAULT 'Active', -- 'Active', 'Completed', 'Archived'
+    industry_context TEXT,               -- Consultant's notes: B2B/B2C, sector — informs question language & example curation
+    status TEXT NOT NULL DEFAULT 'Draft', -- 'Draft', 'Active', 'Completed', 'Archived'
     process_id INTEGER NOT NULL,         -- which framework this project runs (e.g. Brand Compass V2)
-    created_by INTEGER NOT NULL,
+    created_by INTEGER NOT NULL,         -- the SystemAdmin who created it
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (process_id) REFERENCES processes (id),
     FOREIGN KEY (created_by) REFERENCES users (id)
@@ -67,7 +97,7 @@ CREATE TABLE IF NOT EXISTS project_members (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
-    role TEXT NOT NULL,                  -- 'Consultant', 'Owner', 'Reviewer', 'Peer'
+    role TEXT NOT NULL,                  -- 'Consultant', 'ClientUser' (Owner/Reviewer/Peer deferred — see Out of Scope)
     org_title TEXT,                      -- display label only, e.g. 'CMO'
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
@@ -85,6 +115,7 @@ CREATE TABLE IF NOT EXISTS project_artifacts (
     filename TEXT NOT NULL,
     artifact_type TEXT NOT NULL,         -- 'document', 'audio'
     source_format TEXT NOT NULL,         -- 'pdf', 'docx', 'pptx', 'txt', 'audio'
+    purpose TEXT NOT NULL DEFAULT 'reference', -- 'reference', 'case_study_external', 'case_study_internal', 'case_study_resolution'
     status TEXT NOT NULL DEFAULT 'Uploaded', -- 'Uploaded', 'Processing', 'Indexed', 'Failed', 'Transcript Needed'
     transcript_text TEXT,                -- populated for audio once transcribed (or pasted manually as a fallback)
     uploaded_by INTEGER NOT NULL,
@@ -129,14 +160,16 @@ This subsumes the schema goals of the roadmap's existing "Database Layer Overhau
 
 ## Authorization Design
 
+- **`require_admin` dependency**: checks `users.is_admin`; raises 403 otherwise. Gates `POST /api/projects`.
 - **`require_project_role(project_id, allowed_roles)` dependency**: looks up the caller's `project_members` row for that `project_id`; raises 403 if no row exists (not a member — the project doesn't exist for them, not even read access) or if their `role` isn't in `allowed_roles`.
+- **`require_active_project(project_id)` dependency**: raises 403 if `projects.status != 'Active'` for any `ClientUser`-role caller (a `Consultant` can still access their own `Draft` project to keep prepping it).
 - **Role capabilities**:
-  | Role | Can do |
-  |---|---|
-  | `Consultant` | Create the project, invite/assign members, author process/stage/question content (once Framework Authoring Mode is built), upload/delete Engagement KB artifacts. |
-  | `Owner` | Submit answers to their assigned questions, run guided self-evaluation. |
-  | `Reviewer` | View and comment on locked/submitted answers. |
-  | `Peer` | Read-only view of locked answers. |
+  | Role | Scope | Can do |
+  |---|---|---|
+  | `SystemAdmin` | Global (`users.is_admin`) | Create a project, assign its initial `Consultant`. |
+  | `Consultant` | Per-project | Set industry context, upload/tag Engagement KB artifacts (including case studies and the hidden resolution), invite/assign `ClientUser`s, activate the project (`Draft` → `Active`), author process/stage/question content (once Framework Authoring Mode is built). |
+  | `ClientUser` | Per-project | Work through the learning flow: answer questions, submit case study responses, run guided self-evaluation. Blocked entirely while the project is `Draft`. |
+- `Owner`/`Reviewer`/`Peer` from the original design are deferred — see Out of Scope.
 - Mapping a specific `questions.owner_role` string (e.g. `"CMO"`) to a specific `project_member` automatically is **not** part of this design — see Out of Scope.
 
 ## Engagement Knowledge Base — Ingestion Pipeline
@@ -156,6 +189,8 @@ New module: `backend/project_knowledge_base.py`, alongside the existing `backend
 
 Results from both are merged (e.g. top matches from each, combined and re-ranked by similarity score) and passed into the benchmark-generation prompt. Each retrieved snippet carries a `source` tag (`"framework"` or `"customer_document"`) so the frontend can label it — e.g. **"Framework Reference"** vs. **"Customer Document"** — giving the consultant and customer visibility into what actually informed a given AI benchmark. This directly supports the BRD's "System Credibility" success metric.
 
+**Exclusion**: artifacts with `purpose = 'case_study_resolution'` are never included in this automatic retrieval — they're only shown at the dedicated case-study reveal step, after the `ClientUser` has already submitted their own answer (see Revision above).
+
 ## API Surface (new/changed)
 
 | Endpoint | Status | Notes |
@@ -163,13 +198,15 @@ Results from both are merged (e.g. top matches from each, combined and re-ranked
 | `POST /api/auth/register` | New | |
 | `POST /api/auth/login` | New | Returns JWT |
 | `GET /api/projects` | New | Lists projects where the caller has a `project_members` row |
-| `POST /api/projects` | New | Any authenticated user may create a project (becomes its first Consultant); requires a `process_id`. Creation inserts both the `projects` row and a `project_members` row (creator, role `Consultant`) in the same transaction — otherwise the creator couldn't see the project they just made. |
+| `POST /api/projects` | Changed | **SystemAdmin-only** (was: any authenticated user). Body includes `process_id` and the `user_id` to assign as the initial `Consultant`. Creation inserts the `projects` row (`status='Draft'`) and a `project_members` row (assigned user, role `Consultant`) in the same transaction. |
+| `PATCH /api/projects/{project_id}` | New | Consultant-only; sets `industry_context` and other project metadata during setup. |
+| `POST /api/projects/{project_id}/activate` | New | Consultant-only; `Draft` → `Active`. `ClientUser`s get 403 on the learning-flow endpoints until this has run. |
 | `GET /api/projects/{project_id}` | New | Replaces `GET /api/case/{case_id}`; requires membership |
-| `POST /api/projects/{project_id}/members` | New | Consultant-only; assigns a user + role to the project |
-| `POST /api/projects/{project_id}/artifacts` | New | Consultant-only; Engagement KB upload |
-| `GET /api/projects/{project_id}/artifacts` | New | Any project member; lists artifacts + status |
+| `POST /api/projects/{project_id}/members` | New | Consultant-only; assigns a user as `ClientUser` (or another `Consultant`) to the project |
+| `POST /api/projects/{project_id}/artifacts` | Changed | Consultant-only; Engagement KB upload; body now includes `purpose` (`reference` / `case_study_external` / `case_study_internal` / `case_study_resolution`) |
+| `GET /api/projects/{project_id}/artifacts` | New | Any project member; lists artifacts + status + purpose |
 | `DELETE /api/projects/{project_id}/artifacts/{artifact_id}` | New | Consultant-only |
-| `POST /api/evaluate` | Changed | `case_id` param → `project_id`; requires auth + membership; retrieval now merges both knowledge bases |
+| `POST /api/evaluate` | Changed | `case_id` param → `project_id`; requires auth + membership + `Active` project (for `ClientUser`); retrieval merges both knowledge bases, excluding `case_study_resolution`-purpose artifacts |
 | `POST /api/response/save` | Changed | `case_id` param → `project_id`; requires auth + membership |
 | `GET /api/cases`, `GET /api/case/{case_id}` | Removed | Superseded by the `/api/projects` endpoints above |
 
@@ -197,12 +234,14 @@ This sequencing sits **before** the roadmap's existing "Backend API Integration"
 
 - **SSO / enterprise identity** (Azure AD, Cognito, etc.) — noted as explicit future work, not this design.
 - **Password reset and email verification flows** — deferred; register/login only for now.
-- **Automatic mapping of a `questions.owner_role` string (e.g. `"CMO"`) to a specific `project_member`** — for now, any `Owner`-role member can answer any question; fine-grained per-question assignment is a later refinement.
+- **`Owner`/`Reviewer`/`Peer` client-side role distinctions** — deferred in favor of one `ClientUser` role (see Revision above). The vision (sign-off workflows, read-only peer visibility) still stands; it's just not needed to build the core one-on-one learning loop, and designing it now would be premature ahead of the functional-spec.md revision covering that loop.
+- **Automatic mapping of a `questions.owner_role` string (e.g. `"CMO"`) to a specific `project_member`** — for now, any `ClientUser` can answer any question; fine-grained per-question assignment is a later refinement.
+- **Multiple `SystemAdmin`s or fine-grained admin permissions** — `users.is_admin` is a single flat flag for now; no admin roles/tiers.
 - **Multi-firm / multi-tenant isolation beyond project-level** — a single consulting firm's instance is assumed; isolating multiple firms on one deployment is not designed here.
 - **Background job queue for ingestion** — synchronous only, per the Decisions section above.
 - **Framework Authoring Mode itself** (the actual UI for a Consultant to define new processes/questions) — already flagged as "not yet designed" in the roadmap; this spec only ensures the `Consultant` role exists to eventually gate it.
 
 ## Verification Plan
 
-- **Automated**: register/login (including invalid credentials), a protected route without a token returns 401, a role-mismatched request returns 403, a user only sees projects where they have a `project_members` row, artifact upload/list is scoped correctly to `project_id`, retrieval results carry the correct `source` tag for both knowledge bases.
-- **Manual walkthrough**: a Consultant registers, logs in, creates a project, assigns a colleague as `Owner` with org_title "CMO", uploads a customer PDF and one audio file (exercising the AWS-unavailable → `Transcript Needed` → manual paste fallback path), the `Owner` logs in separately and runs guided self-evaluation, and both "Framework Reference" and "Customer Document" citations appear in the result. Separately, confirm a `Peer` cannot upload artifacts (403) and a non-member cannot see the project at all.
+- **Automated**: register/login (including invalid credentials), a protected route without a token returns 401, a role-mismatched request returns 403, a non-admin user gets 403 on `POST /api/projects`, a `ClientUser` gets 403 on learning-flow endpoints while the project is `Draft` and succeeds once `Active`, a user only sees projects where they have a `project_members` row, artifact upload/list is scoped correctly to `project_id` and respects `purpose`, retrieval results carry the correct `source` tag for both knowledge bases and never include a `case_study_resolution`-purpose artifact.
+- **Manual walkthrough**: a `SystemAdmin` creates a project and assigns a `Consultant`. The `Consultant` logs in, sets industry context, uploads a customer PDF (`purpose='reference'`), an external case study, an internal case study, and a hidden resolution, uploads one audio file (exercising the AWS-unavailable → `Transcript Needed` → manual paste fallback path), assigns a `ClientUser`, then activates the project. The `ClientUser` logs in separately, confirms the project was inaccessible before activation, then runs guided self-evaluation and confirms both "Framework Reference" and "Customer Document" citations appear — but never the hidden resolution — until they submit a case study answer and the reveal step runs.
