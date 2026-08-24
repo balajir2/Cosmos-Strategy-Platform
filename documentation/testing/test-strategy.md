@@ -36,6 +36,11 @@ From the original implementation plan's verification section — tracked here so
 - A test for the `GET /api/process/{process_id}/brief` endpoint once it exists, verifying it extracts structured execution data into a well-formed strategic briefing document.
 - Frontend testing approach is not yet scoped — `frontend/` is vanilla JS with no test runner configured today.
 
+**From the Users/Projects/Engagement Knowledge Base spec** ([`docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md`](../../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md)) — will need its own dedicated test files once built, distinct from the pre-migration tests above since this is new behavior, not a contract change:
+- Auth: register/login, invalid credentials rejected, a protected route without a token returns 401.
+- Authorization: a role-mismatched request returns 403; a user only sees projects where they have a `project_members` row; a non-member gets no visibility into a project at all.
+- Engagement Knowledge Base: artifact upload/list correctly scoped to `project_id`; retrieval results carry the correct `source` tag (`"framework"` vs. `"customer_document"`) for both knowledge bases.
+
 ## Manual Verification
 
 Until the migration lands, the meaningful manual check is the one described in `documentation/product/roadmap.md`: author a custom Insights process, map user roles, submit answers, run guided self-evaluation, generate a brief. No automated coverage exists for that flow yet because the underlying features don't exist yet.

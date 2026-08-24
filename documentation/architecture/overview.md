@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-08-24
 
-This document describes two things: the **current POC architecture** (implemented, three-tier, SQLite-backed) and the **target Framework Factory architecture** (proposed in the original pivot plan, not yet implemented). See `documentation/product/roadmap.md` for what separates the two today.
+This document describes three things: the **current POC architecture** (implemented, three-tier, SQLite-backed), the **target Framework Factory architecture** (proposed in the original pivot plan, not yet implemented), and the **Users, Projects & Engagement Knowledge Base** layer (designed, not yet implemented — Section 3) that sits between them, adding real auth and per-engagement customer artifacts. See `documentation/product/roadmap.md` for what's actually built today.
 
 ## 1. Current POC Architecture
 
@@ -110,3 +110,27 @@ The POC's actual schema (SQLite, scoped to what's needed now) is documented in f
 3. **Output Compilation Mode**: compiles structured inputs into a standardized consulting brief or slide outline.
 
 Only a subset of Framework Execution Mode is in scope for the current POC (see `documentation/product/roadmap.md`); Authoring Mode and multi-tenant Peer Visibility are future work.
+
+## 3. Users, Projects & Engagement Knowledge Base (Designed, Not Yet Built)
+
+Full design: [`docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md`](../../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md). This is the concrete near-term implementation of the "Hierarchy & Role Configurator" and "Client Strategic Team" boxes sketched in Section 2's target diagram above — it replaces the informal `client_case_id` string with a real `Project` entity and adds an auth layer neither Section 1 nor Section 2 specified.
+
+### 3.1 Two Knowledge Bases
+
+- **Framework Knowledge Base** (Section 1, implemented): the shared Cosmos methodology materials — currently the Brand Compass decks in `archives/` → `data/vector_db.json`. One global index, common to every project.
+- **Engagement Knowledge Base** (new, planned): a *per-project* index of the customer's own artifacts — documents and meeting audio — uploaded by the Consultant running that engagement. Stored at `data/knowledge_base/{project_id}/vector_db.json`, isolated from every other project.
+
+During evaluation, retrieval merges both: the shared framework context plus whatever the consultant has ingested for this specific customer, each result tagged by source (`"framework"` vs. `"customer_document"`) so it's visible in the UI what actually informed a given AI benchmark.
+
+### 3.2 Auth & Access Control
+
+Simple built-in auth (email/password, JWT) — no external identity provider. A `users` table backs login; a `project_members` join table assigns each user a role (`Consultant`, `Owner`, `Reviewer`, `Peer`) **per project**, not globally — the same person can be a Consultant on one engagement and a Peer on another. A `require_project_role` dependency gates every project-scoped endpoint; someone with no `project_members` row for a project can't see it exists.
+
+### 3.3 Data Flow — Onboarding a Customer Engagement
+
+1. A Consultant registers/logs in and creates a `Project` against a chosen process (e.g. Brand Compass V2), becoming its first member with role `Consultant`.
+2. The Consultant assigns the client team (e.g. the CMO as `Owner`, the CEO as `Reviewer`) via `project_members`.
+3. The Consultant uploads the customer's enterprise artifacts — prior strategy decks, financials, interview transcripts, meeting audio — into the project's Engagement Knowledge Base. Documents are parsed and embedded immediately; audio is transcribed via AWS Transcribe first (or pasted manually if AWS is unavailable).
+4. From this point on, every question answered within this project retrieves from both knowledge bases automatically — the Guided Self-Evaluation flow described in Section 1.3 is unchanged, it just has richer, customer-specific context feeding it.
+
+Sequencing and what depends on what: `documentation/product/roadmap.md`.

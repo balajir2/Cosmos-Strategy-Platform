@@ -17,6 +17,7 @@ Welcome to the Cosmos Strategic Capability Platform documentation. This is the i
 | Understand test coverage | [Test Strategy](./testing/test-strategy.md) |
 | See what the source PDFs are | [Source Materials](./reference/source-materials.md) |
 | Read the original ideation doc | [Concept Synthesis](./product/concept-synthesis.md) |
+| Understand the Users/Projects/Engagement Knowledge Base design | [Design Spec](../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md) |
 | See the version history | [CHANGELOG](../CHANGELOG.md) |
 
 ## Documentation Structure
@@ -45,6 +46,7 @@ documentation/
 
 - **Phase**: Insights POC — specs complete, code migration not started.
 - **Running code** still reflects the pre-pivot design (hardcoded Blazar/Basil cases, legacy rating/critique/recommendations output).
+- **Scope expanded 2026-08-24**: a design for real Users, Projects (replacing the ad hoc "case" concept), and a per-project Engagement Knowledge Base was added, ahead of the existing DB/API/frontend migration checklist — see [Design Spec](../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md).
 - **Test bed**: not yet built as of 2026-08-24 — see [Roadmap](./product/roadmap.md).
 
 Full detail: [Roadmap](./product/roadmap.md).
