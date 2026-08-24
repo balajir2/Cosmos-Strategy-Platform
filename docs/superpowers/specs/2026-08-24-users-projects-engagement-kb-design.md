@@ -3,6 +3,7 @@
 **Date:** 2026-08-24
 **Status:** Approved for planning
 **Revised:** 2026-08-24 (same day) — see "Revision: System Flow & Roles" below. The role model, project lifecycle, and case-study handling described in the original sections below have been updated in place to match; this isn't a changelog of a past decision, it's the current design.
+**Revised again, 2026-08-24:** the storage decision below (SQLite + a flat JSON file per project) is **superseded** by [`docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md`](2026-08-24-neon-postgres-pgvector-design.md) — one Neon Postgres database with `pgvector` for both knowledge bases, decided before any of this was built. Wherever this document says "flat JSON index" or "local pattern," read it as historical rationale for *why a database was needed at all*; the Neon spec is the authoritative storage design now.
 
 ## Goal
 
@@ -24,7 +25,7 @@ This spec **supersedes and extends** `documentation/product/roadmap.md`'s existi
 4. **Engagement Knowledge Base scope** (carried over from the prior Engagement KB sketch, now re-keyed to `project_id`):
    - Artifact types: documents (PDF/DOCX/PPTX/TXT) **and** audio/meeting transcripts.
    - Retrieval: merged automatically with the shared Framework Knowledge Base on every evaluation call, tagged by source in the UI.
-   - Storage: extends the existing lightweight local pattern (`SentenceTransformer` + flat JSON index) — one index per project, no new infrastructure.
+   - Storage: **superseded** — see the note above. Originally "extends the existing lightweight local pattern... no new infrastructure"; now one Neon Postgres database with `pgvector`, per the dedicated storage spec.
    - Upload access: Consultant role only, now actually enforceable via real auth (previously this was aspirational).
 
 ## Revision: System Flow & Roles
@@ -125,11 +126,9 @@ CREATE TABLE IF NOT EXISTS project_artifacts (
 );
 ```
 
-Storage layout on disk, mirroring the existing `archives/` → `data/vector_db.json` pattern:
-- `data/knowledge_base/{project_id}/vector_db.json` — that project's embedding index.
-- `data/knowledge_base/{project_id}/raw/` — the original uploaded files.
+**Storage (superseded)**: this section originally described a `data/knowledge_base/{project_id}/vector_db.json` flat-file layout. That's replaced by the `project_kb_chunks` Postgres/pgvector table (scoped by `project_id`) in [`docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md`](2026-08-24-neon-postgres-pgvector-design.md) — original uploaded files still need *some* durable storage (a filesystem path or object storage; not decided here, the Neon spec explicitly excludes Neon Object Storage from its scope).
 
-The existing global `archives/` + `data/vector_db.json` remains unchanged, now referred to as the **Framework Knowledge Base** to distinguish it from each project's Engagement Knowledge Base.
+The Framework Knowledge Base (currently `archives/` + `data/vector_db.json`) also moves to Postgres/pgvector (`framework_kb_chunks`) under the same spec — it's no longer a separate flat file once that work lands.
 
 ### Changed: `responses`
 
@@ -176,16 +175,16 @@ This subsumes the schema goals of the roadmap's existing "Database Layer Overhau
 
 New module: `backend/project_knowledge_base.py`, alongside the existing `backend/rag_engine.py`.
 
-- **Documents** (PDF/DOCX/PPTX/TXT): extract text (`pypdf` for PDF, new `python-docx`/`python-pptx` dependencies for the other formats) → chunk → embed with the same `SentenceTransformer("all-MiniLM-L6-v2")` already used by `rag_engine.py` → append to `data/knowledge_base/{project_id}/vector_db.json`.
+- **Documents** (PDF/DOCX/PPTX/TXT): extract text (`pypdf` for PDF, new `python-docx`/`python-pptx` dependencies for the other formats) → chunk → embed with the same `SentenceTransformer("all-MiniLM-L6-v2")` already used by `rag_engine.py` → insert rows into `project_kb_chunks` (Neon/pgvector — see the storage spec).
 - **Audio**: transcribe via AWS Transcribe (`boto3`, same AWS account already configured for Bedrock) → chunk the transcript → embed → index, same as documents.
   - **Graceful fallback, matching `rag_engine.py`'s existing pattern**: if AWS isn't configured or the transcription call fails, the artifact's `status` is set to `Transcript Needed` instead of `Failed` outright, and the consultant can paste a transcript manually via the artifact's detail view — populating `transcript_text` directly and triggering the same chunk/embed/index step.
 - **Synchronous for now**: ingestion runs inline on the upload request, given POC-scale document/audio counts per engagement. Revisit with a background job queue only if this proves too slow in practice — not designed here.
 
 ## Retrieval — Merged Automatically
 
-`/api/evaluate` (and its target-state successor described in the roadmap's "Backend API Integration" item) queries **both**:
-1. The shared Framework Knowledge Base (`data/vector_db.json`) — unchanged.
-2. The current project's Engagement Knowledge Base (`data/knowledge_base/{project_id}/vector_db.json`) — new.
+`/api/evaluate` (and its target-state successor described in the roadmap's "Backend API Integration" item) queries **both**, via pgvector SQL queries rather than flat-file loading — see the storage spec for the exact query shape:
+1. The shared Framework Knowledge Base (`framework_kb_chunks`).
+2. The current project's Engagement Knowledge Base (`project_kb_chunks`, filtered to `project_id`).
 
 Results from both are merged (e.g. top matches from each, combined and re-ranked by similarity score) and passed into the benchmark-generation prompt. Each retrieved snippet carries a `source` tag (`"framework"` or `"customer_document"`) so the frontend can label it — e.g. **"Framework Reference"** vs. **"Customer Document"** — giving the consultant and customer visibility into what actually informed a given AI benchmark. This directly supports the BRD's "System Credibility" success metric.
 
