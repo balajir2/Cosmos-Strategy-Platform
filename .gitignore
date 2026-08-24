@@ -17,6 +17,9 @@ data/cosmos_platform.db
 .vscode/
 .idea/
 
+# Environment
+.env
+
 # OS-specific
 Thumbs.db
 Desktop.ini
