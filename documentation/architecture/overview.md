@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-08-24
 
-This document describes three things: the **current POC architecture** (implemented, three-tier, SQLite-backed), the **target Framework Factory architecture** (proposed in the original pivot plan, not yet implemented), and the **Users, Projects & Engagement Knowledge Base** layer (designed, not yet implemented — Section 3) that sits between them, adding real auth and per-engagement customer artifacts. See `documentation/product/roadmap.md` for what's actually built today.
+This document describes four things: the **current POC architecture** (implemented, three-tier, SQLite-backed — Section 1), the **target Framework Factory architecture** (proposed in the original pivot plan — Section 2), the **Users, Projects & Engagement Knowledge Base** layer on Neon Postgres + pgvector (designed, not yet implemented — Section 3), and the **Guided Learning Flow** design from the Aug 24 stakeholder review (designed, not yet implemented — Section 4). See `documentation/product/roadmap.md` for what's actually built today.
 
 ## 1. Current POC Architecture
 
@@ -91,7 +91,7 @@ graph TD
     end
 ```
 
-This diagram uses PostgreSQL rather than the current SQLite — a multi-tenant scale consideration for **beyond the POC** (see `documentation/product/roadmap.md`). The POC deliberately stays on SQLite.
+This diagram uses PostgreSQL rather than SQLite. **Update, 2026-08-24**: this is no longer a "beyond the POC" consideration — [`docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md`](../../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md) commits to Neon Postgres + `pgvector` as the near-term target, replacing SQLite entirely (not just for multi-tenant scale later) — see Section 3.1 below.
 
 ### Proposed Data Schema & Entities
 
@@ -115,22 +115,40 @@ Only a subset of Framework Execution Mode is in scope for the current POC (see `
 
 Full design: [`docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md`](../../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md). This is the concrete near-term implementation of the "Hierarchy & Role Configurator" and "Client Strategic Team" boxes sketched in Section 2's target diagram above — it replaces the informal `client_case_id` string with a real `Project` entity and adds an auth layer neither Section 1 nor Section 2 specified.
 
-### 3.1 Two Knowledge Bases
+### 3.1 Two Knowledge Bases, One Database
 
-- **Framework Knowledge Base** (Section 1, implemented): the shared Cosmos methodology materials — currently the Brand Compass decks in `archives/` → `data/vector_db.json`. One global index, common to every project.
-- **Engagement Knowledge Base** (new, planned): a *per-project* index of the customer's own artifacts — documents and meeting audio — uploaded by the Consultant running that engagement. Stored at `data/knowledge_base/{project_id}/vector_db.json`, isolated from every other project.
+- **Framework Knowledge Base** (Section 1, implemented today as a flat file; target is Postgres): the shared Cosmos methodology materials — currently the Brand Compass decks in `archives/` → `data/vector_db.json`; target is the `framework_kb_chunks` table (`pgvector`, HNSW-indexed). One global index, common to every project.
+- **Engagement Knowledge Base** (new, planned): a *per-project* index of the customer's own artifacts — documents and meeting audio — uploaded by the Consultant running that engagement. Target storage is the `project_kb_chunks` table, isolated per project by a `WHERE project_id = ...` clause rather than by which flat file happens to be open. Case studies (external, internal, hidden resolution) are `project_artifacts` rows distinguished by a `purpose` field, not a separate entity.
 
-During evaluation, retrieval merges both: the shared framework context plus whatever the consultant has ingested for this specific customer, each result tagged by source (`"framework"` vs. `"customer_document"`) so it's visible in the UI what actually informed a given AI benchmark.
+During evaluation, retrieval merges both via `pgvector` cosine-distance queries: the shared framework context plus whatever the consultant has ingested for this specific customer, each result tagged by source (`"framework"` vs. `"customer_document"`) so it's visible in the UI what actually informed a given AI benchmark. Chunks from a `case_study_resolution`-purpose artifact are always excluded from this automatic retrieval — see Section 4 below.
 
-### 3.2 Auth & Access Control
+Full storage rationale and schema: [`docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md`](../../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md).
 
-Simple built-in auth (email/password, JWT) — no external identity provider. A `users` table backs login; a `project_members` join table assigns each user a role (`Consultant`, `Owner`, `Reviewer`, `Peer`) **per project**, not globally — the same person can be a Consultant on one engagement and a Peer on another. A `require_project_role` dependency gates every project-scoped endpoint; someone with no `project_members` row for a project can't see it exists.
+### 3.2 Roles & Access Control
+
+Three roles — one global, two per-project:
+
+| Role | Scope | Does |
+|---|---|---|
+| `SystemAdmin` | Global (`users.is_admin`) | Creates a project, assigns its initial `Consultant`. |
+| `Consultant` | Per-project | Preps the engagement (industry context, documents, case studies), activates it, assigns `ClientUser`s. |
+| `ClientUser` | Per-project | Works through the learning flow — blocked entirely while the project is `Draft`. |
+
+Simple built-in auth (email/password, JWT) — no external identity provider. A `require_project_role` dependency gates every project-scoped endpoint; someone with no `project_members` row for a project can't see it exists. A `require_active_project` dependency additionally blocks `ClientUser`s from learning-flow endpoints until the Consultant has activated the project. (Earlier drafts of this document described four per-project roles — `Owner`/`Reviewer`/`Peer` are deferred; see the Users/Projects/Engagement KB spec's Revision section.)
 
 ### 3.3 Data Flow — Onboarding a Customer Engagement
 
-1. A Consultant registers/logs in and creates a `Project` against a chosen process (e.g. Brand Compass V2), becoming its first member with role `Consultant`.
-2. The Consultant assigns the client team (e.g. the CMO as `Owner`, the CEO as `Reviewer`) via `project_members`.
-3. The Consultant uploads the customer's enterprise artifacts — prior strategy decks, financials, interview transcripts, meeting audio — into the project's Engagement Knowledge Base. Documents are parsed and embedded immediately; audio is transcribed via AWS Transcribe first (or pasted manually if AWS is unavailable).
-4. From this point on, every question answered within this project retrieves from both knowledge bases automatically — the Guided Self-Evaluation flow described in Section 1.3 is unchanged, it just has richer, customer-specific context feeding it.
+1. A **SystemAdmin** creates a `Project` (status `Draft`) against a chosen process (e.g. Brand Compass V2) and assigns a **Consultant**.
+2. The **Consultant** preps the engagement: records `industry_context`, uploads reference documents, and uploads/tags the external case study, internal case study, and hidden resolution artifacts. Documents are parsed and embedded immediately into `project_kb_chunks`; audio is transcribed via AWS Transcribe first (or pasted manually if AWS is unavailable).
+3. The Consultant assigns **ClientUser**(s) via `project_members`, then activates the project (`Draft` → `Active`).
+4. From this point on, every question a **ClientUser** answers retrieves from both knowledge bases automatically — the Guided Self-Evaluation flow described in Section 1.3 is unchanged in shape, it just has richer, customer-specific context feeding it, plus the case-study reveal flow described in Section 4.
 
 Sequencing and what depends on what: `documentation/product/roadmap.md`.
+
+## 4. Guided Learning Flow (Designed, Not Yet Built)
+
+The Aug 24 stakeholder review meeting specified the actual `ClientUser` experience in significant depth — baseline concept calibration against the organization's own definitions, adaptive question difficulty, an actionability check, keyword-agnostic mapping of jargon-free answers back to framework terms, a two-case-study resolution flow (with seeded provocations and a hidden "what they did / should have done" reveal), user-driven self-evaluation with a corpus-relative depth signal, and a module-end Start/Stop/Continue reflection where the gap between the user's approach and the organization's way becomes explicit for the first time.
+
+This is functional/UX design, not infrastructure — full detail lives in [Functional Spec §2.3](../product/functional-spec.md#23-guided-learning-flow-clientuser), not duplicated here. The two things worth noting architecturally:
+- The case-study resolution reveal depends on the `purpose`-tagged artifact exclusion described in Section 3.1 — the hidden resolution is retrievable in principle but deliberately filtered out of normal retrieval until the reveal step.
+- The corpus-relative depth signal requires querying across *all* historical `responses` (or a derived aggregate), not just the current project — a capability not yet reflected in the Section 3 schema's per-project scoping and not yet designed at the data-model level. Flagged here as an open gap, not solved.
