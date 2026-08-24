@@ -138,7 +138,7 @@ CASES_DATA = {
 @app.get("/api/status")
 def get_status():
     return {
-        "vector_db_size": len(rag.vector_db),
+        "vector_db_size": rag.vector_db_size(),
         "aws_connected": rag.bedrock_client is not None,
         "region": os.getenv("AWS_DEFAULT_REGION", "us-east-1")
     }
