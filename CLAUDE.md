@@ -65,7 +65,7 @@ Three-tier: Presentation (vanilla HTML/CSS/JS) → Application API (FastAPI) →
 
 **Backend (current)**: Python 3.10+, FastAPI, Neon Postgres + `pgvector` (`psycopg2-binary`, `DATABASE_URL` env var) for both the relational tables and the Framework Knowledge Base vector index, `SentenceTransformer("all-MiniLM-L6-v2")` for local embeddings, a pluggable LLM provider layer (`backend/llm_providers/`) supporting Anthropic (default, direct API), OpenAI, and Gemini (via Vertex AI), switchable at runtime by a SystemAdmin through `platform_settings` and a stopgap shared-token admin gate pending Phase A's real auth. SQLite and the flat-file vector JSON were retired in Phase 0 (2026-08-24).
 **Frontend**: HTML5, vanilla CSS3, ES6+ JavaScript — no framework, no build step.
-**Testing**: `pytest` + FastAPI `TestClient` (`httpx`) — planned, not yet built (see Part 5).
+**Testing**: `pytest` + FastAPI `TestClient` (`httpx`) — a minimal test bed now exists (`tests/`, ~27 tests, run via `pytest` from the repo root) covering the LLM Provider Abstraction modules; the broader pre-migration API contract suite is still planned, not yet built (see Part 5).
 **Planned additions**: `passlib[bcrypt]` + `python-jose` (auth), `python-docx`/`python-pptx` (Engagement KB document parsing), AWS Transcribe via `boto3` (Engagement KB audio) — see [Technical Spec §2](documentation/development/technical-spec.md).
 
 ```
@@ -85,7 +85,7 @@ Cosmos Strategy Platform/
 │   └── style.css
 ├── archives/                  # source PDFs + meeting transcripts for RAG ingestion / design source material
 ├── docs/superpowers/specs/    # design specs (Users/Projects/Engagement KB, Neon Postgres)
-└── tests/                     # pytest suite — planned, see Part 6
+└── tests/                     # pytest suite — minimal test bed exists (LLM Provider Abstraction modules); broader suite still planned, see Part 6
 ```
 
 ---
@@ -120,7 +120,7 @@ Target endpoints not yet implemented: `GET /api/process/{process_id}` (DB-backed
 
 **A pluggable multi-provider LLM layer** (`backend/llm_providers/`) was added ahead of Phase A/B — see `docs/superpowers/specs/2026-08-25-production-deployment-design.md` and `docs/superpowers/plans/2026-08-25-llm-provider-abstraction.md`. Its admin settings endpoint uses a stopgap shared-token gate (`ADMIN_API_TOKEN`) that Phase A's real `require_admin` dependency should replace, not extend, once built.
 
-The automated test bed described in Part 3/6 is also **not yet built** — it's planned (pytest + FastAPI TestClient against the current API contract) but pending explicit go-ahead to start writing code.
+A minimal automated test bed now exists (`tests/`, ~27 pytest tests, run via `pytest` from the repo root), added alongside the LLM Provider Abstraction work (`docs/superpowers/plans/2026-08-25-llm-provider-abstraction.md`, Tasks 1-9) — it covers those new provider/settings/admin modules only. The broader test bed described in Part 3/6, covering the pre-migration API contract (case-study endpoints, `/api/evaluate`'s response shape), is still **not yet built** — that remains planned but pending explicit go-ahead to start writing code.
 
 Full checklist (Users/Projects/Engagement KB phases, DB layer, backend API, frontend GUI): [Roadmap](documentation/product/roadmap.md). Don't assume anything in that checklist is done without checking it — it's a live document, check it before starting related work.
 
@@ -136,9 +136,9 @@ python database.py   # creates schema + seeds process/stage/question data in Neo
 python main.py        # serves API + frontend at http://localhost:8000; also builds the Framework Knowledge Base index on first run
 ```
 
-**Tests**: once the test bed lands, run `pytest` from the repo root. See [Test Strategy](documentation/testing/test-strategy.md) for coverage and known limitations (tests will be pinned to the pre-migration API contract and will need rewriting once the roadmap's API overhaul lands).
+**Tests**: a minimal test bed exists now (`tests/`, ~27 tests) covering the LLM Provider Abstraction modules — run `pytest` from the repo root. The broader pre-migration API contract test bed (case-study endpoints etc.) described in [Test Strategy](documentation/testing/test-strategy.md) is still not built and still pending explicit go-ahead; once it lands, its tests will be pinned to the pre-migration API contract and will need rewriting once the roadmap's API overhaul lands.
 
-**Git conventions**: create a new commit per logical change; don't amend published commits. No CI is configured yet — run `pytest` locally before committing backend changes, once the test bed exists.
+**Git conventions**: create a new commit per logical change; don't amend published commits. No CI is configured yet — run `pytest` locally before committing backend changes.
 
 ---
 

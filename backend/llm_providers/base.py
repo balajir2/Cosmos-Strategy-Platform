@@ -21,6 +21,11 @@ def parse_evaluation_json(response_text: str) -> dict:
         text = text.split("```")[1].split("```")[0]
 
     try:
-        return json.loads(text.strip())
+        result = json.loads(text.strip())
     except json.JSONDecodeError as e:
         raise ValueError(f"Could not parse evaluation JSON from response: {e}") from e
+
+    if not isinstance(result, dict):
+        raise ValueError(f"Expected a JSON object, got {type(result).__name__}: {result!r}")
+
+    return result

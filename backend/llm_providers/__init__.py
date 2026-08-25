@@ -10,9 +10,16 @@ _PROVIDERS = {
 }
 
 
+_adapter_cache: dict = {}
+
+
 def get_provider_adapter(name: str) -> LLMProvider:
     try:
         provider_cls = _PROVIDERS[name]
     except KeyError:
         raise ValueError(f"Unknown LLM provider '{name}'. Must be one of {sorted(_PROVIDERS)}.")
-    return provider_cls()
+
+    if name not in _adapter_cache:
+        _adapter_cache[name] = provider_cls()
+
+    return _adapter_cache[name]

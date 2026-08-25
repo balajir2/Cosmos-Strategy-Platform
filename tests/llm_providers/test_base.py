@@ -21,3 +21,8 @@ def test_parse_evaluation_json_fenced_without_language():
 def test_parse_evaluation_json_invalid_raises_value_error():
     with pytest.raises(ValueError):
         parse_evaluation_json("this is not json")
+
+
+def test_parse_evaluation_json_non_dict_raises_value_error():
+    with pytest.raises(ValueError):
+        parse_evaluation_json("[1, 2, 3]")

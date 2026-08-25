@@ -57,7 +57,7 @@ async function checkStatus() {
         if (response.ok) {
             const data = await response.json();
             statusIndicator.className = 'status-indicator online';
-            statusLabel.textContent = data.aws_connected ? 'AWS Bedrock Connected' : 'Local Fallback Engine Active';
+            statusLabel.textContent = data.active_llm_provider ? `${data.active_llm_provider} Connected` : 'Local Fallback Engine Active';
         } else {
             setOfflineStatus();
         }
