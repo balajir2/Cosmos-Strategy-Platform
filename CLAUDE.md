@@ -63,7 +63,7 @@ Three-tier: Presentation (vanilla HTML/CSS/JS) → Application API (FastAPI) →
 
 # Part 3: Tech Stack & Directory Structure
 
-**Backend (current)**: Python 3.10+, FastAPI, Neon Postgres + `pgvector` (`psycopg2-binary`, `DATABASE_URL` env var) for both the relational tables and the Framework Knowledge Base vector index, `SentenceTransformer("all-MiniLM-L6-v2")` for local embeddings, `boto3` for AWS Bedrock (Claude 3.5 Sonnet). SQLite and the flat-file vector JSON were retired in Phase 0 (2026-08-24).
+**Backend (current)**: Python 3.10+, FastAPI, Neon Postgres + `pgvector` (`psycopg2-binary`, `DATABASE_URL` env var) for both the relational tables and the Framework Knowledge Base vector index, `SentenceTransformer("all-MiniLM-L6-v2")` for local embeddings, a pluggable LLM provider layer (`backend/llm_providers/`) supporting Anthropic (default, direct API), OpenAI, and Gemini (via Vertex AI), switchable at runtime by a SystemAdmin through `platform_settings` and a stopgap shared-token admin gate pending Phase A's real auth. SQLite and the flat-file vector JSON were retired in Phase 0 (2026-08-24).
 **Frontend**: HTML5, vanilla CSS3, ES6+ JavaScript — no framework, no build step.
 **Testing**: `pytest` + FastAPI `TestClient` (`httpx`) — planned, not yet built (see Part 5).
 **Planned additions**: `passlib[bcrypt]` + `python-jose` (auth), `python-docx`/`python-pptx` (Engagement KB document parsing), AWS Transcribe via `boto3` (Engagement KB audio) — see [Technical Spec §2](documentation/development/technical-spec.md).
@@ -100,10 +100,11 @@ Cosmos Strategy Platform/
 
 | Endpoint | Behavior today |
 |---|---|
-| `GET /api/status` | Vector DB size, AWS connection status, region. |
+| `GET /api/status` | Vector DB size, active LLM provider. |
 | `GET /api/cases` | Returns the two hardcoded cases (Blazar, Basil) from in-memory `CASES_DATA`. |
 | `GET /api/case/{case_id}` | Full case detail incl. its 7 questions; 404 if unknown. |
 | `POST /api/evaluate` | RAG search + Bedrock call; returns `rating`/`critique`/`recommendations`/`source_slides`. |
+| `GET /api/admin/settings`, `PATCH /api/admin/settings` | Read/switch the active LLM provider (`anthropic`/`openai`/`gemini`). Gated by a stopgap shared-token check (`ADMIN_API_TOKEN`), not real per-user auth — see Part 5. |
 
 Target endpoints not yet implemented: `GET /api/process/{process_id}` (DB-backed stages/questions), `POST /api/response/save`, `GET /api/process/{process_id}/brief`. Full DDL and target endpoint contracts: [Technical Spec](documentation/development/technical-spec.md).
 
@@ -116,6 +117,8 @@ Target endpoints not yet implemented: `GET /api/process/{process_id}` (DB-backed
 **As of 2026-08-24: specs are complete; Phase 0 (Database Platform) is done, the rest of the migration has not started.** The BRD, functional spec, technical spec, and architecture docs all describe the target Framework Factory design; `backend/main.py` still runs the old hardcoded Blazar/Basil case-study critic. `backend/database.py` and `backend/rag_engine.py`, however, have already been migrated off SQLite + flat-file storage onto Neon Postgres + `pgvector` (Phase 0) — see the Foundational Work section of the Roadmap.
 
 **Scope grew twice more on 2026-08-24**: first, a gap was identified — there was no way for a consultant to bring a customer's own enterprise artifacts into an engagement, and no real user/auth model at all. A new design ([spec](docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md)) adds Users, Projects (replacing `client_case_id`), and a per-project Engagement Knowledge Base, in phases (0: DB platform, A: Auth, B: Projects, C: Engagement KB). Second, the database platform itself was decided: Neon Postgres + `pgvector` ([spec](docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md)), replacing SQLite + flat files for the *entire* data layer, including the already-implemented `processes`/`stages`/`questions`/`guidance` tables. **Phase 0 of that migration (the DB platform itself, plus the Framework Knowledge Base) has since been built and is done** — Phases A/B/C (Auth, Projects, Engagement KB) remain not started. A same-day stakeholder review meeting also produced the Guided Learning Flow design (Part 1). All of this **precedes** the pre-existing "Database Layer Overhaul" and "Backend API Integration" roadmap items — see the roadmap for how they've been revised.
+
+**A pluggable multi-provider LLM layer** (`backend/llm_providers/`) was added ahead of Phase A/B — see `docs/superpowers/specs/2026-08-25-production-deployment-design.md` and `docs/superpowers/plans/2026-08-25-llm-provider-abstraction.md`. Its admin settings endpoint uses a stopgap shared-token gate (`ADMIN_API_TOKEN`) that Phase A's real `require_admin` dependency should replace, not extend, once built.
 
 The automated test bed described in Part 3/6 is also **not yet built** — it's planned (pytest + FastAPI TestClient against the current API contract) but pending explicit go-ahead to start writing code.
 

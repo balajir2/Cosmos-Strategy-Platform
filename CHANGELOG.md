@@ -6,8 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Added
+- Pluggable LLM provider abstraction (`backend/llm_providers/`) supporting Anthropic, OpenAI, and Gemini (via Vertex AI), switchable at runtime via `platform_settings` and a stopgap admin-token-gated `/api/admin/settings` endpoint.
+
 ### Changed
+- `GET /api/status` now reports `active_llm_provider` instead of AWS Bedrock connection status.
 - Database platform migration (Phase 0): `backend/database.py` and `backend/rag_engine.py` moved off SQLite + a flat-file vector JSON onto a single Neon Postgres database with the `pgvector` extension — covers the `processes`/`stages`/`questions`/`guidance` tables and the Framework Knowledge Base (`framework_kb_chunks`). The legacy SQLite `responses` table was dropped, not migrated (superseded by Phase B's `project_id`-based redesign — see `documentation/product/roadmap.md`). Design spec: `docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md`.
+
+### Removed
+- AWS Bedrock (`boto3`) dependency from `backend/rag_engine.py`.
 
 ### Planned
 - Automated test bed (`pytest` + FastAPI `TestClient`) against the current pre-migration API — scaffolding designed, pending go-ahead to write code.
