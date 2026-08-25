@@ -144,8 +144,7 @@ CASES_DATA = {
 def get_status():
     return {
         "vector_db_size": rag.vector_db_size(),
-        "aws_connected": rag.bedrock_client is not None,
-        "region": os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+        "active_llm_provider": platform_settings.get_active_provider(),
     }
 
 @app.get("/api/admin/settings")

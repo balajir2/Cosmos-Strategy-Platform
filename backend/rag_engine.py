@@ -3,10 +3,11 @@ import json
 import contextlib
 from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer
-import boto3
-from botocore.exceptions import BotoCoreError, ClientError
 
 from database import get_db_connection
+from llm_providers import get_provider_adapter
+from llm_providers.base import parse_evaluation_json
+import settings as platform_settings
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -15,22 +16,7 @@ class RagEngine:
     def __init__(self):
         print("Initializing RAG Engine...")
         self.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-        self.bedrock_client = None
-        self.init_aws()
         self.load_or_build_index()
-
-    def init_aws(self):
-        """Initialize AWS Bedrock client if credentials exist."""
-        try:
-            self.bedrock_client = boto3.client(
-                service_name="bedrock-runtime",
-                region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
-            )
-            print("AWS Bedrock Runtime client initialized successfully.")
-        except Exception as e:
-            print(f"Warning: Failed to initialize AWS Bedrock Client: {e}")
-            print("Fallback: Using mock/local LLM responses for development.")
-            self.bedrock_client = None
 
     def vector_db_size(self):
         """Returns the number of indexed chunks in the Framework Knowledge Base."""
@@ -167,7 +153,7 @@ class RagEngine:
         return hits
 
     def generate_evaluation(self, question: str, user_answer: str, context_hits: list):
-        """Generates RAG-assisted critique of the user's answer using AWS Bedrock Claude 3.5 Sonnet."""
+        """Generates RAG-assisted critique of the user's answer using the active LLM provider."""
         context_str = "\n\n".join(
             [
                 f"Source: {hit['source_file']} (Slide {hit['slide_number']})\nContext: {hit['text']}"
@@ -201,48 +187,13 @@ class RagEngine:
             f"}}"
         )
 
-        if not self.bedrock_client:
-            print("No Bedrock Client active. Running fallback local heuristics evaluation.")
-            return self.fallback_local_critique(question, user_answer)
-
         try:
-            body = json.dumps(
-                {
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": 1000,
-                    "system": system_prompt,
-                    "messages": [{"role": "user", "content": user_prompt}],
-                    "temperature": 0.2,
-                }
-            )
-
-            response = self.bedrock_client.invoke_model(
-                modelId="anthropic.claude-3-sonnet-20240229-v1:0",
-                contentType="application/json",
-                accept="application/json",
-                body=body,
-            )
-
-            response_body = json.loads(response.get("body").read())
-            response_text = response_body["content"][0]["text"]
-
-            try:
-                if "```json" in response_text:
-                    response_text = response_text.split("```json")[1].split("```")[0]
-                elif "```" in response_text:
-                    response_text = response_text.split("```")[1].split("```")[0]
-
-                return json.loads(response_text.strip())
-            except Exception as parse_err:
-                print(f"Error parsing Claude's JSON response: {parse_err}. Raw response: {response_text}")
-                return {
-                    "rating": "\U0001F7E1 Level 2",
-                    "critique": f"Raw response from AWS Bedrock: {response_text}",
-                    "recommendations": "Ensure response formatting is strictly structured as JSON next time.",
-                }
-
-        except Exception as aws_err:
-            print(f"Error invoking AWS Bedrock: {aws_err}")
+            provider_name = platform_settings.get_active_provider()
+            provider = get_provider_adapter(provider_name)
+            response_text = provider.complete(system_prompt, user_prompt)
+            return parse_evaluation_json(response_text)
+        except Exception as e:
+            print(f"Error generating evaluation via '{provider_name if 'provider_name' in locals() else 'unknown'}' provider: {e}")
             return self.fallback_local_critique(question, user_answer)
 
     def fallback_local_critique(self, question: str, user_answer: str):
