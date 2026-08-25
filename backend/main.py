@@ -1,6 +1,6 @@
 import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -8,6 +8,8 @@ from typing import List, Dict
 
 # Import RAG Engine
 from rag_engine import RagEngine
+import settings as platform_settings
+from admin_auth import require_admin_token
 
 app = FastAPI(title="Cosmos Strategic Capability Platform", version="1.0.0")
 
@@ -28,6 +30,9 @@ class EvaluationRequest(BaseModel):
     question_id: str
     question_text: str
     user_answer: str
+
+class ProviderSettingUpdate(BaseModel):
+    active_llm_provider: str
 
 # In-memory cases data
 CASES_DATA = {
@@ -142,6 +147,19 @@ def get_status():
         "aws_connected": rag.bedrock_client is not None,
         "region": os.getenv("AWS_DEFAULT_REGION", "us-east-1")
     }
+
+@app.get("/api/admin/settings")
+def get_settings(_: None = Depends(require_admin_token)):
+    return {"active_llm_provider": platform_settings.get_active_provider()}
+
+
+@app.patch("/api/admin/settings")
+def update_settings(payload: ProviderSettingUpdate, _: None = Depends(require_admin_token)):
+    try:
+        platform_settings.set_active_provider(payload.active_llm_provider)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"active_llm_provider": payload.active_llm_provider}
 
 @app.get("/api/cases")
 def get_cases():
