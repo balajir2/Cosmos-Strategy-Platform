@@ -1,5 +1,8 @@
 import os
 
+import vertexai
+from vertexai.generative_models import GenerativeModel
+
 from .base import LLMProvider
 
 DEFAULT_MODEL = "gemini-1.5-pro"
@@ -12,9 +15,6 @@ class GeminiProvider(LLMProvider):
     def __init__(self, model_factory=None, model: str = DEFAULT_MODEL):
         self.model = model
         if model_factory is None:
-            import vertexai
-            from vertexai.generative_models import GenerativeModel
-
             vertexai.init(
                 project=os.environ["GCP_PROJECT_ID"],
                 location=os.environ.get("GCP_LOCATION", "us-central1"),
