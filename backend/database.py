@@ -94,6 +94,22 @@ def init_db():
     ON framework_kb_chunks USING hnsw (embedding vector_cosine_ops);
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS platform_settings (
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        active_llm_provider TEXT NOT NULL DEFAULT 'anthropic'
+            CHECK (active_llm_provider IN ('anthropic', 'openai', 'gemini')),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        CONSTRAINT platform_settings_singleton CHECK (id = 1)
+    );
+    """)
+
+    cursor.execute("""
+    INSERT INTO platform_settings (id, active_llm_provider)
+    VALUES (1, 'anthropic')
+    ON CONFLICT (id) DO NOTHING;
+    """)
+
     conn.commit()
 
     cursor.execute("SELECT COUNT(*) FROM processes;")
