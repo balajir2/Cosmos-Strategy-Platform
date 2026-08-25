@@ -50,8 +50,8 @@ Three-tier: Presentation (vanilla HTML/CSS/JS) → Application API (FastAPI) →
 **Core data flow (mix of implemented and target — see Part 5 for what's actually implemented today):**
 1. User submits an answer to a strategic question.
 2. Backend embeds the question's `search_query` with `SentenceTransformer` and runs a `pgvector` cosine-distance query over the `framework_kb_chunks` table (Neon Postgres) — **implemented**.
-3. Top 3 matching slide contexts + the question + the user's answer go to AWS Bedrock (Claude) — **implemented**.
-4. Bedrock returns Level 1/2/3 comparative benchmark answers — **target**; today the response is a single `rating`/`critique`/`recommendations` shape.
+3. Top 3 matching slide contexts + the question + the user's answer go to the active LLM provider (Anthropic direct API by default, switchable to OpenAI/Gemini) — **implemented**.
+4. The active provider returns Level 1/2/3 comparative benchmark answers — **target**; today the response is a single `rating`/`critique`/`recommendations` shape.
 5. User self-evaluates against the benchmarks, logs notes and a status rating, and saves — **target**, not built.
 6. Backend persists the response and self-evaluation to a `responses` table — **target**; no `responses` table exists today (see Part 4).
 
@@ -77,7 +77,7 @@ Cosmos Strategy Platform/
 ├── backend/
 │   ├── main.py                # FastAPI app & routes
 │   ├── database.py             # Neon Postgres connection, DDL, seed data
-│   ├── rag_engine.py           # SentenceTransformer + pgvector search + Bedrock RAG client
+│   ├── rag_engine.py           # SentenceTransformer + pgvector search + pluggable LLM provider layer
 │   └── requirements.txt
 ├── frontend/
 │   ├── index.html
@@ -103,7 +103,7 @@ Cosmos Strategy Platform/
 | `GET /api/status` | Vector DB size, active LLM provider. |
 | `GET /api/cases` | Returns the two hardcoded cases (Blazar, Basil) from in-memory `CASES_DATA`. |
 | `GET /api/case/{case_id}` | Full case detail incl. its 7 questions; 404 if unknown. |
-| `POST /api/evaluate` | RAG search + Bedrock call; returns `rating`/`critique`/`recommendations`/`source_slides`. |
+| `POST /api/evaluate` | RAG search + call through the active LLM provider; returns `rating`/`critique`/`recommendations`/`source_slides`. |
 | `GET /api/admin/settings`, `PATCH /api/admin/settings` | Read/switch the active LLM provider (`anthropic`/`openai`/`gemini`). Gated by a stopgap shared-token check (`ADMIN_API_TOKEN`), not real per-user auth — see Part 5. |
 
 Target endpoints not yet implemented: `GET /api/process/{process_id}` (DB-backed stages/questions), `POST /api/response/save`, `GET /api/process/{process_id}/brief`. Full DDL and target endpoint contracts: [Technical Spec](documentation/development/technical-spec.md).
