@@ -324,3 +324,130 @@ function showEvaluationResults(data) {
     // Scroll to results automatically
     evaluationResults.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
+/* ==========================================================================
+   PREVIEW: Project Setup & Client Workflow
+   Mock data standing in for the not-yet-built Phase B/C endpoints
+   (GET/PATCH /api/projects/{id}, POST /api/projects/{id}/artifacts,
+   POST /api/projects/{id}/activate). Field names match the approved
+   Users/Projects/Engagement KB design spec so a later real-backend swap
+   is a data-source change, not a UI rewrite.
+   ========================================================================== */
+
+const previewState = {
+    project: {
+        name: 'Blazar India Market Entry',
+        customer_name: 'Blazar Beauty Group',
+        status: 'Draft'
+    },
+    artifacts: [
+        { filename: 'Blazar_Market_Sizing.pdf', artifact_type: 'document', purpose: 'reference', status: 'Indexed' },
+        { filename: 'External_Case_Regional_Competitor.docx', artifact_type: 'document', purpose: 'case_study_external', status: 'Indexed' },
+        { filename: 'Internal_Case_Prior_Launch.pptx', artifact_type: 'document', purpose: 'case_study_internal', status: 'Processing' },
+        { filename: 'Board_Debrief_Recording.mp3', artifact_type: 'audio', purpose: 'case_study_resolution', status: 'Transcript Needed' }
+    ]
+};
+
+const PURPOSE_LABELS = {
+    reference: 'Reference',
+    case_study_external: 'External Case Study',
+    case_study_internal: 'Internal Case Study',
+    case_study_resolution: 'Hidden Resolution'
+};
+
+const screenProjectSetup = document.getElementById('screen-project-setup');
+const screenClientWorkflow = document.getElementById('screen-client-workflow');
+const artifactListEl = document.getElementById('artifact-list');
+const assignedListEl = document.getElementById('assigned-list');
+const clientUserInput = document.getElementById('client-user-input');
+const projectStatusBadge = document.getElementById('project-status-badge');
+const clientProjectStatusBadge = document.getElementById('client-project-status-badge');
+const clientEvaluationResults = document.getElementById('client-evaluation-results');
+const revealCard = document.getElementById('reveal-card');
+const revealLocked = document.getElementById('reveal-locked');
+const revealUnlocked = document.getElementById('reveal-unlocked');
+
+function switchPreviewScreen(showEl) {
+    [screenCaseSelection, screenProjectSetup, screenClientWorkflow].forEach(s => s.classList.remove('active'));
+    showEl.classList.add('active');
+}
+
+function renderArtifactList() {
+    artifactListEl.innerHTML = '';
+    previewState.artifacts.forEach(a => {
+        const item = document.createElement('div');
+        item.className = 'artifact-item';
+        const icon = a.artifact_type === 'audio' ? 'fa-solid fa-microphone' : 'fa-solid fa-file-lines';
+        const statusClass = a.status === 'Indexed' ? 'indexed' : a.status === 'Processing' ? 'processing' : a.status === 'Transcript Needed' ? 'transcript-needed' : '';
+        item.innerHTML = `
+            <i class="${icon} artifact-icon"></i>
+            <span class="artifact-name">${a.filename}</span>
+            <span class="purpose-tag purpose-${a.purpose}">${PURPOSE_LABELS[a.purpose]}</span>
+            <span class="status-pill ${statusClass}">${a.status}</span>
+        `;
+        artifactListEl.appendChild(item);
+    });
+}
+
+function setupPreviewEventListeners() {
+    document.getElementById('btn-open-project-preview').addEventListener('click', () => {
+        renderArtifactList();
+        switchPreviewScreen(screenProjectSetup);
+    });
+
+    document.getElementById('btn-exit-project-preview').addEventListener('click', () => {
+        switchPreviewScreen(screenCaseSelection);
+    });
+
+    document.getElementById('btn-assign-client').addEventListener('click', () => {
+        const email = clientUserInput.value.trim();
+        if (!email) return;
+        const li = document.createElement('li');
+        li.innerHTML = `<i class="fa-solid fa-circle-user"></i> ${email} <span class="role-tag">ClientUser</span>`;
+        assignedListEl.appendChild(li);
+        clientUserInput.value = '';
+    });
+
+    document.getElementById('artifact-dropzone').addEventListener('click', () => {
+        previewState.artifacts.push({
+            filename: `Uploaded_Document_${previewState.artifacts.length + 1}.pdf`,
+            artifact_type: 'document',
+            purpose: 'reference',
+            status: 'Processing'
+        });
+        renderArtifactList();
+    });
+
+    document.getElementById('btn-activate-project').addEventListener('click', () => {
+        previewState.project.status = 'Active';
+        projectStatusBadge.textContent = 'Active';
+        projectStatusBadge.classList.add('active');
+        document.getElementById('client-project-name').textContent = previewState.project.name;
+        clientProjectStatusBadge.textContent = 'Active';
+        switchPreviewScreen(screenClientWorkflow);
+    });
+
+    document.getElementById('btn-back-to-project-setup').addEventListener('click', () => {
+        switchPreviewScreen(screenProjectSetup);
+    });
+
+    document.getElementById('btn-submit-client-answer').addEventListener('click', () => {
+        clientEvaluationResults.classList.remove('hidden');
+        revealCard.classList.remove('hidden');
+        revealLocked.classList.remove('hidden');
+        revealUnlocked.classList.add('hidden');
+        clientEvaluationResults.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    document.getElementById('btn-reveal-resolution').addEventListener('click', () => {
+        revealLocked.classList.add('hidden');
+        revealUnlocked.classList.remove('hidden');
+    });
+
+    document.getElementById('btn-hide-reveal').addEventListener('click', () => {
+        revealUnlocked.classList.add('hidden');
+        revealLocked.classList.remove('hidden');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', setupPreviewEventListeners);

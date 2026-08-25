@@ -40,6 +40,131 @@
                 <!-- Case Cards loaded dynamically -->
                 <div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading strategic modules...</div>
             </div>
+            <div class="preview-link-row">
+                <button class="btn btn-ghost" id="btn-open-project-preview">
+                    <i class="fa-solid fa-diagram-project"></i> Preview: Engagement Setup &amp; Client Workflow
+                </button>
+            </div>
+        </section>
+
+        <!-- PREVIEW SCREEN A: PROJECT SETUP (Consultant view) -->
+        <section id="screen-project-setup" class="screen">
+            <div class="project-shell">
+                <header class="project-header">
+                    <button class="btn btn-secondary back-btn" id="btn-exit-project-preview">
+                        <i class="fa-solid fa-arrow-left"></i> Exit Preview
+                    </button>
+                    <div class="project-header-info">
+                        <span class="project-status-badge" id="project-status-badge">Draft</span>
+                        <h2 id="project-name">Blazar India Market Entry</h2>
+                        <p id="project-customer">Client: Blazar Beauty Group &mdash; Consultant View</p>
+                    </div>
+                </header>
+
+                <div class="project-setup-grid">
+                    <div class="glass-card project-form-card">
+                        <h3><i class="fa-solid fa-sliders"></i> Engagement Setup</h3>
+
+                        <div class="answer-wrapper">
+                            <label for="industry-context-input">Industry Context</label>
+                            <textarea id="industry-context-input" rows="3" placeholder="e.g. B2C premium personal care, salon &amp; D2C hybrid distribution...">B2C premium natural personal care, entering via salon and modern trade; competes with mass-premium incumbents.</textarea>
+                        </div>
+
+                        <div class="answer-wrapper">
+                            <label for="client-user-input">Assign Client User</label>
+                            <div class="assign-row">
+                                <input type="text" id="client-user-input" placeholder="name@customer.com">
+                                <button class="btn btn-secondary" id="btn-assign-client"><i class="fa-solid fa-user-plus"></i> Assign</button>
+                            </div>
+                        </div>
+                        <ul class="assigned-list" id="assigned-list">
+                            <li><i class="fa-solid fa-circle-user"></i> priya.sharma@blazar-beauty.com <span class="role-tag">ClientUser</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="glass-card artifacts-card">
+                        <h3><i class="fa-solid fa-folder-plus"></i> Engagement Documents</h3>
+                        <div class="dropzone" id="artifact-dropzone">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <p>Drag files here, or <span class="dropzone-browse">browse</span></p>
+                            <span class="dropzone-hint">PDF, DOCX, PPTX, TXT, or audio &mdash; tagged by purpose below</span>
+                        </div>
+                        <div class="artifact-list" id="artifact-list"><!-- populated dynamically --></div>
+                    </div>
+                </div>
+
+                <div class="project-actions-row">
+                    <span class="activate-hint"><i class="fa-solid fa-circle-info"></i> Activating unlocks the engagement for the assigned Client User.</span>
+                    <button class="btn btn-primary" id="btn-activate-project">
+                        <i class="fa-solid fa-bolt"></i> Activate Project
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- PREVIEW SCREEN B: CLIENT CASE STUDY WORKFLOW -->
+        <section id="screen-client-workflow" class="screen">
+            <div class="project-shell">
+                <header class="project-header">
+                    <button class="btn btn-secondary back-btn" id="btn-back-to-project-setup">
+                        <i class="fa-solid fa-arrow-left"></i> Back to Consultant View
+                    </button>
+                    <div class="project-header-info">
+                        <span class="project-status-badge active" id="client-project-status-badge">Active</span>
+                        <h2 id="client-project-name">Blazar India Market Entry</h2>
+                        <p>Client Workspace &mdash; Case Study Resolution Exercise</p>
+                    </div>
+                </header>
+
+                <div class="glass-card question-card animate-slide-up">
+                    <div class="card-badge">External Case Study</div>
+                    <h2 class="restless-question" id="client-question-text">A regional competitor entered via mass retail at half our price point and captured 12% share in one year. Our board wants to match their price. What is the real strategic choice being avoided here?</h2>
+
+                    <div class="answer-wrapper">
+                        <label for="client-answer-input">Your Response</label>
+                        <textarea id="client-answer-input" placeholder="Type your analysis here..." rows="6"></textarea>
+                    </div>
+
+                    <div class="actions-row">
+                        <button class="btn btn-primary" id="btn-submit-client-answer">
+                            <span class="btn-text"><i class="fa-solid fa-brain"></i> Submit for Evaluation</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="evaluation-results-wrapper hidden" id="client-evaluation-results">
+                    <div class="glass-card rating-card lvl-2">
+                        <div class="rating-icon-container"><i class="fa-solid fa-circle-chevron-up"></i></div>
+                        <div class="rating-info">
+                            <span class="rating-label">Thinking Depth Rating</span>
+                            <h3 class="rating-title">🟡 Level 2</h3>
+                        </div>
+                    </div>
+                    <div class="results-grid">
+                        <div class="glass-card critique-card">
+                            <h3><i class="fa-solid fa-scale-balanced"></i> Critique</h3>
+                            <p class="critique-text">You correctly frame this as a pricing decision, but stop short of naming the underlying trade-off: matching price abandons the brand equity that justifies your premium in the first place, and signals to every other segment that quality was never the real differentiator.</p>
+                        </div>
+                        <div class="glass-card recommendations-card">
+                            <h3><i class="fa-solid fa-circle-chevron-up"></i> Pushing Thinking Deeper</h3>
+                            <p class="recommendations-text">Reframe the choice: is 12% share worth conceding the category-leader narrative permanently? Consider which customer segment the competitor is actually serving &mdash; is it one you were ever positioned to defend?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card reveal-card hidden" id="reveal-card">
+                    <div class="reveal-locked" id="reveal-locked">
+                        <i class="fa-solid fa-lock"></i>
+                        <span>Hidden Resolution &mdash; tagged <code>case_study_resolution</code>, excluded from retrieval until now</span>
+                        <button class="btn btn-primary" id="btn-reveal-resolution"><i class="fa-solid fa-unlock"></i> Reveal the Resolution</button>
+                    </div>
+                    <div class="reveal-unlocked hidden" id="reveal-unlocked">
+                        <h3><i class="fa-solid fa-unlock"></i> What Actually Happened</h3>
+                        <p>Blazar held price and instead re-launched its salon channel around a "clinically tested, dermatologist-endorsed" claim set, ceding the price-sensitive segment entirely. Share loss stabilized at 8% after two quarters, but average realized price rose 6% and salon repeat-purchase rate improved &mdash; the board's fear of losing share was real, but matching price would have permanently traded away the one asset the competitor couldn't copy.</p>
+                        <button class="btn btn-secondary" id="btn-hide-reveal"><i class="fa-solid fa-lock"></i> Hide Again</button>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- SCREEN 2: WORKSPACE -->
@@ -141,7 +266,7 @@
     </main>
 
     <footer class="app-footer">
-        <p>&copy; 2026 Cosmos Strategy Platform. Formulated on "Thinking Over Compliance". Built on AWS and Bedrock.</p>
+        <p>&copy; 2026 Cosmos Strategy Platform. Formulated on "Thinking Over Compliance".</p>
     </footer>
 
     <!-- App JS -->
