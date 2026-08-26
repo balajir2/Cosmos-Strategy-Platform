@@ -140,6 +140,15 @@ def test_advance_session_rejects_unknown_session_id(mock_get_session):
 
 
 @patch("chat_engine.CASES_DATA", {FAKE_CASE_ID: {"id": FAKE_CASE_ID, "questions": FAKE_QUESTIONS}})
+@patch("chat_engine.get_session")
+def test_advance_session_rejects_unexpected_phase(mock_get_session):
+    import pytest
+    mock_get_session.return_value = {"id": 1, "case_id": FAKE_CASE_ID, "current_level_index": 1, "phase": "complete"}
+    with pytest.raises(ValueError):
+        chat_engine.advance_session(_fake_rag(), 1, "some content")
+
+
+@patch("chat_engine.CASES_DATA", {FAKE_CASE_ID: {"id": FAKE_CASE_ID, "questions": FAKE_QUESTIONS}})
 @patch("chat_engine.add_message")
 @patch("chat_engine.update_session")
 @patch("chat_engine.get_provider_adapter", side_effect=RuntimeError("provider down"))
