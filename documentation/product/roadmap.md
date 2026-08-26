@@ -1,6 +1,6 @@
 # Product Roadmap — Cosmos Strategic Capability Platform
 
-**Last Updated:** 2026-08-24
+**Last Updated:** 2026-08-26
 
 This is the living status document for the project: what's been decided, what's built, and what's next. It replaces the one-time `plan/task.md` checklist and the forward-looking sections of `plan/implementation_plan.md`.
 
@@ -35,7 +35,8 @@ Full design: [Functional Spec §2.3](functional-spec.md#23-guided-learning-flow-
 
 - [ ] Baseline concept calibration step (scored against the org's own definitions, not generic correctness).
 - [ ] Per-question theory + externally-deducible examples + serious/fun exercise pair.
-- [ ] Adaptive question difficulty (probe-then-escalate, with guardrails).
+- [ ] Adaptive question difficulty (probe-then-escalate, with guardrails). **Sharpened 2026-08-26** (`archives/Meeting Min 26Aug.txt`): the master/anchor question per level must be fixed, human-authored Consultant IP — never AI-reworded — with only the post-answer drill-down follow-ups being AI-generated, looping until sufficient depth is reached ("it will not move till you have done justice to the work"). **This is a known correction needed in already-shipped code**: `backend/chat_engine.py`'s `_ask_question` (from the 2026-08-26 chat-style interview backend) currently has the AI conversationally rephrase the canonical question rather than presenting it verbatim, and has no probe-then-escalate loop at all — both need addressing when this checklist item is scheduled.
+- [ ] Consultant preview/edit of AI-facing question content before a ClientUser sees it (from the same meeting) — largely superseded by the point above once master questions are Consultant-authored directly (via Framework Authoring Mode, see "Beyond the POC" below) rather than AI-generated-then-reviewed; revisit whether a separate review step is still needed once that's designed.
 - [ ] Actionability check on vague-but-eloquent answers.
 - [ ] Keyword-agnostic answer mapping (map jargon-free answers back to framework terms).
 - [ ] Case study resolution flow: hidden reveal + limited AI debate + seeded provocations, for both external and internal case studies.
@@ -84,7 +85,7 @@ The Users/Projects/Engagement Knowledge Base spec carries its own verification p
 ## Beyond the POC (not yet scoped)
 
 The BRD frames this POC as validation before a full multi-tenant build. Not yet designed:
-- Framework Authoring Mode (admin/consultant interface to define new processes, stages, and questions beyond the seeded Brand Compass configuration).
+- Framework Authoring Mode (admin/consultant interface to define new processes, stages, and questions beyond the seeded Brand Compass configuration). **Note (2026-08-26 meeting)**: whatever this authors must be treated as fixed Consultant IP going forward — the master/anchor question text itself should never be regenerated or reworded by the AI at runtime; only follow-up drill-down questions are AI-generated. See the Guided Learning Flow checklist above.
 - `Owner`/`Reviewer`/`Peer` client-side role distinctions (deferred in favor of a single `ClientUser` role — see the Users/Projects/Engagement KB spec's Revision section).
 - Automatic mapping of a `questions.owner_role` string (e.g. "CMO") to a specific project member — for now, any `ClientUser` can answer any question.
 - SSO / enterprise identity (Azure AD, Cognito, etc.) — the near-term auth design (Phase A above) is deliberately simple, built-in email/password.

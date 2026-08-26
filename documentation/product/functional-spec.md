@@ -1,6 +1,6 @@
 # Functional Specification — Cosmos Strategic Capability Platform
 
-**Last Updated:** 2026-08-24 (major revision — incorporates the Aug 24 stakeholder review meeting and the same-day System Flow & Roles brainstorm)
+**Last Updated:** 2026-08-26 (§2.3(c) sharpened with a follow-up meeting's detail; the 2026-08-24 entry below describes the prior major revision)
 
 ---
 
@@ -72,6 +72,8 @@ For each restlessness-arousing question:
 **c. Adaptive question difficulty**
 
 If a user pushes back that a question is "too easy" or "we've heard this a hundred times," the system probes with a concrete prompt (e.g. "what would the answer be for your brand?"). If that probe answer is genuinely sophisticated, the question can evolve to arouse more restlessness; if it comes back generic, the system holds firm that the original question is still apt. Guardrails apply — this isn't unlimited escalation.
+
+**Sharpened in the 2026-08-26 review meeting** (transcript: `archives/Meeting Min 26Aug.txt`): the **master/anchor question for each level is fixed, human-authored content — Consultant IP, never reworded by the AI**. Only the follow-up drill-down that happens *after* the user's initial answer is AI-generated: if the answer doesn't yet show sufficient depth, the system keeps probing with further AI-formulated follow-ups — "it will not move till you have done justice to the work" — rather than accepting a shallow first pass and moving on. This is a real gap against the current implementation: `backend/chat_engine.py`'s `_ask_question` currently instructs the LLM to *rephrase* the canonical question conversationally ("ask it in your own words... do not just restate it verbatim"), which blurs exactly the IP boundary this principle depends on. Needs correcting before this flow is built out further — see `documentation/product/roadmap.md`'s Guided Learning Flow checklist.
 
 **d. Actionability check**
 

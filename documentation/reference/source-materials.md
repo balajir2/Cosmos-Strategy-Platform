@@ -1,6 +1,6 @@
 # Source Materials — Cosmos Strategic Capability Platform
 
-**Last Updated:** 2026-08-24
+**Last Updated:** 2026-08-26
 
 Everything in `archives/` is raw input to the RAG ingestion pipeline (`backend/rag_engine.py`) — the content these decks contain becomes the retrievable "slide context" behind the Guided Self-Evaluation feature (see `documentation/architecture/overview.md`, section 1.3).
 
@@ -13,5 +13,6 @@ Everything in `archives/` is raw input to the RAG ingestion pipeline (`backend/r
 | `archives/Relevant slides Phase 1 file.txt` | Short note listing which Phase 1 slides are relevant. | Reference only — not currently parsed by any code. |
 | `archives/Strategy Platform Meeting 19Aug.txt` | Transcript/notes from the August 19, 2026 project kickoff meeting. | Historical context for the original concept — see `documentation/product/concept-synthesis.md`, which was derived from this meeting. |
 | `archives/Meeting transcript 24Aug.txt` | Transcript of the August 24, 2026 stakeholder product review meeting. | Source material for the Guided Learning Flow design in `documentation/product/functional-spec.md` §2.3 — not parsed by any code, a human-read source document. |
+| `archives/Meeting Min 26Aug.txt` | Transcript of the August 26, 2026 product review meeting (a live demo of the in-progress app, plus design discussion). | Sharpened the Guided Learning Flow's "adaptive question difficulty" requirement (master question = fixed Consultant IP, never AI-reworded) — see `documentation/product/functional-spec.md` §2.3(c) and `documentation/product/roadmap.md`'s Guided Learning Flow checklist. Not parsed by any code, a human-read source document. |
 
 These are large binary/text files; they are the source of truth for the Framework Knowledge Base, not something to hand-edit. To regenerate `framework_kb_chunks` from scratch, delete all rows from that table (e.g. `TRUNCATE framework_kb_chunks;`) and restart `python main.py` — it re-ingests automatically whenever the table is empty (see `documentation/guides/quick-start.md`).
