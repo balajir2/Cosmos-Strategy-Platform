@@ -110,6 +110,31 @@ def init_db():
     ON CONFLICT (id) DO NOTHING;
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+        id BIGSERIAL PRIMARY KEY,
+        case_id TEXT NOT NULL,
+        current_level_index INTEGER NOT NULL DEFAULT 0,
+        phase TEXT NOT NULL DEFAULT 'asking'
+            CHECK (phase IN ('asking', 'awaiting_answer', 'benchmarking', 'awaiting_self_rating', 'complete')),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS chat_messages (
+        id BIGSERIAL PRIMARY KEY,
+        session_id BIGINT NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+        role TEXT NOT NULL CHECK (role IN ('assistant', 'user')),
+        content TEXT NOT NULL,
+        message_type TEXT NOT NULL DEFAULT 'chat'
+            CHECK (message_type IN ('question', 'benchmark', 'self_rating_prompt', 'chat', 'level_transition')),
+        level_index INTEGER,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    """)
+
     conn.commit()
 
     cursor.execute("SELECT COUNT(*) FROM processes;")
