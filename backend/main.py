@@ -11,6 +11,8 @@ from rag_engine import RagEngine
 import settings as platform_settings
 from admin_auth import require_admin_token
 from cases_data import CASES_DATA
+import chat_engine
+import chat_sessions as chat_sessions_module
 
 app = FastAPI(title="Cosmos Strategic Capability Platform", version="1.0.0")
 
@@ -35,6 +37,13 @@ class EvaluationRequest(BaseModel):
 class ProviderSettingUpdate(BaseModel):
     active_llm_provider: str
 
+class ChatSessionCreate(BaseModel):
+    case_id: str
+
+
+class ChatMessageCreate(BaseModel):
+    content: str
+
 @app.get("/api/status")
 def get_status():
     return {
@@ -54,6 +63,30 @@ def update_settings(payload: ProviderSettingUpdate, _: None = Depends(require_ad
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"active_llm_provider": payload.active_llm_provider}
+
+@app.post("/api/chat/sessions")
+def create_chat_session(payload: ChatSessionCreate):
+    try:
+        return chat_engine.start_session(rag, payload.case_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.post("/api/chat/sessions/{session_id}/messages")
+def post_chat_message(session_id: int, payload: ChatMessageCreate):
+    try:
+        return chat_engine.advance_session(rag, session_id, payload.content)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/api/chat/sessions/{session_id}")
+def get_chat_session(session_id: int):
+    session = chat_sessions_module.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found.")
+    messages = chat_sessions_module.get_messages(session_id)
+    return {**session, "messages": messages}
 
 @app.get("/api/cases")
 def get_cases():
