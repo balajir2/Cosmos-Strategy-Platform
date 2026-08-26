@@ -160,11 +160,15 @@ body {
 }
 
 .logo-icon {
-    font-size: 2rem;
-    background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-green) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    display: flex;
+    align-items: center;
     filter: drop-shadow(0 2px 8px rgba(0, 122, 255, 0.3));
+}
+
+.logo-icon img {
+    height: 2.75rem;
+    width: auto;
+    object-fit: contain;
 }
 
 .logo-text h1 {
