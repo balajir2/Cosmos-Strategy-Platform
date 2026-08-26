@@ -14,7 +14,7 @@ client = TestClient(main.app)
 @patch("main.chat_engine.start_session")
 def test_create_chat_session_returns_engine_result(mock_start_session):
     mock_start_session.return_value = {
-        "session_id": 1, "phase": "awaiting_answer", "current_level_index": 0,
+        "id": 1, "phase": "awaiting_answer", "current_level_index": 0,
         "messages": [{"id": 10, "role": "assistant", "content": "Q?", "message_type": "question", "level_index": 0, "created_at": "t"}],
     }
 

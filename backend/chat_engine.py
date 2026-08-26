@@ -43,17 +43,20 @@ def _generate_benchmarks(rag, session_id: int, case_id: str, level_index: int) -
     question = questions[level_index]
     try:
         context = _context_str(rag, question["search_query"])
+        level_messages = get_level_messages(session_id, level_index)
+        question_asked = level_messages[0]["content"] if level_messages else question["question"]
+        user_answer = level_messages[-1]["content"] if level_messages else ""
         system_prompt = (
             f"You are Cosmos AI. Framework context:\n{context}\n\n"
-            "The conversation so far is the question you asked and the user's answer to it. Given that, "
-            "write three example answers at increasing depth, labeled exactly:\n"
+            f"You asked the user: {question_asked}\n\n"
+            "Given the user's answer below, write three example answers at increasing depth, labeled "
+            "exactly:\n"
             "Level 1 (superficial, fact-based)\nLevel 2 (needs-based)\nLevel 3 (insight-driven)\n"
             "Do not evaluate or grade the user's answer directly - just provide the three benchmark "
             "answers for comparison."
         )
-        messages = get_level_messages(session_id, level_index)
         provider = get_provider_adapter(platform_settings.get_active_provider())
-        content = provider.complete(system_prompt, messages)
+        content = provider.complete(system_prompt, [{"role": "user", "content": user_answer}])
     except Exception as e:
         print(f"Error generating benchmarks for level {level_index}: {e}")
         content = (
@@ -73,7 +76,7 @@ def start_session(rag, case_id: str) -> dict:
     session = create_session(case_id)
     question_msg = _ask_question(rag, session["id"], case_id, 0)
     update_session(session["id"], 0, "awaiting_answer")
-    return {"session_id": session["id"], "phase": "awaiting_answer", "current_level_index": 0, "messages": [question_msg]}
+    return {"id": session["id"], "phase": "awaiting_answer", "current_level_index": 0, "messages": [question_msg]}
 
 
 def advance_session(rag, session_id: int, user_content: str) -> dict:

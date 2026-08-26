@@ -65,7 +65,7 @@ Three-tier: Presentation (vanilla HTML/CSS/JS) → Application API (FastAPI) →
 
 **Backend (current)**: Python 3.10+, FastAPI, Neon Postgres + `pgvector` (`psycopg2-binary`, `DATABASE_URL` env var) for both the relational tables and the Framework Knowledge Base vector index, `SentenceTransformer("all-MiniLM-L6-v2")` for local embeddings, a pluggable LLM provider layer (`backend/llm_providers/`) supporting Anthropic (default, direct API), OpenAI, and Gemini (via Vertex AI), switchable at runtime by a SystemAdmin through `platform_settings` and a stopgap shared-token admin gate pending Phase A's real auth. `LLMProvider.complete()` accepts a multi-turn message history, not just a single prompt, supporting the chat-style interview flow (`backend/chat_engine.py`). SQLite and the flat-file vector JSON were retired in Phase 0 (2026-08-24).
 **Frontend**: HTML5, vanilla CSS3, ES6+ JavaScript — no framework, no build step.
-**Testing**: `pytest` + FastAPI `TestClient` (`httpx`) — a minimal test bed now exists (`tests/`, ~27 tests, run via `pytest` from the repo root) covering the LLM Provider Abstraction modules; the broader pre-migration API contract suite is still planned, not yet built (see Part 5).
+**Testing**: `pytest` + FastAPI `TestClient` (`httpx`) — a minimal test bed now exists (`tests/`, 59 tests, run via `pytest` from the repo root) covering the LLM Provider Abstraction modules and the chat-style interview modules (`chat_sessions`, `chat_engine`, `chat_endpoints`); the broader pre-migration API contract suite is still planned, not yet built (see Part 5).
 **Planned additions**: `passlib[bcrypt]` + `python-jose` (auth), `python-docx`/`python-pptx` (Engagement KB document parsing), AWS Transcribe via `boto3` (Engagement KB audio) — see [Technical Spec §2](documentation/development/technical-spec.md).
 
 ```
@@ -143,7 +143,7 @@ python database.py   # creates schema + seeds process/stage/question data in Neo
 python main.py        # serves API + frontend at http://localhost:8000; also builds the Framework Knowledge Base index on first run
 ```
 
-**Tests**: a minimal test bed exists now (`tests/`, ~27 tests) covering the LLM Provider Abstraction modules — run `pytest` from the repo root. The broader pre-migration API contract test bed (case-study endpoints etc.) described in [Test Strategy](documentation/testing/test-strategy.md) is still not built and still pending explicit go-ahead; once it lands, its tests will be pinned to the pre-migration API contract and will need rewriting once the roadmap's API overhaul lands.
+**Tests**: a minimal test bed exists now (`tests/`, 59 tests) covering the LLM Provider Abstraction modules and the chat-style interview modules (`chat_sessions`, `chat_engine`, `chat_endpoints`) — run `pytest` from the repo root. The broader pre-migration API contract test bed (case-study endpoints etc.) described in [Test Strategy](documentation/testing/test-strategy.md) is still not built and still pending explicit go-ahead; once it lands, its tests will be pinned to the pre-migration API contract and will need rewriting once the roadmap's API overhaul lands.
 
 **Git conventions**: create a new commit per logical change; don't amend published commits. No CI is configured yet — run `pytest` locally before committing backend changes.
 

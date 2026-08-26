@@ -83,11 +83,14 @@ def test_advance_session_from_awaiting_answer_generates_benchmarks(
     assert result["current_level_index"] == 0
     assert [m["message_type"] for m in result["messages"]] == ["benchmark", "self_rating_prompt"]
     mock_update_session.assert_called_once_with(1, 0, "awaiting_self_rating")
-    # The real accumulated level history (question + answer) must be what's sent, not a flattened mega-prompt
+    # The real stored question/answer must be used, but reshaped so messages[] starts with role "user"
+    # (Anthropic's Messages API rejects a leading "assistant" turn) - the question is folded into the
+    # system prompt instead of being replayed as a leading assistant message.
     mock_get_level_messages.assert_called_once_with(1, 0)
     fake_provider.complete.assert_called_once()
     call_args = fake_provider.complete.call_args
-    assert call_args[0][1] == level_history
+    assert call_args[0][1] == [{"role": "user", "content": "my answer"}]
+    assert "Question one?" in call_args[0][0]
 
 
 @patch("chat_engine.CASES_DATA", {FAKE_CASE_ID: {"id": FAKE_CASE_ID, "questions": FAKE_QUESTIONS}})
