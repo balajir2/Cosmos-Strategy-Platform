@@ -25,7 +25,12 @@ class GeminiProvider(LLMProvider):
 
         self._model_factory = model_factory
 
-    def complete(self, system_prompt: str, user_prompt: str) -> str:
+    def complete(self, system_prompt: str, messages: list) -> str:
         model = self._model_factory(system_prompt)
-        response = model.generate_content(user_prompt)
+        history = []
+        for m in messages[:-1]:
+            role = "model" if m["role"] == "assistant" else "user"
+            history.append({"role": role, "parts": [m["content"]]})
+        chat = model.start_chat(history=history)
+        response = chat.send_message(messages[-1]["content"])
         return response.text

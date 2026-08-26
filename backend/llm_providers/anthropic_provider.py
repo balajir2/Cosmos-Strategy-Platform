@@ -12,11 +12,11 @@ class AnthropicProvider(LLMProvider):
         self.client = client or Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         self.model = model
 
-    def complete(self, system_prompt: str, user_prompt: str) -> str:
+    def complete(self, system_prompt: str, messages: list) -> str:
         response = self.client.messages.create(
             model=self.model,
             max_tokens=1000,
             system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
+            messages=messages,
         )
         return response.content[0].text

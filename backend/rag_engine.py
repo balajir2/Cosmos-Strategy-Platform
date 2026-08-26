@@ -190,7 +190,7 @@ class RagEngine:
         try:
             provider_name = platform_settings.get_active_provider()
             provider = get_provider_adapter(provider_name)
-            response_text = provider.complete(system_prompt, user_prompt)
+            response_text = provider.complete(system_prompt, [{"role": "user", "content": user_prompt}])
             return parse_evaluation_json(response_text)
         except Exception as e:
             print(f"Error generating evaluation via '{provider_name if 'provider_name' in locals() else 'unknown'}' provider: {e}")

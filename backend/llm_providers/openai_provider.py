@@ -12,12 +12,10 @@ class OpenAIProvider(LLMProvider):
         self.client = client or OpenAI(api_key=os.environ["OPENAI_API_KEY"])
         self.model = model
 
-    def complete(self, system_prompt: str, user_prompt: str) -> str:
+    def complete(self, system_prompt: str, messages: list) -> str:
+        full_messages = [{"role": "system", "content": system_prompt}] + list(messages)
         response = self.client.chat.completions.create(
             model=self.model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+            messages=full_messages,
         )
         return response.choices[0].message.content

@@ -6,8 +6,10 @@ class LLMProvider(ABC):
     """Common interface every LLM provider adapter implements."""
 
     @abstractmethod
-    def complete(self, system_prompt: str, user_prompt: str) -> str:
-        """Send a system+user prompt to the provider and return its raw text response."""
+    def complete(self, system_prompt: str, messages: list) -> str:
+        """Send a system prompt plus an ordered turn history to the provider and
+        return its raw text response. messages is [{"role": "user"|"assistant",
+        "content": str}, ...]."""
         raise NotImplementedError
 
 
