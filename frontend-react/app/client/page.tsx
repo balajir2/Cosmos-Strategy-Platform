@@ -8,10 +8,12 @@ import { getProjectStatus } from "@/lib/mockProjectState";
 export default function ClientCaseList() {
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getCases()
       .then(setCases)
+      .catch(() => setError("Could not load your engagements. Is the backend running?"))
       .finally(() => setLoading(false));
   }, []);
 
@@ -19,6 +21,14 @@ export default function ClientCaseList() {
     return (
       <div className="loading-spinner">
         <i className="fa-solid fa-circle-notch fa-spin"></i> Loading your engagements...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="loading-spinner">
+        <i className="fa-solid fa-circle-exclamation"></i> {error}
       </div>
     );
   }

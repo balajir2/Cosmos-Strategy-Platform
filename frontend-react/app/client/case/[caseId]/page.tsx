@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createChatSession, getChatSession, ChatSessionDetail } from "@/lib/api-client";
-import { getSessionId, setSessionId } from "@/lib/mockProjectState";
+import { getProjectStatus, getSessionId, setSessionId } from "@/lib/mockProjectState";
 
 const TOTAL_LEVELS = 7;
 
@@ -57,12 +57,13 @@ export default function CaseHubPage() {
 
   const currentLevel = session ? session.current_level_index : 0;
   const isComplete = session?.phase === "complete";
+  const status = getProjectStatus(caseId);
 
   return (
     <div className="project-shell">
       <header className="project-header">
         <div className="project-header-info">
-          <span className="project-status-badge active">Active</span>
+          <span className={`project-status-badge ${status === "Active" ? "active" : ""}`}>{status}</span>
           <h2>{CASE_TITLES[caseId] ?? caseId}</h2>
           <p>Client Workspace</p>
         </div>
