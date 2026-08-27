@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createChatSession, postChatMessage, getChatSession, ChatMessage as ChatMessageType } from "@/lib/api-client";
-import { getSessionId, setSessionId } from "@/lib/mockProjectState";
+import { getProjectStatus, getSessionId, setSessionId } from "@/lib/mockProjectState";
 import ChatMessageBubble from "@/components/ChatMessageBubble";
 
 export default function ChatPage() {
   const params = useParams();
   const router = useRouter();
   const caseId = params.caseId as string;
+  const status = getProjectStatus(caseId);
 
   const [sessionId, setLocalSessionId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
@@ -20,6 +21,11 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (status !== "Active") {
+      setLoading(false);
+      return;
+    }
+
     async function load() {
       let id = getSessionId(caseId);
       try {
@@ -42,7 +48,7 @@ export default function ChatPage() {
       }
     }
     load();
-  }, [caseId]);
+  }, [caseId, status]);
 
   async function handleSend() {
     if (!input.trim() || !sessionId) return;
@@ -76,6 +82,21 @@ export default function ChatPage() {
     return (
       <div className="loading-spinner">
         <i className="fa-solid fa-circle-notch fa-spin"></i> Loading your workshop...
+      </div>
+    );
+  }
+
+  if (status !== "Active") {
+    return (
+      <div className="project-shell">
+        <header className="project-header">
+          <button className="btn btn-secondary back-btn" onClick={() => router.push(`/client/case/${caseId}`)}>
+            <i className="fa-solid fa-arrow-left"></i> Back to Progress
+          </button>
+        </header>
+        <div className="glass-card" style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
+          <p>Not yet activated by your consultant</p>
+        </div>
       </div>
     );
   }

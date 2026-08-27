@@ -2,15 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createChatSession, getChatSession, ChatSessionDetail } from "@/lib/api-client";
+import { createChatSession, getChatSession, getCases, ChatSessionDetail, CaseSummary } from "@/lib/api-client";
 import { getProjectStatus, getSessionId, setSessionId } from "@/lib/mockProjectState";
 
 const TOTAL_LEVELS = 7;
-
-const CASE_TITLES: Record<string, string> = {
-  blazar: "Blazar India Market Entry",
-  basil: "Basil Apparel Portfolio",
-};
 
 export default function CaseHubPage() {
   const params = useParams();
@@ -21,8 +16,19 @@ export default function CaseHubPage() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [caseInfo, setCaseInfo] = useState<CaseSummary | null>(null);
+  const status = getProjectStatus(caseId);
 
   useEffect(() => {
+    getCases()
+      .then((cases) => setCaseInfo(cases.find((c) => c.id === caseId) ?? null))
+      .catch(() => setCaseInfo(null));
+
+    if (status !== "Active") {
+      setLoading(false);
+      return;
+    }
+
     const existingId = getSessionId(caseId);
     if (existingId) {
       getChatSession(existingId)
@@ -32,7 +38,7 @@ export default function CaseHubPage() {
     } else {
       setLoading(false);
     }
-  }, [caseId]);
+  }, [caseId, status]);
 
   async function handleStart() {
     setStarting(true);
@@ -57,14 +63,30 @@ export default function CaseHubPage() {
 
   const currentLevel = session ? session.current_level_index : 0;
   const isComplete = session?.phase === "complete";
-  const status = getProjectStatus(caseId);
+
+  if (status !== "Active") {
+    return (
+      <div className="project-shell">
+        <header className="project-header">
+          <div className="project-header-info">
+            <span className="project-status-badge">{status}</span>
+            <h2>{caseInfo?.title ?? caseId}</h2>
+            <p>Client Workspace</p>
+          </div>
+        </header>
+        <div className="glass-card" style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
+          <p>Not yet activated by your consultant</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="project-shell">
       <header className="project-header">
         <div className="project-header-info">
           <span className={`project-status-badge ${status === "Active" ? "active" : ""}`}>{status}</span>
-          <h2>{CASE_TITLES[caseId] ?? caseId}</h2>
+          <h2>{caseInfo?.title ?? caseId}</h2>
           <p>Client Workspace</p>
         </div>
       </header>

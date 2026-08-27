@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createChatSession } from "@/lib/api-client";
+import { createChatSession, getCases, CaseSummary } from "@/lib/api-client";
 import {
   getProjectSetup,
   setProjectSetup,
@@ -20,11 +20,6 @@ const PURPOSE_LABELS: Record<string, string> = {
   case_study_resolution: "Hidden Resolution",
 };
 
-const CASE_TITLES: Record<string, string> = {
-  blazar: "Blazar India Market Entry",
-  basil: "Basil Apparel Portfolio",
-};
-
 export default function ProjectSetupPage() {
   const params = useParams();
   const router = useRouter();
@@ -36,6 +31,7 @@ export default function ProjectSetupPage() {
   const [artifacts, setArtifactsState] = useState<MockArtifact[]>([]);
   const [activating, setActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [caseInfo, setCaseInfo] = useState<CaseSummary | null>(null);
 
   useEffect(() => {
     const setup = getProjectSetup(caseId);
@@ -45,6 +41,9 @@ export default function ProjectSetupPage() {
     );
     setAssignedClient(setup.assignedClient);
     setArtifactsState(getArtifacts(caseId));
+    getCases()
+      .then((cases) => setCaseInfo(cases.find((c) => c.id === caseId) ?? null))
+      .catch(() => setCaseInfo(null));
   }, [caseId]);
 
   function handleContextChange(value: string) {
@@ -90,7 +89,7 @@ export default function ProjectSetupPage() {
       <header className="project-header">
         <div className="project-header-info">
           <span className="project-status-badge">Draft</span>
-          <h2>{CASE_TITLES[caseId] ?? caseId}</h2>
+          <h2>{caseInfo?.title ?? caseId}</h2>
           <p>Consultant View</p>
         </div>
       </header>
