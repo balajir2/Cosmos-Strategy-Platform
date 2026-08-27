@@ -2,7 +2,6 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 from fastapi import FastAPI, HTTPException, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Dict
 
@@ -129,13 +128,6 @@ def evaluate_answer(req: EvaluationRequest):
         "recommendations": critique.get("recommendations", "No specific recommendations provided."),
         "source_slides": hits
     }
-
-# Serve Frontend static assets
-FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-if os.path.exists(FRONTEND_DIR):
-    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
-else:
-    print(f"Warning: Frontend directory not found at {FRONTEND_DIR}. API server running standalone.")
 
 if __name__ == "__main__":
     import uvicorn
