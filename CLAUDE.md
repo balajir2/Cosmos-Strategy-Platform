@@ -45,7 +45,7 @@ This file is the single consolidated reference for working on this codebase — 
 
 # Part 2: Architecture
 
-Three-tier: Presentation (vanilla HTML/CSS/JS) → Application API (FastAPI) → storage. **Storage is now one Neon Postgres database with `pgvector`** for the Framework Knowledge Base — decided and built 2026-08-24 (Phase 0) — see [Neon Postgres + pgvector Spec](docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md). The Engagement Knowledge Base's `pgvector` tables (`project_kb_chunks`, etc.) are still target-only, not yet built. Full detail, diagrams, and the proposed longer-term "Framework Factory" architecture: [Architecture Overview](documentation/architecture/overview.md).
+Three-tier: Presentation (Next.js/React, TypeScript) → Application API (FastAPI) → storage. **Storage is now one Neon Postgres database with `pgvector`** for the Framework Knowledge Base — decided and built 2026-08-24 (Phase 0) — see [Neon Postgres + pgvector Spec](docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md). The Engagement Knowledge Base's `pgvector` tables (`project_kb_chunks`, etc.) are still target-only, not yet built. Full detail, diagrams, and the proposed longer-term "Framework Factory" architecture: [Architecture Overview](documentation/architecture/overview.md).
 
 **Core data flow (mix of implemented and target — see Part 5 for what's actually implemented today):**
 1. User submits an answer to a strategic question.
@@ -64,7 +64,7 @@ Three-tier: Presentation (vanilla HTML/CSS/JS) → Application API (FastAPI) →
 # Part 3: Tech Stack & Directory Structure
 
 **Backend (current)**: Python 3.10+, FastAPI, Neon Postgres + `pgvector` (`psycopg2-binary`, `DATABASE_URL` env var) for both the relational tables and the Framework Knowledge Base vector index, `SentenceTransformer("all-MiniLM-L6-v2")` for local embeddings, a pluggable LLM provider layer (`backend/llm_providers/`) supporting Anthropic (default, direct API), OpenAI, and Gemini (via Vertex AI), switchable at runtime by a SystemAdmin through `platform_settings` and a stopgap shared-token admin gate pending Phase A's real auth. `LLMProvider.complete()` accepts a multi-turn message history, not just a single prompt, supporting the chat-style interview flow (`backend/chat_engine.py`). SQLite and the flat-file vector JSON were retired in Phase 0 (2026-08-24).
-**Frontend**: HTML5, vanilla CSS3, ES6+ JavaScript — no framework, no build step.
+**Frontend**: Next.js (React, TypeScript), in `frontend-react/` — migrated from the earlier vanilla HTML/CSS/JS frontend on 2026-08-27. Calls the FastAPI backend over HTTP via `NEXT_PUBLIC_API_BASE`.
 **Testing**: `pytest` + FastAPI `TestClient` (`httpx`) — a minimal test bed now exists (`tests/`, 59 tests, run via `pytest` from the repo root) covering the LLM Provider Abstraction modules and the chat-style interview modules (`chat_sessions`, `chat_engine`, `chat_endpoints`); the broader pre-migration API contract suite is still planned, not yet built (see Part 5).
 **Planned additions**: `passlib[bcrypt]` + `python-jose` (auth), `python-docx`/`python-pptx` (Engagement KB document parsing), AWS Transcribe via `boto3` (Engagement KB audio) — see [Technical Spec §2](documentation/development/technical-spec.md).
 
@@ -79,10 +79,11 @@ Cosmos Strategy Platform/
 │   ├── database.py             # Neon Postgres connection, DDL, seed data
 │   ├── rag_engine.py           # SentenceTransformer + pgvector search + pluggable LLM provider layer
 │   └── requirements.txt
-├── frontend/
-│   ├── index.html
-│   ├── app.js
-│   └── style.css
+├── frontend-react/            # Next.js (React, TypeScript) frontend
+│   ├── app/                    # routes (admin, client, chat pages)
+│   ├── components/             # shared React components
+│   ├── lib/                    # API client, mock project-state helpers
+│   └── public/
 ├── archives/                  # source PDFs + meeting transcripts for RAG ingestion / design source material
 ├── docs/superpowers/specs/    # design specs (Users/Projects/Engagement KB, Neon Postgres)
 └── tests/                     # pytest suite — minimal test bed exists (LLM Provider Abstraction modules); broader suite still planned, see Part 6
@@ -128,6 +129,8 @@ Target endpoints not yet implemented: `GET /api/process/{process_id}` (DB-backed
 **A chat-style interview backend** (`backend/chat_engine.py`, `chat_sessions`/`chat_messages` tables) was added ahead of the frontend migration that will consume it — see `docs/superpowers/specs/2026-08-26-chat-style-interview-design.md` and `docs/superpowers/plans/2026-08-26-chat-style-interview.md`. No frontend currently calls these endpoints; the existing form-based UI still runs on `/api/evaluate`.
 
 A minimal automated test bed now exists (`tests/`, ~27 pytest tests, run via `pytest` from the repo root), added alongside the LLM Provider Abstraction work (`docs/superpowers/plans/2026-08-25-llm-provider-abstraction.md`, Tasks 1-9) — it covers those new provider/settings/admin modules only. The broader test bed described in Part 3/6, covering the pre-migration API contract (case-study endpoints, `/api/evaluate`'s response shape), is still **not yet built** — that remains planned but pending explicit go-ahead to start writing code.
+
+**The frontend was migrated to Next.js (React, TypeScript) on 2026-08-27** (`frontend-react/`, replacing the old vanilla HTML/CSS/JS frontend, now removed) — see `docs/superpowers/plans/2026-08-26-react-frontend-migration.md`. It covers all three roles (SystemAdmin, Consultant, ClientUser) and is backed by the chat-style interview API described above; Users/Projects/Auth (Phase A/B) are still stubbed with a localStorage-backed mock pending those phases landing.
 
 Full checklist (Users/Projects/Engagement KB phases, DB layer, backend API, frontend GUI): [Roadmap](documentation/product/roadmap.md). Don't assume anything in that checklist is done without checking it — it's a live document, check it before starting related work.
 

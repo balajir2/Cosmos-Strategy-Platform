@@ -1,6 +1,6 @@
 # Product Roadmap — Cosmos Strategic Capability Platform
 
-**Last Updated:** 2026-08-26
+**Last Updated:** 2026-08-27
 
 This is the living status document for the project: what's been decided, what's built, and what's next. It replaces the one-time `plan/task.md` checklist and the forward-looking sections of `plan/implementation_plan.md`.
 
@@ -63,7 +63,8 @@ The schema goals here (drop `rating`/`critique`/`recommendations`, add `self_eva
 This item now depends on Phase A/B being built first (auth + the `project_id` model it requires).
 
 ### 3. Frontend GUI Overhaul
-- [ ] Update `frontend/app.js` to fetch projects, stages, and questions dynamically from the backend.
+**The vanilla-JS `frontend/` was replaced by a Next.js (React, TypeScript) frontend in `frontend-react/` on 2026-08-27** (see `docs/superpowers/plans/2026-08-26-react-frontend-migration.md`) — it covers all three roles and the chat-style interview flow, but Projects/Auth (Phase A/B) are still mock/`localStorage`-backed, and the items below were explicit Non-Goals of that migration, not delivered by it. They're no longer blocked on a vanilla-JS rewrite, just still not built:
+- [ ] Update `frontend-react/` to fetch projects, stages, and questions dynamically from the backend (once Phase A/B's real Projects/Auth land) rather than relying on the mock/`localStorage`-backed project state.
 - [ ] Build the split-screen comparison UI:
   - User's answer side-by-side with RAG context slides, each labeled by source ("Framework Reference" vs. "Customer Document").
   - Level 1/2/3 exemplary comparative answers.
@@ -71,7 +72,7 @@ This item now depends on Phase A/B being built first (auth + the `project_id` mo
 - [ ] Add a "Download Brief" button.
 - [ ] Add a login screen, a project dashboard (replacing the hardcoded case-select screen), and an "Engagement Documents" panel per project (Phase C).
 - [ ] Add the Guided Learning Flow screens: baseline calibration, case study resolution reveal, Start/Stop/Continue reflection (see Guided Learning Flow checklist above).
-- [ ] Refine `frontend/style.css` (dark/light tokens, Outfit/Inter typography, loading skeletons, responsive split columns).
+- [ ] Refine `frontend-react/`'s styling (dark/light tokens, Outfit/Inter typography, loading skeletons, responsive split columns).
 
 ## Planned Verification (once migration lands)
 
