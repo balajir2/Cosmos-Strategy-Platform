@@ -141,3 +141,48 @@ def test_get_project_allows_client_user_on_active_project(mock_get_member, mock_
         assert response.json() == {"id": 1, "name": "X", "status": "Active"}
     finally:
         main.app.dependency_overrides.clear()
+
+
+# --- PATCH /api/projects/{project_id} ----------------------------------------
+
+@patch("auth.get_project_member", return_value={
+    "id": 2, "project_id": 1, "user_id": 2, "role": "ClientUser",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_update_project_rejects_non_consultant(mock_get_member):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _NON_ADMIN_USER
+    try:
+        response = client.patch("/api/projects/1", json={"industry_context": "B2B"})
+        assert response.status_code == 403
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.update_project", return_value={**_PROJECT_DICT, "industry_context": "B2B"})
+@patch("auth.get_project_member", return_value={
+    "id": 1, "project_id": 1, "user_id": 1, "role": "Consultant",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_update_project_updates_for_consultant(mock_get_member, mock_update):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
+    try:
+        response = client.patch("/api/projects/1", json={"industry_context": "B2B"})
+        assert response.status_code == 200
+        assert response.json()["industry_context"] == "B2B"
+        mock_update.assert_called_once_with(1, None, None, None, "B2B")
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.update_project", return_value=None)
+@patch("auth.get_project_member", return_value={
+    "id": 1, "project_id": 1, "user_id": 1, "role": "Consultant",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_update_project_returns_404_when_missing(mock_get_member, mock_update):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
+    try:
+        response = client.patch("/api/projects/999", json={"industry_context": "B2B"})
+        assert response.status_code == 404
+    finally:
+        main.app.dependency_overrides.clear()

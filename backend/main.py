@@ -22,6 +22,7 @@ from auth import (
 app = FastAPI(title="Cosmos Strategic Capability Platform", version="1.0.0")
 
 require_project_member = require_project_role(["Consultant", "ClientUser"])
+require_consultant = require_project_role(["Consultant"])
 
 # Enable CORS for frontend integration
 app.add_middleware(
@@ -67,6 +68,12 @@ class ProjectCreateRequest(BaseModel):
     industry_context: Optional[str] = None
     process_id: int
     consultant_user_id: int
+
+class ProjectUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    customer_name: Optional[str] = None
+    description: Optional[str] = None
+    industry_context: Optional[str] = None
 
 @app.get("/api/status")
 def get_status():
@@ -115,6 +122,15 @@ def get_project(
     project: dict = Depends(require_active_project),
 ):
     return project
+
+@app.patch("/api/projects/{project_id}")
+def update_project(project_id: int, payload: ProjectUpdateRequest, member: dict = Depends(require_consultant)):
+    updated = projects_db.update_project(
+        project_id, payload.name, payload.customer_name, payload.description, payload.industry_context,
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return updated
 
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
