@@ -99,6 +99,10 @@ def create_project(payload: ProjectCreateRequest, admin: dict = Depends(require_
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.get("/api/projects")
+def list_projects(current_user: dict = Depends(get_current_user)):
+    return projects_db.list_projects_for_user(current_user["id"])
+
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
     return {"active_llm_provider": platform_settings.get_active_provider()}
