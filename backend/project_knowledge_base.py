@@ -1,5 +1,12 @@
 import io
+import json
+import os
+import time
+import urllib.request
+import uuid
 
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 from docx import Document
 from pptx import Presentation
 from pypdf import PdfReader
@@ -81,3 +88,60 @@ def infer_source_format(filename: str) -> str:
 
 def infer_artifact_type(source_format: str) -> str:
     return "audio" if source_format == "audio" else "document"
+
+
+_TRANSCRIBE_POLL_INTERVAL_SECONDS = 5
+_TRANSCRIBE_MAX_POLL_ATTEMPTS = 60
+
+
+def _fetch_transcript_text(transcript_uri: str) -> str:
+    with urllib.request.urlopen(transcript_uri) as response:
+        payload = json.loads(response.read())
+    return payload["results"]["transcripts"][0]["transcript"]
+
+
+def transcribe_audio(file_bytes: bytes, filename: str):
+    """Transcribes an audio artifact via AWS Transcribe. Returns the transcript
+    text, or None if AWS isn't configured or the job fails - mirroring
+    rag_engine.py's graceful-degradation philosophy (missing external-service
+    configuration skips the automatic path rather than crashing the upload).
+    Callers should set the artifact's status to 'Transcript Needed' (not
+    'Failed') when this returns None, so a Consultant can paste a transcript
+    manually instead."""
+    bucket = os.environ.get("AWS_TRANSCRIBE_S3_BUCKET")
+    if not bucket:
+        print("AWS_TRANSCRIBE_S3_BUCKET is not set. Skipping automatic transcription.")
+        return None
+
+    job_name = f"cosmos-transcribe-{uuid.uuid4().hex}"
+    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else "mp3"
+    key = f"transcribe-uploads/{job_name}.{extension}"
+
+    try:
+        s3 = boto3.client("s3")
+        s3.put_object(Bucket=bucket, Key=key, Body=file_bytes)
+
+        transcribe = boto3.client("transcribe")
+        transcribe.start_transcription_job(
+            TranscriptionJobName=job_name,
+            Media={"MediaFileUri": f"s3://{bucket}/{key}"},
+            MediaFormat=extension,
+            LanguageCode="en-US",
+        )
+
+        for _ in range(_TRANSCRIBE_MAX_POLL_ATTEMPTS):
+            status = transcribe.get_transcription_job(TranscriptionJobName=job_name)
+            job_status = status["TranscriptionJob"]["TranscriptionJobStatus"]
+            if job_status == "COMPLETED":
+                transcript_uri = status["TranscriptionJob"]["Transcript"]["TranscriptFileUri"]
+                return _fetch_transcript_text(transcript_uri)
+            if job_status == "FAILED":
+                print(f"AWS Transcribe job '{job_name}' failed.")
+                return None
+            time.sleep(_TRANSCRIBE_POLL_INTERVAL_SECONDS)
+
+        print(f"AWS Transcribe job '{job_name}' did not complete within the polling window.")
+        return None
+    except (BotoCoreError, ClientError, NoCredentialsError) as e:
+        print(f"AWS Transcribe unavailable ({e}). Falling back to manual transcript entry.")
+        return None

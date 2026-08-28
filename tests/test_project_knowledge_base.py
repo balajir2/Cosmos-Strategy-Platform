@@ -111,3 +111,64 @@ def test_infer_artifact_type_maps_audio_and_document():
     assert pkb.infer_artifact_type("audio") == "audio"
     assert pkb.infer_artifact_type("pdf") == "document"
     assert pkb.infer_artifact_type("docx") == "document"
+
+
+from botocore.exceptions import NoCredentialsError
+
+
+def test_transcribe_audio_skips_when_bucket_not_configured(monkeypatch):
+    monkeypatch.delenv("AWS_TRANSCRIBE_S3_BUCKET", raising=False)
+
+    with patch("project_knowledge_base.boto3.client") as mock_client:
+        result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
+
+    assert result is None
+    mock_client.assert_not_called()
+
+
+@patch("project_knowledge_base.boto3.client")
+def test_transcribe_audio_returns_none_when_credentials_missing(mock_client, monkeypatch):
+    monkeypatch.setenv("AWS_TRANSCRIBE_S3_BUCKET", "cosmos-transcribe-bucket")
+    mock_client.side_effect = NoCredentialsError()
+
+    result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
+
+    assert result is None
+
+
+@patch("project_knowledge_base._fetch_transcript_text", return_value="hello from the meeting")
+@patch("project_knowledge_base.boto3.client")
+def test_transcribe_audio_returns_transcript_on_completed_job(mock_client, mock_fetch, monkeypatch):
+    monkeypatch.setenv("AWS_TRANSCRIBE_S3_BUCKET", "cosmos-transcribe-bucket")
+
+    mock_s3 = MagicMock()
+    mock_transcribe = MagicMock()
+    mock_transcribe.get_transcription_job.return_value = {
+        "TranscriptionJob": {
+            "TranscriptionJobStatus": "COMPLETED",
+            "Transcript": {"TranscriptFileUri": "https://example.com/transcript.json"},
+        }
+    }
+    mock_client.side_effect = lambda service_name: mock_s3 if service_name == "s3" else mock_transcribe
+
+    result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
+
+    assert result == "hello from the meeting"
+    mock_s3.put_object.assert_called_once()
+    mock_transcribe.start_transcription_job.assert_called_once()
+
+
+@patch("project_knowledge_base.boto3.client")
+def test_transcribe_audio_returns_none_when_job_fails(mock_client, monkeypatch):
+    monkeypatch.setenv("AWS_TRANSCRIBE_S3_BUCKET", "cosmos-transcribe-bucket")
+
+    mock_s3 = MagicMock()
+    mock_transcribe = MagicMock()
+    mock_transcribe.get_transcription_job.return_value = {
+        "TranscriptionJob": {"TranscriptionJobStatus": "FAILED"}
+    }
+    mock_client.side_effect = lambda service_name: mock_s3 if service_name == "s3" else mock_transcribe
+
+    result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
+
+    assert result is None
