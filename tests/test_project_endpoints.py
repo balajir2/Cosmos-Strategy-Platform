@@ -186,3 +186,48 @@ def test_update_project_returns_404_when_missing(mock_get_member, mock_update):
         assert response.status_code == 404
     finally:
         main.app.dependency_overrides.clear()
+
+
+# --- POST /api/projects/{project_id}/activate --------------------------------
+
+@patch("auth.get_project_member", return_value={
+    "id": 2, "project_id": 1, "user_id": 2, "role": "ClientUser",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_activate_project_rejects_non_consultant(mock_get_member):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _NON_ADMIN_USER
+    try:
+        response = client.post("/api/projects/1/activate")
+        assert response.status_code == 403
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.activate_project", return_value={**_PROJECT_DICT, "status": "Active"})
+@patch("auth.get_project_member", return_value={
+    "id": 1, "project_id": 1, "user_id": 1, "role": "Consultant",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_activate_project_activates_for_consultant(mock_get_member, mock_activate):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
+    try:
+        response = client.post("/api/projects/1/activate")
+        assert response.status_code == 200
+        assert response.json()["status"] == "Active"
+        mock_activate.assert_called_once_with(1)
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.activate_project", side_effect=ValueError("Project 1 cannot be activated (not found or not in Draft status)."))
+@patch("auth.get_project_member", return_value={
+    "id": 1, "project_id": 1, "user_id": 1, "role": "Consultant",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_activate_project_rejects_already_active_project(mock_get_member, mock_activate):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
+    try:
+        response = client.post("/api/projects/1/activate")
+        assert response.status_code == 400
+    finally:
+        main.app.dependency_overrides.clear()

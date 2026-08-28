@@ -132,6 +132,13 @@ def update_project(project_id: int, payload: ProjectUpdateRequest, member: dict 
         raise HTTPException(status_code=404, detail="Project not found.")
     return updated
 
+@app.post("/api/projects/{project_id}/activate")
+def activate_project(project_id: int, member: dict = Depends(require_consultant)):
+    try:
+        return projects_db.activate_project(project_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
     return {"active_llm_provider": platform_settings.get_active_provider()}
