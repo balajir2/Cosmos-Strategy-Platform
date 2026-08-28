@@ -334,6 +334,24 @@ def test_ingest_artifact_marks_failed_on_parse_error(mock_update, mock_get, mock
     mock_update.assert_any_call(1, "Failed")
 
 
+@patch("project_knowledge_base._insert_chunks")
+@patch("project_knowledge_base.chunk_text", return_value=[])
+@patch("project_knowledge_base.extract_text", return_value="")
+@patch("project_knowledge_base.project_artifacts_db.get_artifact_by_id", return_value=_DOCUMENT_ARTIFACT)
+@patch(
+    "project_knowledge_base.project_artifacts_db.update_artifact_status",
+    return_value={**_DOCUMENT_ARTIFACT, "status": "Failed"},
+)
+def test_ingest_artifact_marks_failed_when_no_text_extracted(mock_update, mock_get, mock_extract, mock_chunk, mock_insert):
+    rag = _fake_rag()
+
+    result = pkb.ingest_artifact(rag, 1, b"file-bytes")
+
+    assert result["status"] == "Failed"
+    mock_update.assert_any_call(1, "Failed")
+    mock_insert.assert_not_called()
+
+
 def test_ingest_artifact_raises_value_error_for_unknown_artifact():
     with patch("project_knowledge_base.project_artifacts_db.get_artifact_by_id", return_value=None):
         with pytest.raises(ValueError, match="999"):

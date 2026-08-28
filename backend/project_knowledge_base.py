@@ -178,8 +178,11 @@ def ingest_artifact(rag, artifact_id: int, file_bytes: bytes) -> dict:
     to reflect the outcome: 'Indexed' on success, 'Transcript Needed' for
     audio when AWS Transcribe isn't available (never 'Failed' for that case -
     see transcribe_audio's docstring), 'Failed' on any other parse/embedding
-    error. Runs inline on the upload request - no background job queue,
-    per the spec's "Synchronous for now" decision."""
+    error OR when extraction produced no usable text (an artifact marked
+    'Indexed' with zero project_kb_chunks rows would silently never surface
+    in retrieval with no visible signal that anything went wrong). Runs
+    inline on the upload request - no background job queue, per the spec's
+    "Synchronous for now" decision."""
     artifact = project_artifacts_db.get_artifact_by_id(artifact_id)
     if artifact is None:
         raise ValueError(f"Unknown artifact_id '{artifact_id}'")
@@ -196,9 +199,12 @@ def ingest_artifact(rag, artifact_id: int, file_bytes: bytes) -> dict:
             text = extract_text(file_bytes, artifact["source_format"])
 
         chunks = chunk_text(text)
-        if chunks:
-            embeddings = rag.embedding_model.encode(chunks)
-            _insert_chunks(artifact["project_id"], artifact_id, chunks, embeddings)
+        if not chunks:
+            print(f"Artifact {artifact_id} produced no extractable text.")
+            return project_artifacts_db.update_artifact_status(artifact_id, "Failed")
+
+        embeddings = rag.embedding_model.encode(chunks)
+        _insert_chunks(artifact["project_id"], artifact_id, chunks, embeddings)
 
         transcript_text = text if artifact["source_format"] == "audio" else None
         return project_artifacts_db.update_artifact_status(artifact_id, "Indexed", transcript_text=transcript_text)
