@@ -38,6 +38,8 @@ app.add_middleware(
 # Initialize RAG Engine
 rag = RagEngine()
 
+MAX_ARTIFACT_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
+
 class EvaluationRequest(BaseModel):
     case_id: str
     question_id: str
@@ -154,7 +156,9 @@ async def upload_project_artifact(
         raise HTTPException(status_code=400, detail=str(e))
     artifact_type = project_knowledge_base.infer_artifact_type(source_format)
 
-    file_bytes = await file.read()
+    file_bytes = await file.read(MAX_ARTIFACT_UPLOAD_BYTES + 1)
+    if len(file_bytes) > MAX_ARTIFACT_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail=f"File exceeds the {MAX_ARTIFACT_UPLOAD_BYTES // (1024 * 1024)} MB upload limit.")
 
     try:
         artifact = project_artifacts_db.create_artifact(

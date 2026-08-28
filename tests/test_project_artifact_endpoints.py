@@ -80,6 +80,21 @@ def test_upload_artifact_rejects_unsupported_extension(mock_get_member):
         main.app.dependency_overrides.clear()
 
 
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_upload_artifact_rejects_oversized_file(mock_get_member, monkeypatch):
+    monkeypatch.setattr(main, "MAX_ARTIFACT_UPLOAD_BYTES", 10)
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.post(
+            "/api/projects/1/artifacts",
+            files={"file": ("notes.txt", b"this is way more than ten bytes", "text/plain")},
+            data={"purpose": "reference"},
+        )
+        assert response.status_code == 413
+    finally:
+        main.app.dependency_overrides.clear()
+
+
 @patch("main.project_artifacts_db.create_artifact", side_effect=ValueError("Invalid project_id or uploaded_by: no such project"))
 @patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
 def test_upload_artifact_rejects_invalid_foreign_keys(mock_get_member, mock_create):
