@@ -78,6 +78,18 @@ def init_db():
     """)
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id BIGSERIAL PRIMARY KEY,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        full_name TEXT NOT NULL,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        is_admin BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS framework_kb_chunks (
         id BIGSERIAL PRIMARY KEY,
         source_file TEXT NOT NULL,

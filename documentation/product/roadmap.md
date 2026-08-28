@@ -1,6 +1,6 @@
 # Product Roadmap — Cosmos Strategic Capability Platform
 
-**Last Updated:** 2026-08-27
+**Last Updated:** 2026-08-28
 
 This is the living status document for the project: what's been decided, what's built, and what's next. It replaces the one-time `plan/task.md` checklist and the forward-looking sections of `plan/implementation_plan.md`.
 
@@ -25,7 +25,7 @@ Two distinct knowledge bases result from this design, both `pgvector`-backed in 
 Roles are `SystemAdmin` (global — creates projects, assigns the leading Consultant), `Consultant` (per-project — preps the engagement, activates it), and `ClientUser` (per-project — works the learning flow, blocked until the project is `Active`). `Owner`/`Reviewer`/`Peer` from the original design are deferred, not abandoned.
 
 - [x] **Phase 0 — Database Platform**: stand up a Neon project, `CREATE EXTENSION vector`, migrate `processes`/`stages`/`questions`/`guidance` DDL from SQLite to Postgres, rebuild the Framework Knowledge Base into `framework_kb_chunks`. Everything below depends on this. **Scope note**: the legacy SQLite `responses` table (`id`, `question_id`, `client_case_id`, `submitted_text`, `status`, `rating`, `critique`, `recommendations`, `updated_at`) was dropped, not migrated — no `responses` table exists in Postgres today. It's superseded by Phase B's `project_id`-based redesign below, so recreating the old shape now just to replace it again in Phase B would be wasted work.
-- [ ] **Phase A — Users & Auth**: `users` table (incl. `is_admin`), register/login, JWT issuance/verification, `get_current_user` and `require_admin` dependencies.
+- [x] **Phase A — Users & Auth**: `users` table (incl. `is_admin`), register/login, JWT issuance/verification, `get_current_user` dependency. **Done 2026-08-28** — see `docs/superpowers/plans/2026-08-28-phase-a-users-auth.md`. `require_admin` was reassigned to Phase B in that plan (it depends on the `is_admin` flag being checked in the context of project creation, which doesn't exist until Phase B) — not built here. `admin_auth.py`'s stopgap shared-token gate is untouched, still pending that Phase B `require_admin` dependency. `get_current_user` is not yet wired into any pre-existing endpoint (`/api/evaluate`, `/api/chat/sessions`, etc.) — those stay open/unauthenticated until Phase B introduces `project_id`-scoped access control.
 - [ ] **Phase B — Projects**: `projects` (incl. `industry_context`, `status` starting at `Draft`) + `project_members` tables, `require_project_role` / `require_active_project` dependencies, `POST /api/projects` (SystemAdmin-only), `PATCH /api/projects/{id}`, `POST /api/projects/{id}/activate`, creating the `responses` table (`project_id`-based — no prior `responses` table exists to migrate from, since Phase 0 dropped the legacy one; see above), removing the hardcoded `CASES_DATA` dict.
 - [ ] **Phase C — Engagement Knowledge Base**: `project_artifacts` table (incl. `purpose` tagging for case studies), `project_kb_chunks` table, `backend/project_knowledge_base.py` ingestion pipeline (documents + audio-with-fallback), merged pgvector retrieval in `/api/evaluate` (excluding `case_study_resolution`-purpose chunks), the Engagement Documents frontend panel.
 
