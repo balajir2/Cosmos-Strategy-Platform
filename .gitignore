@@ -23,3 +23,6 @@ env/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Git worktrees
+.worktrees/
