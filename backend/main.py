@@ -17,6 +17,7 @@ import users_db
 import project_artifacts_db
 import project_knowledge_base
 import process_db
+import responses_db
 from auth import (
     hash_password, verify_password, create_access_token, get_current_user,
     require_admin, require_project_role, require_active_project,
@@ -83,6 +84,12 @@ class ProjectUpdateRequest(BaseModel):
 class ProjectEvaluationRequest(BaseModel):
     question_id: int
     submitted_text: str
+
+class ResponseSaveRequest(BaseModel):
+    question_id: int
+    submitted_text: Optional[str] = None
+    self_evaluation_notes: Optional[str] = None
+    self_evaluation_status: Optional[str] = None
 
 @app.get("/api/status")
 def get_status():
@@ -210,6 +217,21 @@ def evaluate_project_answer(
         "level_3": benchmarks.get("level_3", ""),
         "source_chunks": hits,
     }
+
+@app.post("/api/projects/{project_id}/responses")
+def save_project_response(
+    project_id: int,
+    payload: ResponseSaveRequest,
+    member: dict = Depends(require_project_member),
+    project: dict = Depends(require_active_project),
+):
+    try:
+        return responses_db.save_response(
+            project_id, payload.question_id, payload.submitted_text,
+            payload.self_evaluation_notes, payload.self_evaluation_status,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
