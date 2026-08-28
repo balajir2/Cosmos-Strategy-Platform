@@ -94,3 +94,63 @@ def test_list_artifacts_for_project_returns_dict_list(mock_get_conn):
     result = project_artifacts_db.list_artifacts_for_project(10)
 
     assert result == [_ARTIFACT_DICT]
+
+
+@patch("project_artifacts_db.get_db_connection")
+def test_update_artifact_status_updates_and_returns_row(mock_get_conn):
+    updated_row = (1, 10, "notes.txt", "document", "txt", "reference", "Indexed", None, 5, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    conn, cursor = _fake_conn(fetchone_result=updated_row)
+    mock_get_conn.return_value = conn
+
+    result = project_artifacts_db.update_artifact_status(1, "Indexed")
+
+    assert result["status"] == "Indexed"
+    sql, params = cursor.execute.call_args[0]
+    assert "UPDATE project_artifacts" in sql
+    assert params == ("Indexed", None, 1)
+    conn.commit.assert_called_once()
+
+
+@patch("project_artifacts_db.get_db_connection")
+def test_update_artifact_status_sets_transcript_text_when_given(mock_get_conn):
+    updated_row = (2, 10, "meeting.mp3", "audio", "audio", "reference", "Indexed", "hello from the meeting", 5, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    conn, cursor = _fake_conn(fetchone_result=updated_row)
+    mock_get_conn.return_value = conn
+
+    result = project_artifacts_db.update_artifact_status(2, "Indexed", transcript_text="hello from the meeting")
+
+    assert result["transcript_text"] == "hello from the meeting"
+    _, params = cursor.execute.call_args[0]
+    assert params == ("Indexed", "hello from the meeting", 2)
+
+
+@patch("project_artifacts_db.get_db_connection")
+def test_update_artifact_status_returns_none_when_missing(mock_get_conn):
+    conn, _ = _fake_conn(fetchone_result=None)
+    mock_get_conn.return_value = conn
+
+    assert project_artifacts_db.update_artifact_status(999, "Failed") is None
+
+
+@patch("project_artifacts_db.get_db_connection")
+def test_delete_artifact_returns_true_when_deleted(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.rowcount = 1
+    mock_get_conn.return_value = conn
+
+    result = project_artifacts_db.delete_artifact(10, 1)
+
+    assert result is True
+    sql, params = cursor.execute.call_args[0]
+    assert "DELETE FROM project_artifacts" in sql
+    assert params == (1, 10)
+    conn.commit.assert_called_once()
+
+
+@patch("project_artifacts_db.get_db_connection")
+def test_delete_artifact_returns_false_when_not_found_or_wrong_project(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.rowcount = 0
+    mock_get_conn.return_value = conn
+
+    assert project_artifacts_db.delete_artifact(10, 999) is False
