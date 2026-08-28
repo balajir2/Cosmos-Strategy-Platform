@@ -3,7 +3,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 from fastapi import FastAPI, HTTPException, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 # Import RAG Engine
 from rag_engine import RagEngine
@@ -12,8 +12,9 @@ from admin_auth import require_admin_token
 from cases_data import CASES_DATA
 import chat_engine
 import chat_sessions as chat_sessions_module
+import projects_db
 import users_db
-from auth import hash_password, verify_password, create_access_token, get_current_user
+from auth import hash_password, verify_password, create_access_token, get_current_user, require_admin
 
 app = FastAPI(title="Cosmos Strategic Capability Platform", version="1.0.0")
 
@@ -54,6 +55,14 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class ProjectCreateRequest(BaseModel):
+    name: str
+    customer_name: str
+    description: Optional[str] = None
+    industry_context: Optional[str] = None
+    process_id: int
+    consultant_user_id: int
+
 @app.get("/api/status")
 def get_status():
     return {
@@ -79,6 +88,16 @@ def login(payload: LoginRequest):
 @app.get("/api/auth/me")
 def get_me(current_user: dict = Depends(get_current_user)):
     return current_user
+
+@app.post("/api/projects")
+def create_project(payload: ProjectCreateRequest, admin: dict = Depends(require_admin)):
+    try:
+        return projects_db.create_project(
+            payload.name, payload.customer_name, payload.description, payload.industry_context,
+            payload.process_id, admin["id"], payload.consultant_user_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
