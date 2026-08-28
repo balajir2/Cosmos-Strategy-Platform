@@ -313,7 +313,10 @@ class RagEngine:
             provider_name = platform_settings.get_active_provider()
             provider = get_provider_adapter(provider_name)
             response_text = provider.complete(system_prompt, [{"role": "user", "content": user_prompt}])
-            return parse_evaluation_json(response_text)
+            result = parse_evaluation_json(response_text)
+            if not all(result.get(key) for key in ("level_1", "level_2", "level_3")):
+                raise ValueError(f"LLM response missing one or more required keys: {result!r}")
+            return result
         except Exception as e:
             print(f"Error generating comparative benchmarks via '{provider_name if 'provider_name' in locals() else 'unknown'}' provider: {e}")
             return self.fallback_local_benchmarks()

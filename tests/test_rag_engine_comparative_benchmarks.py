@@ -54,6 +54,19 @@ def test_generate_comparative_benchmarks_falls_back_on_provider_error(mock_get_a
     assert set(result.keys()) == {"level_1", "level_2", "level_3"}
 
 
+@patch("rag_engine.get_provider_adapter")
+@patch("rag_engine.platform_settings.get_active_provider", return_value="anthropic")
+def test_generate_comparative_benchmarks_falls_back_on_incomplete_json(mock_get_active, mock_get_adapter):
+    fake_provider = MagicMock()
+    fake_provider.complete.return_value = '{"level_1": "surface fact", "level_2": "customer need"}'
+    mock_get_adapter.return_value = fake_provider
+
+    engine = _make_engine()
+    result = engine.generate_comparative_benchmarks("Q?", "my answer", [])
+
+    assert result == engine.fallback_local_benchmarks()
+
+
 def test_fallback_local_benchmarks_returns_all_three_levels():
     engine = _make_engine()
     result = engine.fallback_local_benchmarks()
