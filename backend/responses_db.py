@@ -34,10 +34,14 @@ def save_response(
                     INSERT INTO responses (question_id, project_id, submitted_text, self_evaluation_notes, self_evaluation_status, status)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     ON CONFLICT (question_id, project_id) DO UPDATE SET
-                        submitted_text = EXCLUDED.submitted_text,
-                        self_evaluation_notes = EXCLUDED.self_evaluation_notes,
-                        self_evaluation_status = EXCLUDED.self_evaluation_status,
-                        status = EXCLUDED.status,
+                        submitted_text = COALESCE(EXCLUDED.submitted_text, responses.submitted_text),
+                        self_evaluation_notes = COALESCE(EXCLUDED.self_evaluation_notes, responses.self_evaluation_notes),
+                        self_evaluation_status = COALESCE(EXCLUDED.self_evaluation_status, responses.self_evaluation_status),
+                        status = CASE
+                            WHEN COALESCE(EXCLUDED.self_evaluation_status, responses.self_evaluation_status) IS NOT NULL THEN 'Self-Evaluated'
+                            WHEN COALESCE(EXCLUDED.submitted_text, responses.submitted_text) IS NOT NULL THEN 'Submitted'
+                            ELSE 'Draft'
+                        END,
                         updated_at = now()
                     RETURNING id, question_id, project_id, submitted_text, self_evaluation_notes, self_evaluation_status, status, updated_at;
                     """,

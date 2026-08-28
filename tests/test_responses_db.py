@@ -41,6 +41,19 @@ def test_save_response_inserts_and_returns_row_with_submitted_status(mock_get_co
 
 
 @patch("responses_db.get_db_connection")
+def test_save_response_preserves_prior_columns_on_conflict_via_coalesce(mock_get_conn):
+    conn, cursor = _fake_conn(fetchone_result=_RESPONSE_ROW)
+    mock_get_conn.return_value = conn
+
+    responses_db.save_response(10, 100, self_evaluation_notes="solid reasoning", self_evaluation_status="Strong")
+
+    sql, _ = cursor.execute.call_args[0]
+    assert "submitted_text = COALESCE(EXCLUDED.submitted_text, responses.submitted_text)" in sql
+    assert "self_evaluation_notes = COALESCE(EXCLUDED.self_evaluation_notes, responses.self_evaluation_notes)" in sql
+    assert "self_evaluation_status = COALESCE(EXCLUDED.self_evaluation_status, responses.self_evaluation_status)" in sql
+
+
+@patch("responses_db.get_db_connection")
 def test_save_response_sets_self_evaluated_status_when_status_given(mock_get_conn):
     row = (1, 100, 10, "my answer", "solid reasoning", "Strong", "Self-Evaluated", datetime.datetime(2026, 8, 28, 9, 0, 0))
     conn, cursor = _fake_conn(fetchone_result=row)
