@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import Header, HTTPException
 from jose import jwt
@@ -34,7 +34,7 @@ def _require_jwt_secret() -> str:
 
 def create_access_token(user_id: int, email: str) -> str:
     secret = _require_jwt_secret()
-    expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
     claims = {"sub": str(user_id), "email": email, "exp": expire}
     return jwt.encode(claims, secret, algorithm=JWT_ALGORITHM)
 
