@@ -16,6 +16,7 @@ import projects_db
 import users_db
 import project_artifacts_db
 import project_knowledge_base
+import process_db
 from auth import (
     hash_password, verify_password, create_access_token, get_current_user,
     require_admin, require_project_role, require_active_project,
@@ -236,6 +237,13 @@ def get_case(case_id: str):
     if case_id not in CASES_DATA:
         raise HTTPException(status_code=404, detail="Case study not found.")
     return CASES_DATA[case_id]
+
+@app.get("/api/process/{process_id}")
+def get_process(process_id: int, current_user: dict = Depends(get_current_user)):
+    process = process_db.get_process_detail(process_id)
+    if process is None:
+        raise HTTPException(status_code=404, detail="Process not found.")
+    return process
 
 @app.post("/api/evaluate")
 def evaluate_answer(req: EvaluationRequest):
