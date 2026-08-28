@@ -14,9 +14,14 @@ import chat_engine
 import chat_sessions as chat_sessions_module
 import projects_db
 import users_db
-from auth import hash_password, verify_password, create_access_token, get_current_user, require_admin
+from auth import (
+    hash_password, verify_password, create_access_token, get_current_user,
+    require_admin, require_project_role, require_active_project,
+)
 
 app = FastAPI(title="Cosmos Strategic Capability Platform", version="1.0.0")
+
+require_project_member = require_project_role(["Consultant", "ClientUser"])
 
 # Enable CORS for frontend integration
 app.add_middleware(
@@ -102,6 +107,14 @@ def create_project(payload: ProjectCreateRequest, admin: dict = Depends(require_
 @app.get("/api/projects")
 def list_projects(current_user: dict = Depends(get_current_user)):
     return projects_db.list_projects_for_user(current_user["id"])
+
+@app.get("/api/projects/{project_id}")
+def get_project(
+    project_id: int,
+    member: dict = Depends(require_project_member),
+    project: dict = Depends(require_active_project),
+):
+    return project
 
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):

@@ -85,3 +85,59 @@ def test_list_projects_returns_projects_for_current_user(mock_list):
         mock_list.assert_called_once_with(1)
     finally:
         main.app.dependency_overrides.clear()
+
+
+# --- GET /api/projects/{project_id} ------------------------------------------
+
+@patch("auth.get_project_member", return_value=None)
+def test_get_project_rejects_non_member(mock_get_member):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
+    try:
+        response = client.get("/api/projects/1")
+        assert response.status_code == 403
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("auth.get_project_by_id", return_value={"id": 1, "name": "X", "status": "Draft"})
+@patch("auth.get_project_member", return_value={
+    "id": 2, "project_id": 1, "user_id": 2, "role": "ClientUser",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_get_project_rejects_client_user_on_draft_project(mock_get_member, mock_get_project):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _NON_ADMIN_USER
+    try:
+        response = client.get("/api/projects/1")
+        assert response.status_code == 403
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("auth.get_project_by_id", return_value={"id": 1, "name": "X", "status": "Draft"})
+@patch("auth.get_project_member", return_value={
+    "id": 1, "project_id": 1, "user_id": 1, "role": "Consultant",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_get_project_allows_consultant_on_draft_project(mock_get_member, mock_get_project):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
+    try:
+        response = client.get("/api/projects/1")
+        assert response.status_code == 200
+        assert response.json() == {"id": 1, "name": "X", "status": "Draft"}
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("auth.get_project_by_id", return_value={"id": 1, "name": "X", "status": "Active"})
+@patch("auth.get_project_member", return_value={
+    "id": 2, "project_id": 1, "user_id": 2, "role": "ClientUser",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_get_project_allows_client_user_on_active_project(mock_get_member, mock_get_project):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _NON_ADMIN_USER
+    try:
+        response = client.get("/api/projects/1")
+        assert response.status_code == 200
+        assert response.json() == {"id": 1, "name": "X", "status": "Active"}
+    finally:
+        main.app.dependency_overrides.clear()
