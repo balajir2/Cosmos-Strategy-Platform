@@ -45,3 +45,46 @@ def test_register_rejects_duplicate_email(mock_create, mock_hash):
     )
     assert response.status_code == 400
     assert "already registered" in response.json()["detail"]
+
+
+# --- POST /api/auth/login --------------------------------------------------
+
+@patch("main.create_access_token", return_value="fake-jwt-token")
+@patch("main.verify_password", return_value=True)
+@patch(
+    "main.users_db.get_user_by_email",
+    return_value={
+        "id": 1, "email": "a@x.com", "password_hash": "hashed-value", "full_name": "Alice",
+        "is_active": True, "is_admin": False, "created_at": "2026-08-28T09:00:00",
+    },
+)
+def test_login_returns_token_for_correct_credentials(mock_get_user, mock_verify, mock_token):
+    response = client.post("/api/auth/login", json={"email": "a@x.com", "password": "secret123"})
+
+    assert response.status_code == 200
+    assert response.json() == {"access_token": "fake-jwt-token", "token_type": "bearer"}
+    mock_verify.assert_called_once_with("secret123", "hashed-value")
+    mock_token.assert_called_once_with(1, "a@x.com")
+
+
+@patch("main.users_db.get_user_by_email", return_value=None)
+def test_login_rejects_unknown_email(mock_get_user):
+    response = client.post("/api/auth/login", json={"email": "missing@x.com", "password": "secret123"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password."
+
+
+@patch("main.verify_password", return_value=False)
+@patch(
+    "main.users_db.get_user_by_email",
+    return_value={
+        "id": 1, "email": "a@x.com", "password_hash": "hashed-value", "full_name": "Alice",
+        "is_active": True, "is_admin": False, "created_at": "2026-08-28T09:00:00",
+    },
+)
+def test_login_rejects_wrong_password(mock_get_user, mock_verify):
+    response = client.post("/api/auth/login", json={"email": "a@x.com", "password": "wrong"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password."

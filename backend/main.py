@@ -50,6 +50,10 @@ class RegisterRequest(BaseModel):
     password: str
     full_name: str
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
 @app.get("/api/status")
 def get_status():
     return {
@@ -63,6 +67,14 @@ def register(payload: RegisterRequest):
         return users_db.create_user(payload.email, hash_password(payload.password), payload.full_name)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/auth/login")
+def login(payload: LoginRequest):
+    user = users_db.get_user_by_email(payload.email)
+    if not user or not verify_password(payload.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+    token = create_access_token(user["id"], user["email"])
+    return {"access_token": token, "token_type": "bearer"}
 
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
