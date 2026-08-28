@@ -133,6 +133,40 @@ def init_db():
     """)
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS project_artifacts (
+        id BIGSERIAL PRIMARY KEY,
+        project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        filename TEXT NOT NULL,
+        artifact_type TEXT NOT NULL
+            CHECK (artifact_type IN ('document', 'audio')),
+        source_format TEXT NOT NULL
+            CHECK (source_format IN ('pdf', 'docx', 'pptx', 'txt', 'audio')),
+        purpose TEXT NOT NULL DEFAULT 'reference'
+            CHECK (purpose IN ('reference', 'case_study_external', 'case_study_internal', 'case_study_resolution')),
+        status TEXT NOT NULL DEFAULT 'Uploaded'
+            CHECK (status IN ('Uploaded', 'Processing', 'Indexed', 'Failed', 'Transcript Needed')),
+        transcript_text TEXT,
+        uploaded_by BIGINT NOT NULL REFERENCES users(id),
+        uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS project_kb_chunks (
+        id BIGSERIAL PRIMARY KEY,
+        project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        artifact_id BIGINT NOT NULL REFERENCES project_artifacts(id) ON DELETE CASCADE,
+        chunk_text TEXT NOT NULL,
+        embedding VECTOR(384) NOT NULL
+    );
+    """)
+
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS project_kb_chunks_embedding_idx
+    ON project_kb_chunks USING hnsw (embedding vector_cosine_ops);
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS framework_kb_chunks (
         id BIGSERIAL PRIMARY KEY,
         source_file TEXT NOT NULL,
