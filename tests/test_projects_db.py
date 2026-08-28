@@ -88,3 +88,74 @@ def test_list_projects_for_user_returns_dict_list(mock_get_conn):
     result = projects_db.list_projects_for_user(1)
 
     assert result == [_PROJECT_DICT]
+
+
+_MEMBER_ROW = (1, 1, 5, "Consultant", "CMO", datetime.datetime(2026, 8, 28, 9, 0, 0))
+_MEMBER_DICT = {
+    "id": 1, "project_id": 1, "user_id": 5, "role": "Consultant",
+    "org_title": "CMO", "assigned_at": "2026-08-28T09:00:00",
+}
+
+
+@patch("projects_db.get_db_connection")
+def test_update_project_returns_none_when_missing(mock_get_conn):
+    conn, _ = _fake_conn(fetchone_result=None)
+    mock_get_conn.return_value = conn
+
+    assert projects_db.update_project(999, industry_context="B2B") is None
+
+
+@patch("projects_db.get_db_connection")
+def test_update_project_updates_and_returns_row(mock_get_conn):
+    updated_row = (1, "Blazar India Entry", "Blazar", "Market entry", "B2B now", "Draft", 1, 1, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    conn, cursor = _fake_conn(fetchone_result=updated_row)
+    mock_get_conn.return_value = conn
+
+    result = projects_db.update_project(1, industry_context="B2B now")
+
+    assert result["industry_context"] == "B2B now"
+    sql, params = cursor.execute.call_args[0]
+    assert "UPDATE projects" in sql
+    assert params == (None, None, None, "B2B now", 1)
+    conn.commit.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_activate_project_transitions_draft_to_active(mock_get_conn):
+    active_row = (1, "Blazar India Entry", "Blazar", "Market entry", "B2C, personal care", "Active", 1, 1, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    conn, cursor = _fake_conn(fetchone_result=active_row)
+    mock_get_conn.return_value = conn
+
+    result = projects_db.activate_project(1)
+
+    assert result["status"] == "Active"
+    conn.commit.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_activate_project_raises_value_error_when_not_draft(mock_get_conn):
+    conn, cursor = _fake_conn(fetchone_result=None)
+    mock_get_conn.return_value = conn
+
+    with pytest.raises(ValueError, match="1"):
+        projects_db.activate_project(1)
+
+    conn.rollback.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_get_project_member_returns_none_when_not_a_member(mock_get_conn):
+    conn, _ = _fake_conn(fetchone_result=None)
+    mock_get_conn.return_value = conn
+
+    assert projects_db.get_project_member(1, 999) is None
+
+
+@patch("projects_db.get_db_connection")
+def test_get_project_member_returns_dict_when_found(mock_get_conn):
+    conn, _ = _fake_conn(fetchone_result=_MEMBER_ROW)
+    mock_get_conn.return_value = conn
+
+    result = projects_db.get_project_member(1, 5)
+
+    assert result == _MEMBER_DICT

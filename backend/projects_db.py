@@ -80,3 +80,63 @@ def list_projects_for_user(user_id: int) -> list:
             )
             rows = cursor.fetchall()
     return [_project_dict(row) for row in rows]
+
+
+def update_project(project_id: int, name=None, customer_name=None, description=None, industry_context=None):
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE projects
+                SET name = COALESCE(%s, name),
+                    customer_name = COALESCE(%s, customer_name),
+                    description = COALESCE(%s, description),
+                    industry_context = COALESCE(%s, industry_context)
+                WHERE id = %s
+                RETURNING id, name, customer_name, description, industry_context, status, process_id, created_by, created_at;
+                """,
+                (name, customer_name, description, industry_context, project_id),
+            )
+            row = cursor.fetchone()
+        conn.commit()
+    if not row:
+        return None
+    return _project_dict(row)
+
+
+def activate_project(project_id: int) -> dict:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE projects SET status = 'Active'
+                WHERE id = %s AND status = 'Draft'
+                RETURNING id, name, customer_name, description, industry_context, status, process_id, created_by, created_at;
+                """,
+                (project_id,),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                conn.rollback()
+                raise ValueError(f"Project {project_id} cannot be activated (not found or not in Draft status).")
+        conn.commit()
+    return _project_dict(row)
+
+
+def get_project_member(project_id: int, user_id: int):
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, project_id, user_id, role, org_title, assigned_at
+                FROM project_members WHERE project_id = %s AND user_id = %s;
+                """,
+                (project_id, user_id),
+            )
+            row = cursor.fetchone()
+    if not row:
+        return None
+    return {
+        "id": row[0], "project_id": row[1], "user_id": row[2], "role": row[3],
+        "org_title": row[4], "assigned_at": row[5].isoformat(),
+    }
