@@ -34,7 +34,7 @@
 **Interfaces:**
 - Produces: a `projects` table (`id, name, customer_name, description, industry_context, status, process_id, created_by, created_at`), a `project_members` table (`id, project_id, user_id, role, org_title, assigned_at`), and a `responses` table (`id, question_id, project_id, submitted_text, self_evaluation_notes, self_evaluation_status, status, updated_at`) — the schema every later task in this plan reads/writes via `backend/projects_db.py`.
 
-- [ ] **Step 1: Add the three `CREATE TABLE IF NOT EXISTS` blocks**
+- [x] **Step 1: Add the three `CREATE TABLE IF NOT EXISTS` blocks**
 
 In `backend/database.py`, insert this immediately after the existing `users` table block (after the line `""")` that closes it at line 90, i.e. right before the `framework_kb_chunks` block):
 
@@ -83,7 +83,7 @@ In `backend/database.py`, insert this immediately after the existing `users` tab
     """)
 ```
 
-- [ ] **Step 2: Verify against the running Neon database**
+- [x] **Step 2: Verify against the running Neon database**
 
 This project has no automated test for schema DDL (`framework_kb_chunks`, `platform_settings`, `chat_sessions`, `users` etc. were all added the same way, unverified by pytest — schema changes are verified by running the script). Run:
 
@@ -93,7 +93,7 @@ cd backend && python database.py
 
 Expected: prints `Database initialisation completed successfully.` with no errors. Then confirm all three tables exist (e.g. via the Neon SQL console or `psql "$DATABASE_URL" -c '\d projects'`, `\d project_members`, `\d responses`) and show the columns above.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/database.py
@@ -115,7 +115,7 @@ git commit -m "feat: add projects, project_members, and responses tables to data
   - `get_project_by_id(project_id: int) -> dict | None` — returns the row above, or `None` if no match.
   - `list_projects_for_user(user_id: int) -> list[dict]` — returns the row shape above for every project where the user has a `project_members` row, newest first.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_projects_db.py`:
 
@@ -212,12 +212,12 @@ def test_list_projects_for_user_returns_dict_list(mock_get_conn):
     assert result == [_PROJECT_DICT]
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_projects_db.py -v`
 Expected: `ModuleNotFoundError: No module named 'projects_db'` (or collection error) for every test.
 
-- [ ] **Step 3: Implement `backend/projects_db.py`**
+- [x] **Step 3: Implement `backend/projects_db.py`**
 
 ```python
 import contextlib
@@ -304,12 +304,12 @@ def list_projects_for_user(user_id: int) -> list:
     return [_project_dict(row) for row in rows]
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_projects_db.py -v`
 Expected: all 6 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/projects_db.py tests/test_projects_db.py
@@ -331,7 +331,7 @@ git commit -m "feat: add projects_db create/fetch/list functions"
   - `activate_project(project_id: int) -> dict` — transitions `Draft` → `Active`; returns the updated row; raises `ValueError` if the project doesn't exist or isn't currently `Draft`.
   - `get_project_member(project_id: int, user_id: int) -> dict | None` — returns `{"id", "project_id", "user_id", "role", "org_title", "assigned_at"}`, or `None` if the user has no `project_members` row for that project.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_projects_db.py`:
 
@@ -407,12 +407,12 @@ def test_get_project_member_returns_dict_when_found(mock_get_conn):
     assert result == _MEMBER_DICT
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_projects_db.py -v`
 Expected: the 6 new tests FAIL with `AttributeError: module 'projects_db' has no attribute 'update_project'` (the 6 tests from Task 2 still PASS).
 
-- [ ] **Step 3: Implement the remaining functions**
+- [x] **Step 3: Implement the remaining functions**
 
 Append to `backend/projects_db.py`:
 
@@ -479,12 +479,12 @@ def get_project_member(project_id: int, user_id: int):
 
 Note: `update_project`'s `WHERE id = %s` with no matching row still triggers psycopg2's `RETURNING` clause to return zero rows, so `cursor.fetchone()` returns `None` — no separate existence check needed before the `UPDATE`.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_projects_db.py -v`
 Expected: all 12 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/projects_db.py tests/test_projects_db.py
@@ -503,7 +503,7 @@ git commit -m "feat: add projects_db update/activate/member-lookup functions"
 - Consumes: `get_current_user` (existing, Phase A — same module).
 - Produces (used by Task 7): `require_admin(current_user: dict = Depends(get_current_user)) -> dict` — raises `HTTPException(403)` if `current_user["is_admin"]` is falsy; otherwise returns `current_user` unchanged.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_auth.py`:
 
@@ -522,12 +522,12 @@ def test_require_admin_allows_admin_user():
     assert result == admin_user
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_auth.py -v`
 Expected: the 2 new tests FAIL with `AttributeError: module 'auth' has no attribute 'require_admin'` (the 12 existing tests in the file still PASS).
 
-- [ ] **Step 3: Implement `require_admin`**
+- [x] **Step 3: Implement `require_admin`**
 
 Append to `backend/auth.py`:
 
@@ -538,12 +538,12 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
     return current_user
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_auth.py -v`
 Expected: all 14 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/auth.py tests/test_auth.py
@@ -562,7 +562,7 @@ git commit -m "feat: add require_admin dependency"
 - Consumes: `projects_db.get_project_member(project_id: int, user_id: int) -> dict | None` (Task 3), `get_current_user` (existing).
 - Produces (used by Task 6 and Tasks 9-11): `require_project_role(allowed_roles: List[str])` — a dependency *factory*. Calling it returns a FastAPI dependency function `(project_id: int, current_user: dict = Depends(get_current_user)) -> dict` that raises `HTTPException(403)` if the caller has no `project_members` row for `project_id` (not a member — a non-existent project reads the same way, so this never leaks whether a project ID exists), or if their `role` isn't in `allowed_roles`; otherwise returns the membership row dict from `get_project_member`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_auth.py`:
 
@@ -605,12 +605,12 @@ def test_require_project_role_allows_matching_role(mock_get_member):
     mock_get_member.assert_called_once_with(1, 1)
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_auth.py -v`
 Expected: the 3 new tests FAIL with `AttributeError: module 'auth' has no attribute 'require_project_role'` (the 14 existing tests still PASS).
 
-- [ ] **Step 3: Implement `require_project_role`**
+- [x] **Step 3: Implement `require_project_role`**
 
 Add this import near the top of `backend/auth.py`, alongside the existing `from users_db import get_user_by_id` line:
 
@@ -634,12 +634,12 @@ def require_project_role(allowed_roles: List[str]):
     return _dependency
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_auth.py -v`
 Expected: all 17 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/auth.py tests/test_auth.py
@@ -658,7 +658,7 @@ git commit -m "feat: add require_project_role dependency factory"
 - Consumes: `projects_db.get_project_by_id(project_id: int) -> dict | None` (Task 2), `projects_db.get_project_member(project_id: int, user_id: int) -> dict | None` (Task 3), `get_current_user` (existing).
 - Produces (used by Task 9): `require_active_project(project_id: int, current_user: dict = Depends(get_current_user)) -> dict` — raises `HTTPException(404)` if the project doesn't exist; raises `HTTPException(403)` if the caller is a `ClientUser` member of that project and `projects.status != 'Active'` (a `Consultant` may still access their own `Draft` project); otherwise returns the project dict.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_auth.py`:
 
@@ -696,12 +696,12 @@ def test_require_active_project_allows_client_user_on_active_project(mock_get_pr
     assert result == _ACTIVE_PROJECT
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_auth.py -v`
 Expected: the 4 new tests FAIL with `AttributeError: module 'auth' has no attribute 'require_active_project'` (the 17 existing tests still PASS).
 
-- [ ] **Step 3: Implement `require_active_project`**
+- [x] **Step 3: Implement `require_active_project`**
 
 Change the import added in Task 5 from:
 
@@ -730,12 +730,12 @@ def require_active_project(project_id: int, current_user: dict = Depends(get_cur
     return project
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_auth.py -v`
 Expected: all 21 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/auth.py tests/test_auth.py
@@ -754,7 +754,7 @@ git commit -m "feat: add require_active_project dependency"
 - Consumes: `projects_db.create_project` (Task 2), `auth.require_admin` (Task 4).
 - Produces: `POST /api/projects` — **SystemAdmin-only**. Body `{"name", "customer_name", "description"?, "industry_context"?, "process_id", "consultant_user_id"}` → success body is the created project dict (`{"id", "name", "customer_name", "description", "industry_context", "status", "process_id", "created_by", "created_at"}`); `403` if the caller isn't an admin; `400` with `{"detail": "..."}` if `process_id`/`consultant_user_id` don't exist.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_project_endpoints.py`:
 
@@ -829,12 +829,12 @@ def test_create_project_rejects_invalid_foreign_keys(mock_create):
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_endpoints.py -v`
 Expected: all 4 tests FAIL with a `404 Not Found` assertion mismatch (the route doesn't exist yet) or an `AttributeError` (`main.projects_db`/`main.require_admin` don't exist yet).
 
-- [ ] **Step 3: Wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Wire the endpoint in `backend/main.py`**
 
 Modify the existing imports near the top of `backend/main.py`:
 
@@ -883,12 +883,12 @@ def create_project(payload: ProjectCreateRequest, admin: dict = Depends(require_
         raise HTTPException(status_code=400, detail=str(e))
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_endpoints.py -v`
 Expected: all 4 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/main.py tests/test_project_endpoints.py
@@ -907,7 +907,7 @@ git commit -m "feat: add POST /api/projects endpoint"
 - Consumes: `projects_db.list_projects_for_user` (Task 2), `get_current_user` (existing).
 - Produces: `GET /api/projects` — any authenticated user; returns a JSON array of project dicts for every project where the caller has a `project_members` row (per spec line 199); `401`/`422` if unauthenticated.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_project_endpoints.py`:
 
@@ -931,12 +931,12 @@ def test_list_projects_returns_projects_for_current_user(mock_list):
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_endpoints.py -v`
 Expected: the 2 new tests FAIL with `404 Not Found` (the route doesn't exist yet) — the Task 7 tests still PASS.
 
-- [ ] **Step 3: Wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Wire the endpoint in `backend/main.py`**
 
 Add this route, right after `create_project`:
 
@@ -946,12 +946,12 @@ def list_projects(current_user: dict = Depends(get_current_user)):
     return projects_db.list_projects_for_user(current_user["id"])
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_endpoints.py -v`
 Expected: all 6 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/main.py tests/test_project_endpoints.py
@@ -970,7 +970,7 @@ git commit -m "feat: add GET /api/projects list endpoint"
 - Consumes: `auth.require_project_role` (Task 5), `auth.require_active_project` (Task 6).
 - Produces: `GET /api/projects/{project_id}` — requires the caller to have a `project_members` row for that project (`Consultant` or `ClientUser`), via a new module-level `require_project_member = require_project_role(["Consultant", "ClientUser"])` instance; a `ClientUser` additionally gets `403` while the project is `Draft` (a `Consultant` can still view their own `Draft` project); returns the project dict on success. Replaces `GET /api/case/{case_id}` for the target design, though that endpoint is left in place per this plan's Global Constraints.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_project_endpoints.py`:
 
@@ -1031,12 +1031,12 @@ def test_get_project_allows_client_user_on_active_project(mock_get_member, mock_
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_endpoints.py -v`
 Expected: the 4 new tests FAIL with `404 Not Found` (the route doesn't exist yet) — the Tasks 7-8 tests still PASS.
 
-- [ ] **Step 3: Wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Wire the endpoint in `backend/main.py`**
 
 Modify the `auth` import to include `require_project_role` and `require_active_project`:
 
@@ -1065,12 +1065,12 @@ def get_project(
     return project
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_endpoints.py -v`
 Expected: all 10 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/main.py tests/test_project_endpoints.py
@@ -1089,7 +1089,7 @@ git commit -m "feat: add GET /api/projects/{project_id} detail endpoint"
 - Consumes: `projects_db.update_project` (Task 3), `auth.require_project_role` (Task 5), via a new module-level `require_consultant = require_project_role(["Consultant"])` instance.
 - Produces: `PATCH /api/projects/{project_id}` — **Consultant-only** (of that project). Body `{"name"?, "customer_name"?, "description"?, "industry_context"?}` (all optional) → updated project dict on success; `403` if the caller isn't that project's `Consultant`; `404` if `project_id` doesn't exist.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_project_endpoints.py`:
 
@@ -1139,12 +1139,12 @@ def test_update_project_returns_404_when_missing(mock_get_member, mock_update):
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_endpoints.py -v`
 Expected: the 3 new tests FAIL with `404 Not Found` / `405 Method Not Allowed` (the route doesn't exist yet) — the Tasks 7-9 tests still PASS.
 
-- [ ] **Step 3: Wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Wire the endpoint in `backend/main.py`**
 
 Add this module-level dependency instance right after `require_project_member`:
 
@@ -1175,12 +1175,12 @@ def update_project(project_id: int, payload: ProjectUpdateRequest, member: dict 
     return updated
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_endpoints.py -v`
 Expected: all 13 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/main.py tests/test_project_endpoints.py
@@ -1199,7 +1199,7 @@ git commit -m "feat: add PATCH /api/projects/{project_id} endpoint"
 - Consumes: `projects_db.activate_project` (Task 3), `require_consultant` (Task 10, same module-level instance).
 - Produces: `POST /api/projects/{project_id}/activate` — **Consultant-only** (of that project); transitions `Draft` → `Active`; returns the updated project dict on success; `403` if the caller isn't that project's `Consultant`; `400` with `{"detail": "..."}` if the project isn't currently `Draft`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_project_endpoints.py`:
 
@@ -1249,12 +1249,12 @@ def test_activate_project_rejects_already_active_project(mock_get_member, mock_a
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_endpoints.py -v`
 Expected: the 3 new tests FAIL with `404 Not Found` (the route doesn't exist yet) — the Tasks 7-10 tests still PASS.
 
-- [ ] **Step 3: Wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Wire the endpoint in `backend/main.py`**
 
 Add this route, right after `update_project`:
 
@@ -1267,17 +1267,17 @@ def activate_project(project_id: int, member: dict = Depends(require_consultant)
         raise HTTPException(status_code=400, detail=str(e))
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_endpoints.py -v`
 Expected: all 16 tests PASS.
 
-- [ ] **Step 5: Run the full test suite**
+- [x] **Step 5: Run the full test suite**
 
 Run: `python -m pytest -v` from the repo root.
 Expected: every test PASSES (the pre-existing 72 tests plus all tests added by this plan — 72 + ~37 new = ~109 tests).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/main.py tests/test_project_endpoints.py
