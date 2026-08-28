@@ -172,3 +172,50 @@ def test_transcribe_audio_returns_none_when_job_fails(mock_client, monkeypatch):
     result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
 
     assert result is None
+
+
+@patch("project_knowledge_base.boto3.client")
+def test_transcribe_audio_returns_none_when_transcript_fetch_network_fails(mock_client, monkeypatch):
+    import urllib.error
+
+    monkeypatch.setenv("AWS_TRANSCRIBE_S3_BUCKET", "cosmos-transcribe-bucket")
+
+    mock_s3 = MagicMock()
+    mock_transcribe = MagicMock()
+    mock_transcribe.get_transcription_job.return_value = {
+        "TranscriptionJob": {
+            "TranscriptionJobStatus": "COMPLETED",
+            "Transcript": {"TranscriptFileUri": "https://example.com/transcript.json"},
+        }
+    }
+    mock_client.side_effect = lambda service_name: mock_s3 if service_name == "s3" else mock_transcribe
+
+    with patch("project_knowledge_base.urllib.request.urlopen", side_effect=urllib.error.URLError("boom")):
+        result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
+
+    assert result is None
+
+
+@patch("project_knowledge_base.boto3.client")
+def test_transcribe_audio_returns_none_on_malformed_transcript_json(mock_client, monkeypatch):
+    monkeypatch.setenv("AWS_TRANSCRIBE_S3_BUCKET", "cosmos-transcribe-bucket")
+
+    mock_s3 = MagicMock()
+    mock_transcribe = MagicMock()
+    mock_transcribe.get_transcription_job.return_value = {
+        "TranscriptionJob": {
+            "TranscriptionJobStatus": "COMPLETED",
+            "Transcript": {"TranscriptFileUri": "https://example.com/transcript.json"},
+        }
+    }
+    mock_client.side_effect = lambda service_name: mock_s3 if service_name == "s3" else mock_transcribe
+
+    mock_response = MagicMock()
+    mock_response.read.return_value = b'{"unexpected": "shape"}'
+    mock_response.__enter__.return_value = mock_response
+    mock_response.__exit__.return_value = False
+
+    with patch("project_knowledge_base.urllib.request.urlopen", return_value=mock_response):
+        result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
+
+    assert result is None

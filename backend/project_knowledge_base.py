@@ -2,6 +2,7 @@ import io
 import json
 import os
 import time
+import urllib.error
 import urllib.request
 import uuid
 
@@ -142,6 +143,9 @@ def transcribe_audio(file_bytes: bytes, filename: str):
 
         print(f"AWS Transcribe job '{job_name}' did not complete within the polling window.")
         return None
-    except (BotoCoreError, ClientError, NoCredentialsError) as e:
+    except (
+        BotoCoreError, ClientError, NoCredentialsError,
+        urllib.error.URLError, ValueError, KeyError, IndexError,
+    ) as e:
         print(f"AWS Transcribe unavailable ({e}). Falling back to manual transcript entry.")
         return None
