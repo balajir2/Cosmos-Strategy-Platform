@@ -88,3 +88,30 @@ def test_login_rejects_wrong_password(mock_get_user, mock_verify):
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid email or password."
+
+
+# --- GET /api/auth/me -------------------------------------------------------
+
+def test_get_me_rejects_missing_authorization_header():
+    response = client.get("/api/auth/me")
+    assert response.status_code in (401, 422)
+
+
+def test_get_me_rejects_invalid_token():
+    response = client.get("/api/auth/me", headers={"Authorization": "Bearer not-a-real-token"})
+    assert response.status_code == 401
+
+
+def test_get_me_returns_current_user_for_valid_token():
+    token = main.create_access_token(user_id=1, email="a@x.com")
+    fake_user = {
+        "id": 1, "email": "a@x.com", "full_name": "Alice",
+        "is_active": True, "is_admin": False, "created_at": "2026-08-28T09:00:00",
+    }
+    main.app.dependency_overrides[main.get_current_user] = lambda: fake_user
+    try:
+        response = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+        assert response.status_code == 200
+        assert response.json() == fake_user
+    finally:
+        main.app.dependency_overrides.clear()

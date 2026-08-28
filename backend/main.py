@@ -76,6 +76,10 @@ def login(payload: LoginRequest):
     token = create_access_token(user["id"], user["email"])
     return {"access_token": token, "token_type": "bearer"}
 
+@app.get("/api/auth/me")
+def get_me(current_user: dict = Depends(get_current_user)):
+    return current_user
+
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
     return {"active_llm_provider": platform_settings.get_active_provider()}
