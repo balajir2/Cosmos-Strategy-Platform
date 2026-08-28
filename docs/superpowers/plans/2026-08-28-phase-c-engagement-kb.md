@@ -38,7 +38,7 @@
 **Interfaces:**
 - Produces: a `project_artifacts` table (`id, project_id, filename, artifact_type, source_format, purpose, status, transcript_text, uploaded_by, uploaded_at`) and a `project_kb_chunks` table (`id, project_id, artifact_id, chunk_text, embedding`) with an HNSW cosine-distance index — the schema every later task in this plan reads/writes via `backend/project_artifacts_db.py` and `backend/project_knowledge_base.py`.
 
-- [ ] **Step 1: Add the two `CREATE TABLE IF NOT EXISTS` blocks**
+- [x] **Step 1: Add the two `CREATE TABLE IF NOT EXISTS` blocks**
 
 In `backend/database.py`, insert this immediately after the existing `responses` table block (after the line `""")` that closes it at line 133, i.e. right before the `framework_kb_chunks` block):
 
@@ -78,7 +78,7 @@ In `backend/database.py`, insert this immediately after the existing `responses`
     """)
 ```
 
-- [ ] **Step 2: Verify against the running Neon database**
+- [x] **Step 2: Verify against the running Neon database**
 
 This project has no automated test for schema DDL (`framework_kb_chunks`, `projects`, `responses` etc. were all added the same way, unverified by pytest — schema changes are verified by running the script). Run:
 
@@ -88,7 +88,7 @@ cd backend && python database.py
 
 Expected: prints `Database initialisation completed successfully.` with no errors. Then confirm both tables exist (e.g. via the Neon SQL console or `psql "$DATABASE_URL" -c '\d project_artifacts'`, `\d project_kb_chunks`) and show the columns above.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/database.py
@@ -110,7 +110,7 @@ git commit -m "feat: add project_artifacts and project_kb_chunks tables to datab
   - `get_artifact_by_id(artifact_id: int) -> dict | None` — returns the row above, or `None` if no match.
   - `list_artifacts_for_project(project_id: int) -> list[dict]` — returns the row shape above for every artifact belonging to `project_id`, newest first.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_project_artifacts_db.py`:
 
@@ -213,12 +213,12 @@ def test_list_artifacts_for_project_returns_dict_list(mock_get_conn):
     assert result == [_ARTIFACT_DICT]
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_artifacts_db.py -v`
 Expected: `ModuleNotFoundError: No module named 'project_artifacts_db'` (or collection error) for every test.
 
-- [ ] **Step 3: Implement `backend/project_artifacts_db.py`**
+- [x] **Step 3: Implement `backend/project_artifacts_db.py`**
 
 ```python
 import contextlib
@@ -293,12 +293,12 @@ def list_artifacts_for_project(project_id: int) -> list:
     return [_artifact_dict(row) for row in rows]
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_artifacts_db.py -v`
 Expected: all 7 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/project_artifacts_db.py tests/test_project_artifacts_db.py
@@ -319,7 +319,7 @@ git commit -m "feat: add project_artifacts_db create/fetch/list functions"
   - `update_artifact_status(artifact_id: int, status: str, transcript_text: str | None = None) -> dict | None` — sets `status`; if `transcript_text` is not `None`, also sets `transcript_text` (via `COALESCE`, so passing `None` leaves the existing value untouched); returns the updated row, or `None` if `artifact_id` doesn't exist.
   - `delete_artifact(project_id: int, artifact_id: int) -> bool` — deletes the `project_artifacts` row only if it belongs to `project_id` (defends against a Consultant on one project deleting another project's artifact by guessing an id); returns `True` if a row was deleted, `False` otherwise. Cascades to `project_kb_chunks` automatically via the `ON DELETE CASCADE` FK from Task 1 — no explicit chunk deletion needed.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_project_artifacts_db.py`:
 
@@ -384,12 +384,12 @@ def test_delete_artifact_returns_false_when_not_found_or_wrong_project(mock_get_
     assert project_artifacts_db.delete_artifact(10, 999) is False
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_artifacts_db.py -v`
 Expected: the 5 new tests FAIL with `AttributeError: module 'project_artifacts_db' has no attribute 'update_artifact_status'` (the 7 tests from Task 2 still PASS).
 
-- [ ] **Step 3: Implement the remaining functions**
+- [x] **Step 3: Implement the remaining functions**
 
 Append to `backend/project_artifacts_db.py`:
 
@@ -426,12 +426,12 @@ def delete_artifact(project_id: int, artifact_id: int) -> bool:
     return deleted
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_artifacts_db.py -v`
 Expected: all 12 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/project_artifacts_db.py tests/test_project_artifacts_db.py
@@ -456,7 +456,7 @@ git commit -m "feat: add project_artifacts_db update-status/delete functions"
   - `infer_source_format(filename: str) -> str` — maps a filename's extension to one of `'pdf'`, `'docx'`, `'pptx'`, `'txt'`, `'audio'`; raises `ValueError` for an unrecognized extension.
   - `infer_artifact_type(source_format: str) -> str` — returns `'audio'` if `source_format == 'audio'`, else `'document'`.
 
-- [ ] **Step 1: Add the dependencies**
+- [x] **Step 1: Add the dependencies**
 
 In `backend/requirements.txt`, add two new lines:
 
@@ -471,7 +471,7 @@ Install them:
 cd backend && pip install "python-docx>=1.1.0" "python-pptx>=1.0.0"
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Create `tests/test_project_knowledge_base.py`:
 
@@ -591,12 +591,12 @@ def test_infer_artifact_type_maps_audio_and_document():
     assert pkb.infer_artifact_type("docx") == "document"
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [x] **Step 3: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_knowledge_base.py -v`
 Expected: `ModuleNotFoundError: No module named 'project_knowledge_base'` (or collection error) for every test.
 
-- [ ] **Step 4: Implement `backend/project_knowledge_base.py`**
+- [x] **Step 4: Implement `backend/project_knowledge_base.py`**
 
 ```python
 import io
@@ -684,12 +684,12 @@ def infer_artifact_type(source_format: str) -> str:
     return "audio" if source_format == "audio" else "document"
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_knowledge_base.py -v`
 Expected: all 12 tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/requirements.txt backend/project_knowledge_base.py tests/test_project_knowledge_base.py
@@ -709,7 +709,7 @@ git commit -m "feat: add project_knowledge_base document parsing and chunking"
 - Consumes: `os.environ["AWS_TRANSCRIBE_S3_BUCKET"]` (new env var — the S3 bucket AWS Transcribe reads uploaded audio from and writes job output to).
 - Produces (used by Task 6): `transcribe_audio(file_bytes: bytes, filename: str) -> str | None` — uploads the audio to S3, starts and polls an AWS Transcribe job, and returns the transcript text on success. Returns `None` — never raises — if `AWS_TRANSCRIBE_S3_BUCKET` isn't set, if AWS credentials aren't configured, or if the Transcribe job fails or doesn't complete in time. This mirrors `rag_engine.py`'s existing graceful-degradation philosophy (missing external-service configuration skips the automatic path rather than crashing the request).
 
-- [ ] **Step 1: Add the dependency**
+- [x] **Step 1: Add the dependency**
 
 In `backend/requirements.txt`, add a new line:
 
@@ -723,7 +723,7 @@ Install it:
 cd backend && pip install "boto3>=1.35.0"
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Append to `tests/test_project_knowledge_base.py`:
 
@@ -789,12 +789,12 @@ def test_transcribe_audio_returns_none_when_job_fails(mock_client, monkeypatch):
     assert result is None
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [x] **Step 3: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_knowledge_base.py -v`
 Expected: the 4 new tests FAIL with `AttributeError: module 'project_knowledge_base' has no attribute 'transcribe_audio'` (the 12 tests from Task 4 still PASS).
 
-- [ ] **Step 4: Implement `transcribe_audio`**
+- [x] **Step 4: Implement `transcribe_audio`**
 
 Add these imports at the top of `backend/project_knowledge_base.py`, alongside the existing `import io` / `from docx import Document` / etc.:
 
@@ -871,12 +871,12 @@ def transcribe_audio(file_bytes: bytes, filename: str):
 
 Note: the test in Step 2 that drives the `FAILED` branch doesn't sleep (it returns on the first poll iteration), so this test suite never actually sleeps for `_TRANSCRIBE_POLL_INTERVAL_SECONDS`.
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_knowledge_base.py -v`
 Expected: all 16 tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/requirements.txt backend/project_knowledge_base.py tests/test_project_knowledge_base.py
@@ -895,7 +895,7 @@ git commit -m "feat: add AWS Transcribe audio transcription with graceful fallba
 - Consumes: `extract_text` (Task 4), `chunk_text` (Task 4), `transcribe_audio` (Task 5), `project_artifacts_db.get_artifact_by_id` / `update_artifact_status` (Tasks 2-3), `database.get_db_connection` (existing), and a `rag` argument (a `RagEngine` instance, or any object exposing `.embedding_model.encode(list[str])`) — following the same convention `chat_engine.py` uses for `start_session(rag, ...)`/`advance_session(rag, ...)`, so the `SentenceTransformer` is loaded once at app startup, not duplicated.
 - Produces (used by Task 7): `ingest_artifact(rag, artifact_id: int, file_bytes: bytes) -> dict` — the synchronous ingestion pipeline. Extracts/transcribes text, chunks it, embeds each chunk, inserts rows into `project_kb_chunks`, and returns the artifact's final state after updating `project_artifacts.status` to `'Indexed'` (success), `'Transcript Needed'` (audio, AWS unavailable), or `'Failed'` (any other error). Raises `ValueError` if `artifact_id` doesn't exist.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_project_knowledge_base.py`:
 
@@ -1019,12 +1019,12 @@ def test_ingest_artifact_raises_value_error_for_unknown_artifact():
             pkb.ingest_artifact(_fake_rag(), 999, b"bytes")
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_knowledge_base.py -v`
 Expected: the 6 new tests FAIL with `AttributeError: module 'project_knowledge_base' has no attribute '_insert_chunks'` (or `'ingest_artifact'`) — the 16 tests from Tasks 4-5 still PASS.
 
-- [ ] **Step 3: Implement `_insert_chunks` and `ingest_artifact`**
+- [x] **Step 3: Implement `_insert_chunks` and `ingest_artifact`**
 
 Add these imports at the top of `backend/project_knowledge_base.py`, alongside the existing imports:
 
@@ -1090,12 +1090,12 @@ def ingest_artifact(rag, artifact_id: int, file_bytes: bytes) -> dict:
         return project_artifacts_db.update_artifact_status(artifact_id, "Failed")
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_knowledge_base.py -v`
 Expected: all 22 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/project_knowledge_base.py tests/test_project_knowledge_base.py
@@ -1114,7 +1114,7 @@ git commit -m "feat: add project_knowledge_base ingestion orchestrator"
 - Consumes: `project_artifacts_db.create_artifact` (Task 2), `project_artifacts_db.get_artifact_by_id` (Task 2), `project_knowledge_base.infer_source_format`/`infer_artifact_type`/`ingest_artifact` (Tasks 4, 6), `require_consultant` (Phase B, module-level instance already in `main.py` — not redefined here).
 - Produces: `POST /api/projects/{project_id}/artifacts` — **Consultant-only** (of that project); multipart form body: `file` (the upload) and `purpose` (optional, defaults to `'reference'`). Infers `source_format`/`artifact_type` from the filename, creates the `project_artifacts` row, runs ingestion synchronously, and returns the artifact's final state (post-ingestion) as JSON. `403` if the caller isn't that project's Consultant; `400` with `{"detail": "..."}` for an unsupported file extension or an invalid `project_id`/`uploaded_by`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_project_artifact_endpoints.py`:
 
@@ -1216,12 +1216,12 @@ def test_upload_artifact_rejects_invalid_foreign_keys(mock_get_member, mock_crea
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_artifact_endpoints.py -v`
 Expected: all 4 tests FAIL with a `404 Not Found` assertion mismatch (the route doesn't exist yet) or an `AttributeError` (`main.project_artifacts_db`/`main.project_knowledge_base` don't exist yet).
 
-- [ ] **Step 3: Wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Wire the endpoint in `backend/main.py`**
 
 Modify the existing FastAPI import near the top of `backend/main.py`:
 
@@ -1271,12 +1271,12 @@ async def upload_project_artifact(
     return project_artifacts_db.get_artifact_by_id(artifact["id"])
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_artifact_endpoints.py -v`
 Expected: all 4 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/main.py tests/test_project_artifact_endpoints.py
@@ -1295,7 +1295,7 @@ git commit -m "feat: add POST /api/projects/{project_id}/artifacts endpoint"
 - Consumes: `project_artifacts_db.list_artifacts_for_project` (Task 2), `require_project_member` (Phase B, module-level instance already in `main.py`).
 - Produces: `GET /api/projects/{project_id}/artifacts` — any project member (`Consultant` or `ClientUser`); returns a JSON array of artifact dicts for that project, per spec line 206 ("Any project member; lists artifacts + status + purpose"); `403` if the caller isn't a member of that project.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_project_artifact_endpoints.py`:
 
@@ -1325,12 +1325,12 @@ def test_list_artifacts_rejects_non_member(mock_get_member):
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_artifact_endpoints.py -v`
 Expected: the 2 new tests FAIL with `404 Not Found` (the route doesn't exist yet) — the Task 7 tests still PASS.
 
-- [ ] **Step 3: Wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Wire the endpoint in `backend/main.py`**
 
 Add this route, right after `upload_project_artifact`:
 
@@ -1340,12 +1340,12 @@ def list_project_artifacts(project_id: int, member: dict = Depends(require_proje
     return project_artifacts_db.list_artifacts_for_project(project_id)
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_artifact_endpoints.py -v`
 Expected: all 6 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/main.py tests/test_project_artifact_endpoints.py
@@ -1364,7 +1364,7 @@ git commit -m "feat: add GET /api/projects/{project_id}/artifacts endpoint"
 - Consumes: `project_artifacts_db.delete_artifact` (Task 3), `require_consultant` (Phase B, module-level instance already in `main.py`).
 - Produces: `DELETE /api/projects/{project_id}/artifacts/{artifact_id}` — **Consultant-only** (of that project); deletes the artifact (its `project_kb_chunks` rows cascade automatically via the FK from Task 1); returns `{"deleted": true}` on success; `403` if the caller isn't that project's Consultant; `404` if `artifact_id` doesn't exist or doesn't belong to `project_id`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_project_artifact_endpoints.py`:
 
@@ -1405,12 +1405,12 @@ def test_delete_artifact_returns_404_when_missing(mock_get_member, mock_delete):
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_artifact_endpoints.py -v`
 Expected: the 3 new tests FAIL with `404 Not Found` / `405 Method Not Allowed` (the route doesn't exist yet) — the Tasks 7-8 tests still PASS.
 
-- [ ] **Step 3: Wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Wire the endpoint in `backend/main.py`**
 
 Add this route, right after `list_project_artifacts`:
 
@@ -1423,17 +1423,17 @@ def delete_project_artifact(project_id: int, artifact_id: int, member: dict = De
     return {"deleted": True}
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_artifact_endpoints.py -v`
 Expected: all 9 tests PASS.
 
-- [ ] **Step 5: Run the full test suite**
+- [x] **Step 5: Run the full test suite**
 
 Run: `python -m pytest -v` from the repo root.
 Expected: every test PASSES (the pre-existing 126 tests plus all tests added by this plan — `tests/test_project_artifacts_db.py` (12), `tests/test_project_knowledge_base.py` (22), `tests/test_project_artifact_endpoints.py` (9) — 126 + 43 new = 169 tests).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/main.py tests/test_project_artifact_endpoints.py
