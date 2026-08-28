@@ -219,3 +219,122 @@ def test_transcribe_audio_returns_none_on_malformed_transcript_json(mock_client,
         result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
 
     assert result is None
+
+
+_DOCUMENT_ARTIFACT = {
+    "id": 1, "project_id": 10, "filename": "notes.txt", "artifact_type": "document",
+    "source_format": "txt", "purpose": "reference", "status": "Uploaded",
+    "transcript_text": None, "uploaded_by": 5, "uploaded_at": "2026-08-28T09:00:00",
+}
+_AUDIO_ARTIFACT = {
+    "id": 2, "project_id": 10, "filename": "meeting.mp3", "artifact_type": "audio",
+    "source_format": "audio", "purpose": "reference", "status": "Uploaded",
+    "transcript_text": None, "uploaded_by": 5, "uploaded_at": "2026-08-28T09:00:00",
+}
+
+
+def _fake_conn():
+    cursor = MagicMock()
+    cursor.__enter__.return_value = cursor
+    cursor.__exit__.return_value = False
+    conn = MagicMock()
+    conn.cursor.return_value = cursor
+    return conn, cursor
+
+
+def _fake_rag():
+    rag = MagicMock()
+    rag.embedding_model.encode.return_value = [[0.1, 0.2], [0.3, 0.4]]
+    return rag
+
+
+@patch("project_knowledge_base.get_db_connection")
+def test_insert_chunks_inserts_one_row_per_chunk(mock_get_conn):
+    conn, cursor = _fake_conn()
+    mock_get_conn.return_value = conn
+
+    pkb._insert_chunks(10, 1, ["chunk one", "chunk two"], [[0.1, 0.2], [0.3, 0.4]])
+
+    assert cursor.execute.call_count == 2
+    first_sql, first_params = cursor.execute.call_args_list[0][0]
+    assert "INSERT INTO project_kb_chunks" in first_sql
+    assert first_params == (10, 1, "chunk one", [0.1, 0.2])
+    conn.commit.assert_called_once()
+
+
+@patch("project_knowledge_base._insert_chunks")
+@patch("project_knowledge_base.chunk_text", return_value=["chunk one", "chunk two"])
+@patch("project_knowledge_base.extract_text", return_value="parsed document text")
+@patch("project_knowledge_base.project_artifacts_db.get_artifact_by_id", return_value=_DOCUMENT_ARTIFACT)
+@patch(
+    "project_knowledge_base.project_artifacts_db.update_artifact_status",
+    return_value={**_DOCUMENT_ARTIFACT, "status": "Indexed"},
+)
+def test_ingest_artifact_indexes_a_document(mock_update, mock_get, mock_extract, mock_chunk, mock_insert):
+    rag = _fake_rag()
+
+    result = pkb.ingest_artifact(rag, 1, b"file-bytes")
+
+    assert result["status"] == "Indexed"
+    mock_extract.assert_called_once_with(b"file-bytes", "txt")
+    mock_chunk.assert_called_once_with("parsed document text")
+    mock_insert.assert_called_once_with(10, 1, ["chunk one", "chunk two"], [[0.1, 0.2], [0.3, 0.4]])
+    mock_update.assert_any_call(1, "Processing")
+    mock_update.assert_any_call(1, "Indexed", transcript_text=None)
+
+
+@patch("project_knowledge_base._insert_chunks")
+@patch("project_knowledge_base.chunk_text", return_value=["chunk one"])
+@patch("project_knowledge_base.transcribe_audio", return_value="hello from the meeting")
+@patch("project_knowledge_base.project_artifacts_db.get_artifact_by_id", return_value=_AUDIO_ARTIFACT)
+@patch(
+    "project_knowledge_base.project_artifacts_db.update_artifact_status",
+    return_value={**_AUDIO_ARTIFACT, "status": "Indexed", "transcript_text": "hello from the meeting"},
+)
+def test_ingest_artifact_indexes_audio_with_transcript(mock_update, mock_get, mock_transcribe, mock_chunk, mock_insert):
+    rag = _fake_rag()
+
+    result = pkb.ingest_artifact(rag, 2, b"audio-bytes")
+
+    assert result["status"] == "Indexed"
+    assert result["transcript_text"] == "hello from the meeting"
+    mock_transcribe.assert_called_once_with(b"audio-bytes", "meeting.mp3")
+    mock_chunk.assert_called_once_with("hello from the meeting")
+    mock_update.assert_any_call(2, "Indexed", transcript_text="hello from the meeting")
+
+
+@patch("project_knowledge_base.transcribe_audio", return_value=None)
+@patch("project_knowledge_base.project_artifacts_db.get_artifact_by_id", return_value=_AUDIO_ARTIFACT)
+@patch(
+    "project_knowledge_base.project_artifacts_db.update_artifact_status",
+    return_value={**_AUDIO_ARTIFACT, "status": "Transcript Needed"},
+)
+def test_ingest_artifact_marks_transcript_needed_when_aws_unavailable(mock_update, mock_get, mock_transcribe):
+    rag = _fake_rag()
+
+    result = pkb.ingest_artifact(rag, 2, b"audio-bytes")
+
+    assert result["status"] == "Transcript Needed"
+    mock_transcribe.assert_called_once_with(b"audio-bytes", "meeting.mp3")
+    mock_update.assert_any_call(2, "Transcript Needed")
+
+
+@patch("project_knowledge_base.extract_text", side_effect=RuntimeError("corrupt file"))
+@patch("project_knowledge_base.project_artifacts_db.get_artifact_by_id", return_value=_DOCUMENT_ARTIFACT)
+@patch(
+    "project_knowledge_base.project_artifacts_db.update_artifact_status",
+    return_value={**_DOCUMENT_ARTIFACT, "status": "Failed"},
+)
+def test_ingest_artifact_marks_failed_on_parse_error(mock_update, mock_get, mock_extract):
+    rag = _fake_rag()
+
+    result = pkb.ingest_artifact(rag, 1, b"file-bytes")
+
+    assert result["status"] == "Failed"
+    mock_update.assert_any_call(1, "Failed")
+
+
+def test_ingest_artifact_raises_value_error_for_unknown_artifact():
+    with patch("project_knowledge_base.project_artifacts_db.get_artifact_by_id", return_value=None):
+        with pytest.raises(ValueError, match="999"):
+            pkb.ingest_artifact(_fake_rag(), 999, b"bytes")

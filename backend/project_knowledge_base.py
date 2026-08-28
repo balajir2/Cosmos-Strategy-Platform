@@ -1,3 +1,4 @@
+import contextlib
 import io
 import json
 import os
@@ -11,6 +12,9 @@ from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 from docx import Document
 from pptx import Presentation
 from pypdf import PdfReader
+
+from database import get_db_connection
+import project_artifacts_db
 
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
@@ -149,3 +153,55 @@ def transcribe_audio(file_bytes: bytes, filename: str):
     ) as e:
         print(f"AWS Transcribe unavailable ({e}). Falling back to manual transcript entry.")
         return None
+
+
+def _insert_chunks(project_id: int, artifact_id: int, chunks: list, embeddings) -> None:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            for chunk, embedding in zip(chunks, embeddings):
+                cursor.execute(
+                    """
+                    INSERT INTO project_kb_chunks (project_id, artifact_id, chunk_text, embedding)
+                    VALUES (%s, %s, %s, %s);
+                    """,
+                    (project_id, artifact_id, chunk, embedding),
+                )
+        conn.commit()
+
+
+def ingest_artifact(rag, artifact_id: int, file_bytes: bytes) -> dict:
+    """Synchronous ingestion pipeline: parses or transcribes the uploaded
+    artifact, chunks the resulting text, embeds each chunk with the same
+    SentenceTransformer rag_engine.py already uses for the Framework
+    Knowledge Base (via rag.embedding_model - loaded once, not duplicated),
+    and inserts rows into project_kb_chunks. Updates project_artifacts.status
+    to reflect the outcome: 'Indexed' on success, 'Transcript Needed' for
+    audio when AWS Transcribe isn't available (never 'Failed' for that case -
+    see transcribe_audio's docstring), 'Failed' on any other parse/embedding
+    error. Runs inline on the upload request - no background job queue,
+    per the spec's "Synchronous for now" decision."""
+    artifact = project_artifacts_db.get_artifact_by_id(artifact_id)
+    if artifact is None:
+        raise ValueError(f"Unknown artifact_id '{artifact_id}'")
+
+    project_artifacts_db.update_artifact_status(artifact_id, "Processing")
+
+    try:
+        if artifact["source_format"] == "audio":
+            transcript = transcribe_audio(file_bytes, artifact["filename"])
+            if transcript is None:
+                return project_artifacts_db.update_artifact_status(artifact_id, "Transcript Needed")
+            text = transcript
+        else:
+            text = extract_text(file_bytes, artifact["source_format"])
+
+        chunks = chunk_text(text)
+        if chunks:
+            embeddings = rag.embedding_model.encode(chunks)
+            _insert_chunks(artifact["project_id"], artifact_id, chunks, embeddings)
+
+        transcript_text = text if artifact["source_format"] == "audio" else None
+        return project_artifacts_db.update_artifact_status(artifact_id, "Indexed", transcript_text=transcript_text)
+    except Exception as e:
+        print(f"Error ingesting artifact {artifact_id}: {e}")
+        return project_artifacts_db.update_artifact_status(artifact_id, "Failed")
