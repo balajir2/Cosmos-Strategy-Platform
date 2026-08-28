@@ -51,10 +51,11 @@ def get_current_user(authorization: str = Header(...)) -> dict:
     token = authorization[len("Bearer "):]
     try:
         claims = decode_access_token(token)
-    except JWTError:
+        user_id = int(claims["sub"])
+    except (JWTError, KeyError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
 
-    user = get_user_by_id(int(claims["sub"]))
+    user = get_user_by_id(user_id)
     if user is None:
         raise HTTPException(status_code=401, detail="User not found.")
     return user
