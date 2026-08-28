@@ -174,6 +174,13 @@ async def upload_project_artifact(
 def list_project_artifacts(project_id: int, member: dict = Depends(require_project_member)):
     return project_artifacts_db.list_artifacts_for_project(project_id)
 
+@app.delete("/api/projects/{project_id}/artifacts/{artifact_id}")
+def delete_project_artifact(project_id: int, artifact_id: int, member: dict = Depends(require_consultant)):
+    deleted = project_artifacts_db.delete_artifact(project_id, artifact_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Artifact not found.")
+    return {"deleted": True}
+
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
     return {"active_llm_provider": platform_settings.get_active_provider()}

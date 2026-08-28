@@ -133,3 +133,39 @@ def test_list_artifacts_rejects_non_member(mock_get_member):
         assert response.status_code == 403
     finally:
         main.app.dependency_overrides.clear()
+
+
+# --- DELETE /api/projects/{project_id}/artifacts/{artifact_id} ---------------
+
+@patch("auth.get_project_member", return_value=_CLIENT_USER_MEMBER)
+def test_delete_artifact_rejects_non_consultant(mock_get_member):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.delete("/api/projects/1/artifacts/1")
+        assert response.status_code == 403
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.project_artifacts_db.delete_artifact", return_value=True)
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_delete_artifact_deletes_for_consultant(mock_get_member, mock_delete):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.delete("/api/projects/1/artifacts/1")
+        assert response.status_code == 200
+        assert response.json() == {"deleted": True}
+        mock_delete.assert_called_once_with(1, 1)
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.project_artifacts_db.delete_artifact", return_value=False)
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_delete_artifact_returns_404_when_missing(mock_get_member, mock_delete):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.delete("/api/projects/1/artifacts/999")
+        assert response.status_code == 404
+    finally:
+        main.app.dependency_overrides.clear()
