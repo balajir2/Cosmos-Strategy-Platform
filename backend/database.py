@@ -90,6 +90,49 @@ def init_db():
     """)
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS projects (
+        id BIGSERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        customer_name TEXT NOT NULL,
+        description TEXT,
+        industry_context TEXT,
+        status TEXT NOT NULL DEFAULT 'Draft'
+            CHECK (status IN ('Draft', 'Active', 'Completed', 'Archived')),
+        process_id BIGINT NOT NULL REFERENCES processes(id),
+        created_by BIGINT NOT NULL REFERENCES users(id),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS project_members (
+        id BIGSERIAL PRIMARY KEY,
+        project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role TEXT NOT NULL CHECK (role IN ('Consultant', 'ClientUser')),
+        org_title TEXT,
+        assigned_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE(project_id, user_id)
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS responses (
+        id BIGSERIAL PRIMARY KEY,
+        question_id BIGINT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+        project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        submitted_text TEXT,
+        self_evaluation_notes TEXT,
+        self_evaluation_status TEXT
+            CHECK (self_evaluation_status IS NULL OR self_evaluation_status IN ('Needs Work', 'Satisfactory', 'Strong')),
+        status TEXT NOT NULL DEFAULT 'Draft'
+            CHECK (status IN ('Draft', 'Submitted', 'Self-Evaluated', 'Reviewed')),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE(question_id, project_id)
+    );
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS framework_kb_chunks (
         id BIGSERIAL PRIMARY KEY,
         source_file TEXT NOT NULL,
