@@ -82,6 +82,8 @@ def require_project_role(allowed_roles: List[str]):
     return _dependency
 
 
+# Does not check membership by itself — compose with require_project_role
+# (e.g. require_project_member) on routes that need both checks.
 def require_active_project(project_id: int, current_user: dict = Depends(get_current_user)) -> dict:
     project = get_project_by_id(project_id)
     if project is None:

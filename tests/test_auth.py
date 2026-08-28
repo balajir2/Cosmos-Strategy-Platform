@@ -193,6 +193,13 @@ def test_require_active_project_allows_consultant_on_draft_project(mock_get_proj
     assert result == _DRAFT_PROJECT
 
 
+@patch("auth.get_project_member", return_value=None)
+@patch("auth.get_project_by_id", return_value=_DRAFT_PROJECT)
+def test_require_active_project_allows_non_member_on_draft_project(mock_get_project, mock_get_member):
+    result = auth.require_active_project(project_id=1, current_user={"id": 1})
+    assert result == _DRAFT_PROJECT
+
+
 @patch("auth.get_project_member", return_value=_CLIENT_USER_MEMBER)
 @patch("auth.get_project_by_id", return_value=_ACTIVE_PROJECT)
 def test_require_active_project_allows_client_user_on_active_project(mock_get_project, mock_get_member):
