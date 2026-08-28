@@ -32,7 +32,7 @@
 **Interfaces:**
 - Produces: a `users` table with columns `id, email, password_hash, full_name, is_active, is_admin, created_at` — this is the schema every later task in this plan reads/writes via `backend/users_db.py`.
 
-- [ ] **Step 1: Add the `CREATE TABLE IF NOT EXISTS users` block**
+- [x] **Step 1: Add the `CREATE TABLE IF NOT EXISTS users` block**
 
 In `backend/database.py`, insert this immediately after the existing `guidance` table block (after the line `""")` that closes it, i.e. right before the `framework_kb_chunks` block):
 
@@ -50,7 +50,7 @@ In `backend/database.py`, insert this immediately after the existing `guidance` 
     """)
 ```
 
-- [ ] **Step 2: Verify against the running Neon database**
+- [x] **Step 2: Verify against the running Neon database**
 
 This project has no automated test for schema DDL (`framework_kb_chunks`, `platform_settings`, `chat_sessions` etc. were all added the same way, unverified by pytest — schema changes are verified by running the script). Run:
 
@@ -60,7 +60,7 @@ cd backend && python database.py
 
 Expected: prints `Database initialisation completed successfully.` with no errors. Then confirm the table exists (e.g. via the Neon SQL console or `psql "$DATABASE_URL" -c '\d users'`) and shows the 7 columns above.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/database.py
@@ -82,7 +82,7 @@ git commit -m "feat: add users table to database schema"
   - `get_user_by_email(email: str) -> dict | None` — returns the row above **plus** `"password_hash"`, or `None` if no match.
   - `get_user_by_id(user_id: int) -> dict | None` — returns the row above (no `password_hash`), or `None` if no match.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_users_db.py`:
 
@@ -177,12 +177,12 @@ def test_get_user_by_id_returns_dict_without_password_hash(mock_get_conn):
     assert "password_hash" not in result
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_users_db.py -v`
 Expected: `ModuleNotFoundError: No module named 'users_db'` (or collection error) for every test.
 
-- [ ] **Step 3: Implement `backend/users_db.py`**
+- [x] **Step 3: Implement `backend/users_db.py`**
 
 ```python
 import contextlib
@@ -253,12 +253,12 @@ def get_user_by_id(user_id: int):
     }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_users_db.py -v`
 Expected: all 6 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/users_db.py tests/test_users_db.py
@@ -279,7 +279,7 @@ git commit -m "feat: add users_db module for user CRUD"
   - `hash_password(password: str) -> str`
   - `verify_password(password: str, password_hash: str) -> bool`
 
-- [ ] **Step 1: Add the dependency**
+- [x] **Step 1: Add the dependency**
 
 In `backend/requirements.txt`, add a new line:
 
@@ -293,7 +293,7 @@ Install it:
 cd backend && pip install "passlib[bcrypt]>=1.7.4"
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Create `tests/test_auth.py`:
 
@@ -317,12 +317,12 @@ def test_verify_password_rejects_wrong_password():
     assert auth.verify_password("wrong-password", hashed) is False
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [x] **Step 3: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_auth.py -v`
 Expected: `ModuleNotFoundError: No module named 'auth'` (or collection error) for every test.
 
-- [ ] **Step 4: Implement `backend/auth.py`**
+- [x] **Step 4: Implement `backend/auth.py`**
 
 ```python
 from passlib.context import CryptContext
@@ -338,12 +338,12 @@ def verify_password(password: str, password_hash: str) -> bool:
     return _pwd_context.verify(password, password_hash)
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_auth.py -v`
 Expected: all 3 tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/requirements.txt backend/auth.py tests/test_auth.py
@@ -366,7 +366,7 @@ git commit -m "feat: add password hashing utilities"
   - `create_access_token(user_id: int, email: str) -> str`
   - `decode_access_token(token: str) -> dict` — raises `jose.JWTError` (or a subclass, e.g. `ExpiredSignatureError`) on an invalid/expired token. Returned dict has keys `sub` (str), `email`, `exp`.
 
-- [ ] **Step 1: Add the dependency**
+- [x] **Step 1: Add the dependency**
 
 In `backend/requirements.txt`, add a new line:
 
@@ -380,7 +380,7 @@ Install it:
 cd backend && pip install "python-jose[cryptography]>=3.3.0"
 ```
 
-- [ ] **Step 2: Document the new env var**
+- [x] **Step 2: Document the new env var**
 
 In `.env.example` at the repo root, add a line:
 
@@ -388,7 +388,7 @@ In `.env.example` at the repo root, add a line:
 JWT_SECRET_KEY=change-me-to-a-long-random-string
 ```
 
-- [ ] **Step 3: Write the failing tests**
+- [x] **Step 3: Write the failing tests**
 
 Append to `tests/test_auth.py`:
 
@@ -435,12 +435,12 @@ def test_create_access_token_raises_runtime_error_when_secret_unset(monkeypatch)
 
 Note: `import auth` at the top of `tests/test_auth.py` already exists from Task 3 — don't duplicate it.
 
-- [ ] **Step 4: Run the tests to verify they fail**
+- [x] **Step 4: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_auth.py -v`
 Expected: the 4 new tests FAIL with `AttributeError: module 'auth' has no attribute 'create_access_token'` (the 3 tests from Task 3 still PASS).
 
-- [ ] **Step 5: Implement the JWT functions**
+- [x] **Step 5: Implement the JWT functions**
 
 Append to `backend/auth.py`:
 
@@ -521,12 +521,12 @@ def decode_access_token(token: str) -> dict:
     return jwt.decode(token, secret, algorithms=[JWT_ALGORITHM])
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_auth.py -v`
 Expected: all 7 tests PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/requirements.txt backend/auth.py .env.example tests/test_auth.py
@@ -545,7 +545,7 @@ git commit -m "feat: add JWT issuance and verification"
 - Consumes: `users_db.get_user_by_id(user_id: int) -> dict | None` (Task 2), `decode_access_token(token: str) -> dict` (Task 4).
 - Produces (used by Task 8): `get_current_user(authorization: str = Header(...)) -> dict` — a FastAPI dependency. Raises `HTTPException(401)` if the header is missing/malformed, the token is invalid/expired, or the user no longer exists. Returns the same dict shape as `users_db.get_user_by_id`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_auth.py`:
 
@@ -596,12 +596,12 @@ def test_get_current_user_returns_user_for_valid_token(mock_get_user, monkeypatc
     mock_get_user.assert_called_once_with(42)
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_auth.py -v`
 Expected: the 4 new tests FAIL with `AttributeError: module 'auth' has no attribute 'get_current_user'` (the 7 tests from Tasks 3-4 still PASS).
 
-- [ ] **Step 3: Implement `get_current_user`**
+- [x] **Step 3: Implement `get_current_user`**
 
 Append to `backend/auth.py`, and add the needed imports at the top (`Header`, `HTTPException` from `fastapi`; `JWTError` from `jose`; `get_user_by_id` from `users_db`) alongside the existing imports:
 
@@ -629,12 +629,12 @@ def get_current_user(authorization: str = Header(...)) -> dict:
     return user
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_auth.py -v`
 Expected: all 11 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/auth.py tests/test_auth.py
@@ -653,7 +653,7 @@ git commit -m "feat: add get_current_user dependency"
 - Consumes: `users_db.create_user` (Task 2), `auth.hash_password` (Task 3).
 - Produces: `POST /api/auth/register` — body `{"email", "password", "full_name"}` → `201`-shaped success body `{"id", "email", "full_name", "is_active", "is_admin", "created_at"}` (FastAPI default status is `200`; this plan keeps the existing codebase's convention of not setting explicit status codes — see `/api/chat/sessions` in `main.py`, which also returns `200` on creation), or `400` with `{"detail": "..."}` on duplicate email.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_auth_endpoints.py`:
 
@@ -707,12 +707,12 @@ def test_register_rejects_duplicate_email(mock_create, mock_hash):
     assert "already registered" in response.json()["detail"]
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_auth_endpoints.py -v`
 Expected: both tests FAIL with a `404 Not Found` assertion mismatch (the route doesn't exist yet) or a `patch` target error (`main.users_db` / `main.hash_password` don't exist yet).
 
-- [ ] **Step 3: Wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Wire the endpoint in `backend/main.py`**
 
 Add these imports near the top of `backend/main.py`, alongside the existing `import chat_engine` / `import chat_sessions as chat_sessions_module` lines:
 
@@ -741,12 +741,12 @@ def register(payload: RegisterRequest):
         raise HTTPException(status_code=400, detail=str(e))
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_auth_endpoints.py -v`
 Expected: both tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/main.py tests/test_auth_endpoints.py
@@ -765,7 +765,7 @@ git commit -m "feat: add POST /api/auth/register endpoint"
 - Consumes: `users_db.get_user_by_email` (Task 2), `auth.verify_password` (Task 3), `auth.create_access_token` (Task 4).
 - Produces: `POST /api/auth/login` — body `{"email", "password"}` → `{"access_token": "...", "token_type": "bearer"}` on success, or `401` with `{"detail": "Invalid email or password."}` on bad credentials (unknown email or wrong password — same message for both, so the endpoint never reveals which one was wrong).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_auth_endpoints.py`:
 
@@ -813,12 +813,12 @@ def test_login_rejects_wrong_password(mock_get_user, mock_verify):
     assert response.json()["detail"] == "Invalid email or password."
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_auth_endpoints.py -v`
 Expected: the 3 new tests FAIL with `404 Not Found` (the route doesn't exist yet) — the Task 6 tests still PASS.
 
-- [ ] **Step 3: Wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Wire the endpoint in `backend/main.py`**
 
 Add this Pydantic model next to `RegisterRequest`:
 
@@ -840,12 +840,12 @@ def login(payload: LoginRequest):
     return {"access_token": token, "token_type": "bearer"}
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_auth_endpoints.py -v`
 Expected: all 5 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/main.py tests/test_auth_endpoints.py
@@ -864,7 +864,7 @@ git commit -m "feat: add POST /api/auth/login endpoint"
 - Consumes: `auth.get_current_user` (Task 5), injected via FastAPI `Depends`.
 - Produces: `GET /api/auth/me` — requires `Authorization: Bearer <token>`; returns the caller's user dict on success, `401` on a missing/invalid/expired token (matching the existing `require_admin_token` convention in `admin_auth.py`, where a header validation failure at the FastAPI-parameter level can surface as either `401` or `422` — see `tests/test_main_api.py`'s `assert response.status_code in (401, 422)` pattern, followed identically below).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_auth_endpoints.py`:
 
@@ -896,12 +896,12 @@ def test_get_me_returns_current_user_for_valid_token():
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_auth_endpoints.py -v`
 Expected: the 3 new tests FAIL with `404 Not Found` (the route doesn't exist yet) — all previous tests in the file still PASS.
 
-- [ ] **Step 3: Wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Wire the endpoint in `backend/main.py`**
 
 Add this route, right after `login`:
 
@@ -911,17 +911,17 @@ def get_me(current_user: dict = Depends(get_current_user)):
     return current_user
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_auth_endpoints.py -v`
 Expected: all 8 tests in the file PASS.
 
-- [ ] **Step 5: Run the full test suite**
+- [x] **Step 5: Run the full test suite**
 
 Run: `python -m pytest -v` from the repo root.
 Expected: every test PASSES (the pre-existing suite plus all tests added by this plan — 61 + ~26 new = ~87 tests).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/main.py tests/test_auth_endpoints.py
