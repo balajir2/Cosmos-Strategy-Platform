@@ -1,6 +1,6 @@
 import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-from fastapi import FastAPI, HTTPException, Body, Depends
+from fastapi import FastAPI, HTTPException, Body, Depends, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Optional
@@ -14,6 +14,8 @@ import chat_engine
 import chat_sessions as chat_sessions_module
 import projects_db
 import users_db
+import project_artifacts_db
+import project_knowledge_base
 from auth import (
     hash_password, verify_password, create_access_token, get_current_user,
     require_admin, require_project_role, require_active_project,
@@ -138,6 +140,31 @@ def activate_project(project_id: int, member: dict = Depends(require_consultant)
         return projects_db.activate_project(project_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/projects/{project_id}/artifacts")
+async def upload_project_artifact(
+    project_id: int,
+    file: UploadFile = File(...),
+    purpose: str = Form("reference"),
+    member: dict = Depends(require_consultant),
+):
+    try:
+        source_format = project_knowledge_base.infer_source_format(file.filename)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    artifact_type = project_knowledge_base.infer_artifact_type(source_format)
+
+    file_bytes = await file.read()
+
+    try:
+        artifact = project_artifacts_db.create_artifact(
+            project_id, file.filename, artifact_type, source_format, purpose, member["user_id"],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    project_knowledge_base.ingest_artifact(rag, artifact["id"], file_bytes)
+    return project_artifacts_db.get_artifact_by_id(artifact["id"])
 
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
