@@ -152,6 +152,60 @@ class RagEngine:
             )
         return hits
 
+    def search_merged(self, project_id: int, query: str, top_k: int = 3):
+        """Merged retrieval across the shared Framework Knowledge Base
+        (framework_kb_chunks, unscoped) and this project's Engagement
+        Knowledge Base (project_kb_chunks, scoped to project_id), excluding
+        artifacts tagged purpose='case_study_resolution' (those are only
+        surfaced at the dedicated case-study reveal step, never in ordinary
+        evaluation retrieval - see the Users/Projects/Engagement KB spec's
+        "Retrieval - Merged Automatically" section). Each hit is tagged by
+        source so the frontend can label it "Framework Reference" vs.
+        "Customer Document". Results from both sources are merged and
+        re-ranked by score, then trimmed to top_k overall."""
+        query_vector = self.embedding_model.encode(query)
+
+        with contextlib.closing(get_db_connection()) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, source_file, phase, slide_number, text, 1 - (embedding <=> %s) AS score
+                    FROM framework_kb_chunks
+                    ORDER BY embedding <=> %s
+                    LIMIT %s;
+                    """,
+                    (query_vector, query_vector, top_k),
+                )
+                framework_rows = cursor.fetchall()
+
+                cursor.execute(
+                    """
+                    SELECT pkc.id, pa.filename, pkc.chunk_text, 1 - (pkc.embedding <=> %s) AS score
+                    FROM project_kb_chunks pkc
+                    JOIN project_artifacts pa ON pa.id = pkc.artifact_id
+                    WHERE pkc.project_id = %s AND pa.purpose != 'case_study_resolution'
+                    ORDER BY pkc.embedding <=> %s
+                    LIMIT %s;
+                    """,
+                    (query_vector, project_id, query_vector, top_k),
+                )
+                project_rows = cursor.fetchall()
+
+        framework_hits = [
+            {
+                "id": row_id, "source": "framework", "source_file": source_file, "phase": phase,
+                "slide_number": slide_number, "text": text, "score": float(score),
+            }
+            for row_id, source_file, phase, slide_number, text, score in framework_rows
+        ]
+        customer_hits = [
+            {"id": row_id, "source": "customer_document", "source_file": filename, "text": chunk_text, "score": float(score)}
+            for row_id, filename, chunk_text, score in project_rows
+        ]
+
+        merged = sorted(framework_hits + customer_hits, key=lambda hit: hit["score"], reverse=True)
+        return merged[:top_k]
+
     def generate_evaluation(self, question: str, user_answer: str, context_hits: list):
         """Generates RAG-assisted critique of the user's answer using the active LLM provider."""
         context_str = "\n\n".join(
