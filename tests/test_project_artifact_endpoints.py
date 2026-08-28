@@ -108,3 +108,28 @@ def test_upload_artifact_rejects_invalid_foreign_keys(mock_get_member, mock_crea
         assert response.status_code == 400
     finally:
         main.app.dependency_overrides.clear()
+
+
+# --- GET /api/projects/{project_id}/artifacts ---------------------------------
+
+@patch("main.project_artifacts_db.list_artifacts_for_project", return_value=[_ARTIFACT_DICT])
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_list_artifacts_returns_artifacts_for_member(mock_get_member, mock_list):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.get("/api/projects/1/artifacts")
+        assert response.status_code == 200
+        assert response.json() == [_ARTIFACT_DICT]
+        mock_list.assert_called_once_with(1)
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("auth.get_project_member", return_value=None)
+def test_list_artifacts_rejects_non_member(mock_get_member):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.get("/api/projects/1/artifacts")
+        assert response.status_code == 403
+    finally:
+        main.app.dependency_overrides.clear()

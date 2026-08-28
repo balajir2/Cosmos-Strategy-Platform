@@ -170,6 +170,10 @@ async def upload_project_artifact(
     project_knowledge_base.ingest_artifact(rag, artifact["id"], file_bytes)
     return project_artifacts_db.get_artifact_by_id(artifact["id"])
 
+@app.get("/api/projects/{project_id}/artifacts")
+def list_project_artifacts(project_id: int, member: dict = Depends(require_project_member)):
+    return project_artifacts_db.list_artifacts_for_project(project_id)
+
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
     return {"active_llm_provider": platform_settings.get_active_provider()}
