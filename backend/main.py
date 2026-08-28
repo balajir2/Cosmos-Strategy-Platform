@@ -80,6 +80,10 @@ class ProjectUpdateRequest(BaseModel):
     description: Optional[str] = None
     industry_context: Optional[str] = None
 
+class ProjectEvaluationRequest(BaseModel):
+    question_id: int
+    submitted_text: str
+
 @app.get("/api/status")
 def get_status():
     return {
@@ -181,6 +185,31 @@ def delete_project_artifact(project_id: int, artifact_id: int, member: dict = De
     if not deleted:
         raise HTTPException(status_code=404, detail="Artifact not found.")
     return {"deleted": True}
+
+@app.post("/api/projects/{project_id}/evaluate")
+def evaluate_project_answer(
+    project_id: int,
+    payload: ProjectEvaluationRequest,
+    member: dict = Depends(require_project_member),
+    project: dict = Depends(require_active_project),
+):
+    question = process_db.get_question_by_id(payload.question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="Question not found.")
+    if question["process_id"] != project["process_id"]:
+        raise HTTPException(status_code=400, detail="This question does not belong to the project's process.")
+
+    search_query = question["search_query"] or question["text"]
+    hits = rag.search_merged(project_id, search_query, top_k=3)
+    benchmarks = rag.generate_comparative_benchmarks(question["text"], payload.submitted_text, hits)
+
+    return {
+        "question_id": question["id"],
+        "level_1": benchmarks.get("level_1", ""),
+        "level_2": benchmarks.get("level_2", ""),
+        "level_3": benchmarks.get("level_3", ""),
+        "source_chunks": hits,
+    }
 
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
