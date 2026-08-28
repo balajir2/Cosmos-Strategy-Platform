@@ -12,6 +12,8 @@ from admin_auth import require_admin_token
 from cases_data import CASES_DATA
 import chat_engine
 import chat_sessions as chat_sessions_module
+import users_db
+from auth import hash_password, verify_password, create_access_token, get_current_user
 
 app = FastAPI(title="Cosmos Strategic Capability Platform", version="1.0.0")
 
@@ -43,12 +45,24 @@ class ChatSessionCreate(BaseModel):
 class ChatMessageCreate(BaseModel):
     content: str
 
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str
+
 @app.get("/api/status")
 def get_status():
     return {
         "vector_db_size": rag.vector_db_size(),
         "active_llm_provider": platform_settings.get_active_provider(),
     }
+
+@app.post("/api/auth/register")
+def register(payload: RegisterRequest):
+    try:
+        return users_db.create_user(payload.email, hash_password(payload.password), payload.full_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
