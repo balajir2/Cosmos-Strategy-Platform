@@ -8,6 +8,10 @@ from passlib.context import CryptContext
 
 from users_db import get_user_by_id
 
+from typing import List
+
+from projects_db import get_project_member
+
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 JWT_ALGORITHM = "HS256"
@@ -65,3 +69,14 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
     if not current_user.get("is_admin"):
         raise HTTPException(status_code=403, detail="SystemAdmin privileges required.")
     return current_user
+
+
+def require_project_role(allowed_roles: List[str]):
+    def _dependency(project_id: int, current_user: dict = Depends(get_current_user)) -> dict:
+        member = get_project_member(project_id, current_user["id"])
+        if member is None:
+            raise HTTPException(status_code=403, detail="You are not a member of this project.")
+        if member["role"] not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Your project role does not permit this action.")
+        return member
+    return _dependency

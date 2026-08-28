@@ -127,3 +127,41 @@ def test_require_admin_allows_admin_user():
     result = auth.require_admin(current_user=admin_user)
 
     assert result == admin_user
+
+
+_CONSULTANT_MEMBER = {
+    "id": 1, "project_id": 1, "user_id": 1, "role": "Consultant",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+}
+_CLIENT_USER_MEMBER = {
+    "id": 2, "project_id": 1, "user_id": 1, "role": "ClientUser",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+}
+
+
+@patch("auth.get_project_member", return_value=None)
+def test_require_project_role_rejects_non_member(mock_get_member):
+    dependency = auth.require_project_role(["Consultant"])
+
+    with pytest.raises(HTTPException) as exc_info:
+        dependency(project_id=1, current_user={"id": 1, "email": "a@x.com"})
+    assert exc_info.value.status_code == 403
+
+
+@patch("auth.get_project_member", return_value=_CLIENT_USER_MEMBER)
+def test_require_project_role_rejects_wrong_role(mock_get_member):
+    dependency = auth.require_project_role(["Consultant"])
+
+    with pytest.raises(HTTPException) as exc_info:
+        dependency(project_id=1, current_user={"id": 1, "email": "a@x.com"})
+    assert exc_info.value.status_code == 403
+
+
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_require_project_role_allows_matching_role(mock_get_member):
+    dependency = auth.require_project_role(["Consultant"])
+
+    result = dependency(project_id=1, current_user={"id": 1, "email": "a@x.com"})
+
+    assert result == _CONSULTANT_MEMBER
+    mock_get_member.assert_called_once_with(1, 1)
