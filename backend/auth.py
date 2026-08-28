@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta, timezone
 
-from fastapi import Header, HTTPException
+from fastapi import Depends, Header, HTTPException
 from jose import jwt
 from jose import JWTError
 from passlib.context import CryptContext
@@ -59,3 +59,9 @@ def get_current_user(authorization: str = Header(...)) -> dict:
     if user is None:
         raise HTTPException(status_code=401, detail="User not found.")
     return user
+
+
+def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    if not current_user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="SystemAdmin privileges required.")
+    return current_user

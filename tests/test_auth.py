@@ -113,3 +113,17 @@ def test_get_current_user_rejects_non_numeric_sub_claim(monkeypatch):
     with pytest.raises(HTTPException) as exc_info:
         auth.get_current_user(authorization=f"Bearer {token}")
     assert exc_info.value.status_code == 401
+
+
+def test_require_admin_rejects_non_admin_user():
+    with pytest.raises(HTTPException) as exc_info:
+        auth.require_admin(current_user={"id": 1, "email": "a@x.com", "is_admin": False})
+    assert exc_info.value.status_code == 403
+
+
+def test_require_admin_allows_admin_user():
+    admin_user = {"id": 1, "email": "a@x.com", "is_admin": True}
+
+    result = auth.require_admin(current_user=admin_user)
+
+    assert result == admin_user
