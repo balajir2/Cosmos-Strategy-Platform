@@ -1,8 +1,12 @@
 import os
 from datetime import datetime, timedelta
 
+from fastapi import Header, HTTPException
 from jose import jwt
+from jose import JWTError
 from passlib.context import CryptContext
+
+from users_db import get_user_by_id
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -38,3 +42,19 @@ def create_access_token(user_id: int, email: str) -> str:
 def decode_access_token(token: str) -> dict:
     secret = _require_jwt_secret()
     return jwt.decode(token, secret, algorithms=[JWT_ALGORITHM])
+
+
+def get_current_user(authorization: str = Header(...)) -> dict:
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid or missing Authorization header.")
+
+    token = authorization[len("Bearer "):]
+    try:
+        claims = decode_access_token(token)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+
+    user = get_user_by_id(int(claims["sub"]))
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found.")
+    return user

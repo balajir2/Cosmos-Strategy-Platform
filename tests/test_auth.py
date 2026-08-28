@@ -54,3 +54,49 @@ def test_create_access_token_raises_runtime_error_when_secret_unset(monkeypatch)
 
     with pytest.raises(RuntimeError, match="JWT_SECRET_KEY"):
         auth.create_access_token(user_id=42, email="a@x.com")
+
+
+from unittest.mock import patch
+
+from fastapi import HTTPException
+
+
+def test_get_current_user_rejects_missing_bearer_prefix(monkeypatch):
+    monkeypatch.setenv("JWT_SECRET_KEY", "test-secret")
+
+    with pytest.raises(HTTPException) as exc_info:
+        auth.get_current_user(authorization="not-a-bearer-token")
+    assert exc_info.value.status_code == 401
+
+
+def test_get_current_user_rejects_invalid_token(monkeypatch):
+    monkeypatch.setenv("JWT_SECRET_KEY", "test-secret")
+
+    with pytest.raises(HTTPException) as exc_info:
+        auth.get_current_user(authorization="Bearer not-a-real-token")
+    assert exc_info.value.status_code == 401
+
+
+@patch("auth.get_user_by_id", return_value=None)
+def test_get_current_user_rejects_when_user_no_longer_exists(mock_get_user, monkeypatch):
+    monkeypatch.setenv("JWT_SECRET_KEY", "test-secret")
+    token = auth.create_access_token(user_id=42, email="a@x.com")
+
+    with pytest.raises(HTTPException) as exc_info:
+        auth.get_current_user(authorization=f"Bearer {token}")
+    assert exc_info.value.status_code == 401
+
+
+@patch(
+    "auth.get_user_by_id",
+    return_value={"id": 42, "email": "a@x.com", "full_name": "Alice", "is_active": True, "is_admin": False, "created_at": "2026-08-28T09:00:00"},
+)
+def test_get_current_user_returns_user_for_valid_token(mock_get_user, monkeypatch):
+    monkeypatch.setenv("JWT_SECRET_KEY", "test-secret")
+    token = auth.create_access_token(user_id=42, email="a@x.com")
+
+    result = auth.get_current_user(authorization=f"Bearer {token}")
+
+    assert result["id"] == 42
+    assert result["email"] == "a@x.com"
+    mock_get_user.assert_called_once_with(42)
