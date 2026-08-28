@@ -62,6 +62,8 @@ def get_current_user(authorization: str = Header(...)) -> dict:
     user = get_user_by_id(user_id)
     if user is None:
         raise HTTPException(status_code=401, detail="User not found.")
+    if not user.get("is_active"):
+        raise HTTPException(status_code=401, detail="User account is deactivated.")
     return user
 
 

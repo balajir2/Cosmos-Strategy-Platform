@@ -102,6 +102,19 @@ def test_get_current_user_returns_user_for_valid_token(mock_get_user, monkeypatc
     mock_get_user.assert_called_once_with(42)
 
 
+@patch(
+    "auth.get_user_by_id",
+    return_value={"id": 42, "email": "a@x.com", "full_name": "Alice", "is_active": False, "is_admin": False, "created_at": "2026-08-28T09:00:00"},
+)
+def test_get_current_user_rejects_deactivated_user(mock_get_user, monkeypatch):
+    monkeypatch.setenv("JWT_SECRET_KEY", "test-secret")
+    token = auth.create_access_token(user_id=42, email="a@x.com")
+
+    with pytest.raises(HTTPException) as exc_info:
+        auth.get_current_user(authorization=f"Bearer {token}")
+    assert exc_info.value.status_code == 401
+
+
 def test_get_current_user_rejects_non_numeric_sub_claim(monkeypatch):
     monkeypatch.setenv("JWT_SECRET_KEY", "test-secret")
     token = jwt.encode(
