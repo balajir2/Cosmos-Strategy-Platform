@@ -165,3 +165,36 @@ def test_require_project_role_allows_matching_role(mock_get_member):
 
     assert result == _CONSULTANT_MEMBER
     mock_get_member.assert_called_once_with(1, 1)
+
+
+_DRAFT_PROJECT = {"id": 1, "name": "X", "status": "Draft"}
+_ACTIVE_PROJECT = {"id": 1, "name": "X", "status": "Active"}
+
+
+@patch("auth.get_project_by_id", return_value=None)
+def test_require_active_project_raises_404_when_project_missing(mock_get_project):
+    with pytest.raises(HTTPException) as exc_info:
+        auth.require_active_project(project_id=999, current_user={"id": 1})
+    assert exc_info.value.status_code == 404
+
+
+@patch("auth.get_project_member", return_value=_CLIENT_USER_MEMBER)
+@patch("auth.get_project_by_id", return_value=_DRAFT_PROJECT)
+def test_require_active_project_rejects_client_user_on_draft_project(mock_get_project, mock_get_member):
+    with pytest.raises(HTTPException) as exc_info:
+        auth.require_active_project(project_id=1, current_user={"id": 1})
+    assert exc_info.value.status_code == 403
+
+
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+@patch("auth.get_project_by_id", return_value=_DRAFT_PROJECT)
+def test_require_active_project_allows_consultant_on_draft_project(mock_get_project, mock_get_member):
+    result = auth.require_active_project(project_id=1, current_user={"id": 1})
+    assert result == _DRAFT_PROJECT
+
+
+@patch("auth.get_project_member", return_value=_CLIENT_USER_MEMBER)
+@patch("auth.get_project_by_id", return_value=_ACTIVE_PROJECT)
+def test_require_active_project_allows_client_user_on_active_project(mock_get_project, mock_get_member):
+    result = auth.require_active_project(project_id=1, current_user={"id": 1})
+    assert result == _ACTIVE_PROJECT

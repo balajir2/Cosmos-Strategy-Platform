@@ -10,7 +10,7 @@ from users_db import get_user_by_id
 
 from typing import List
 
-from projects_db import get_project_member
+from projects_db import get_project_by_id, get_project_member
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -80,3 +80,15 @@ def require_project_role(allowed_roles: List[str]):
             raise HTTPException(status_code=403, detail="Your project role does not permit this action.")
         return member
     return _dependency
+
+
+def require_active_project(project_id: int, current_user: dict = Depends(get_current_user)) -> dict:
+    project = get_project_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    member = get_project_member(project_id, current_user["id"])
+    if member is not None and member["role"] == "ClientUser" and project["status"] != "Active":
+        raise HTTPException(status_code=403, detail="This project is not active yet.")
+
+    return project
