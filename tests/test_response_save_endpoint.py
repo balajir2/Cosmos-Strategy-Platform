@@ -29,6 +29,11 @@ _RESPONSE_DICT = {
     "self_evaluation_notes": None, "self_evaluation_status": None, "status": "Submitted",
     "updated_at": "2026-08-28T09:00:00",
 }
+_QUESTION = {
+    "id": 100, "stage_id": 10, "level": "Level 7: Business Model",
+    "text": "What core attributes...?", "search_query": "core attributes strengths weaknesses",
+    "owner_role": "Brand Manager", "reviewer_role": "CMO", "process_id": 1,
+}
 
 
 @patch("auth.get_project_member", return_value=None)
@@ -42,9 +47,10 @@ def test_save_response_rejects_non_member(mock_get_member):
 
 
 @patch("main.responses_db.save_response", return_value=_RESPONSE_DICT)
+@patch("main.process_db.get_question_by_id", return_value=_QUESTION)
 @patch("auth.get_project_by_id", return_value=_ACTIVE_PROJECT)
 @patch("auth.get_project_member", return_value=_CLIENT_USER_MEMBER)
-def test_save_response_saves_for_project_member(mock_get_member, mock_get_project, mock_save):
+def test_save_response_saves_for_project_member(mock_get_member, mock_get_project, mock_get_question, mock_save):
     main.app.dependency_overrides[main.get_current_user] = lambda: _USER
     try:
         response = client.post("/api/projects/1/responses", json={"question_id": 100, "submitted_text": "my answer"})
@@ -59,12 +65,37 @@ def test_save_response_saves_for_project_member(mock_get_member, mock_get_projec
     "main.responses_db.save_response",
     side_effect=ValueError("Invalid project_id, question_id, or self_evaluation_status: no such question"),
 )
+@patch("main.process_db.get_question_by_id", return_value=_QUESTION)
 @patch("auth.get_project_by_id", return_value=_ACTIVE_PROJECT)
 @patch("auth.get_project_member", return_value=_CLIENT_USER_MEMBER)
-def test_save_response_rejects_invalid_question_id(mock_get_member, mock_get_project, mock_save):
+def test_save_response_rejects_invalid_question_id(mock_get_member, mock_get_project, mock_get_question, mock_save):
     main.app.dependency_overrides[main.get_current_user] = lambda: _USER
     try:
         response = client.post("/api/projects/1/responses", json={"question_id": 999, "submitted_text": "x"})
+        assert response.status_code == 400
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.process_db.get_question_by_id", return_value=None)
+@patch("auth.get_project_by_id", return_value=_ACTIVE_PROJECT)
+@patch("auth.get_project_member", return_value=_CLIENT_USER_MEMBER)
+def test_save_response_returns_404_for_unknown_question(mock_get_member, mock_get_project, mock_get_question):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.post("/api/projects/1/responses", json={"question_id": 999, "submitted_text": "x"})
+        assert response.status_code == 404
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.process_db.get_question_by_id", return_value={**_QUESTION, "process_id": 999})
+@patch("auth.get_project_by_id", return_value=_ACTIVE_PROJECT)
+@patch("auth.get_project_member", return_value=_CLIENT_USER_MEMBER)
+def test_save_response_rejects_question_from_a_different_process(mock_get_member, mock_get_project, mock_get_question):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.post("/api/projects/1/responses", json={"question_id": 100, "submitted_text": "x"})
         assert response.status_code == 400
     finally:
         main.app.dependency_overrides.clear()

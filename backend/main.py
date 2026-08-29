@@ -225,6 +225,12 @@ def save_project_response(
     member: dict = Depends(require_project_member),
     project: dict = Depends(require_active_project),
 ):
+    question = process_db.get_question_by_id(payload.question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="Question not found.")
+    if question["process_id"] != project["process_id"]:
+        raise HTTPException(status_code=400, detail="This question does not belong to the project's process.")
+
     try:
         return responses_db.save_response(
             project_id, payload.question_id, payload.submitted_text,
