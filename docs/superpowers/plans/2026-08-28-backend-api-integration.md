@@ -39,7 +39,7 @@
   - `get_process_detail(process_id: int) -> dict | None` — returns `{"id", "name", "description", "created_at", "stages": [...]}`; each stage is `{"id", "name", "sequence_order", "questions": [...]}` ordered by `sequence_order`; each question is `{"id", "level", "text", "search_query", "owner_role", "reviewer_role", "guidance": [...]}` ordered by `id`; each guidance entry is `{"id", "type", "content"}` ordered by `id`. Returns `None` if `process_id` doesn't exist.
   - `get_question_by_id(question_id: int) -> dict | None` — returns `{"id", "stage_id", "level", "text", "search_query", "owner_role", "reviewer_role", "process_id"}` (the `process_id` is joined in via `stages`, so callers can validate a question belongs to a given project's process without a second query). Returns `None` if `question_id` doesn't exist.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_process_db.py`:
 
@@ -133,12 +133,12 @@ def test_get_question_by_id_returns_dict_with_joined_process_id(mock_get_conn):
     }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_process_db.py -v`
 Expected: `ModuleNotFoundError: No module named 'process_db'` (or collection error) for every test.
 
-- [ ] **Step 3: Implement `backend/process_db.py`**
+- [x] **Step 3: Implement `backend/process_db.py`**
 
 ```python
 import contextlib
@@ -235,12 +235,12 @@ def get_question_by_id(question_id: int):
     }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_process_db.py -v`
 Expected: all 4 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/process_db.py tests/test_process_db.py
@@ -259,7 +259,7 @@ git commit -m "feat: add process_db for DB-backed process/stage/question retriev
 - Consumes: `process_db.get_process_detail` (Task 1), `get_current_user` (Phase A, existing).
 - Produces: `GET /api/process/{process_id}` — any authenticated user (processes are shared framework content, not project-scoped, so no membership check applies); returns the nested process/stages/questions/guidance JSON from Task 1; `401` with no `Authorization` header; `404` if `process_id` doesn't exist.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_process_endpoints.py`:
 
@@ -314,12 +314,12 @@ def test_get_process_returns_404_when_missing(mock_get_detail):
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_process_endpoints.py -v`
 Expected: all 3 tests FAIL. `test_get_process_rejects_missing_authorization_header` fails because the unrouted path returns `404 Not Found` instead of `401`/`422` (FastAPI 404s on an unmatched route before any dependency runs). The two `@patch("main.process_db...")` tests fail at the patch step itself with `AttributeError: <module 'main' ...> does not have the attribute 'process_db'`, since that import doesn't exist yet.
 
-- [ ] **Step 3: Wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Wire the endpoint in `backend/main.py`**
 
 Add this import alongside the existing `import projects_db` / `import users_db` lines:
 
@@ -338,12 +338,12 @@ def get_process(process_id: int, current_user: dict = Depends(get_current_user))
     return process
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_process_endpoints.py -v`
 Expected: all 3 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/main.py tests/test_process_endpoints.py
@@ -362,7 +362,7 @@ git commit -m "feat: add GET /api/process/{process_id} endpoint"
 - Consumes: `self.embedding_model` (existing), `get_db_connection` (existing import).
 - Produces (used by Task 6's endpoint): `RagEngine.search_merged(self, project_id: int, query: str, top_k: int = 3) -> list[dict]` — encodes `query` once, runs a `pgvector` cosine-distance query against `framework_kb_chunks` (top `top_k`, unscoped — same as `search()`) and a second one against `project_kb_chunks` joined to `project_artifacts` (scoped to `project_id`, excluding `purpose = 'case_study_resolution'`, top `top_k`), tags every framework hit `{"source": "framework", "source_file", "phase", "slide_number", "text", "score"}` and every customer-document hit `{"source": "customer_document", "source_file", "text", "score"}` (`source_file` here is `project_artifacts.filename`), merges both lists, sorts by `score` descending, and returns the top `top_k` overall.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_rag_engine_search_merged.py`:
 
@@ -462,12 +462,12 @@ def test_search_merged_merges_and_reranks_by_score_then_trims_to_top_k(mock_get_
     assert results[0]["score"] == 0.95
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_rag_engine_search_merged.py -v`
 Expected: all 4 tests FAIL with `AttributeError: 'RagEngine' object has no attribute 'search_merged'`.
 
-- [ ] **Step 3: Implement `search_merged` on `RagEngine`**
+- [x] **Step 3: Implement `search_merged` on `RagEngine`**
 
 Append this method to the `RagEngine` class in `backend/rag_engine.py`, right after the existing `search` method:
 
@@ -527,12 +527,12 @@ Append this method to the `RagEngine` class in `backend/rag_engine.py`, right af
         return merged[:top_k]
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_rag_engine_search_merged.py -v`
 Expected: all 4 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/rag_engine.py tests/test_rag_engine_search_merged.py
@@ -553,7 +553,7 @@ git commit -m "feat: add RagEngine.search_merged for Framework + Engagement KB r
   - `RagEngine.generate_comparative_benchmarks(self, question: str, user_answer: str, context_hits: list) -> dict` — calls the active LLM provider with a prompt that asks for three example answers (`level_1`, `level_2`, `level_3`) rather than a graded critique of the user's answer (kept as a distinct method/prompt from `generate_evaluation` rather than parameterizing it, per Global Constraint 1 — `/api/evaluate`'s existing prompt and output shape must not change). Returns `{"level_1": str, "level_2": str, "level_3": str}`. On any provider error, falls back to `fallback_local_benchmarks()`.
   - `RagEngine.fallback_local_benchmarks(self) -> dict` — a fixed, non-LLM `{"level_1", "level_2", "level_3"}` dict, mirroring `fallback_local_critique`'s graceful-degradation role for this new prompt.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_rag_engine_comparative_benchmarks.py`:
 
@@ -621,12 +621,12 @@ def test_fallback_local_benchmarks_returns_all_three_levels():
     assert all(isinstance(v, str) and v for v in result.values())
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_rag_engine_comparative_benchmarks.py -v`
 Expected: all 4 tests FAIL with `AttributeError: 'RagEngine' object has no attribute 'generate_comparative_benchmarks'` (or `'fallback_local_benchmarks'`).
 
-- [ ] **Step 3: Implement the two methods on `RagEngine`**
+- [x] **Step 3: Implement the two methods on `RagEngine`**
 
 Append these methods to the `RagEngine` class in `backend/rag_engine.py`, right after `fallback_local_critique`:
 
@@ -688,12 +688,12 @@ Append these methods to the `RagEngine` class in `backend/rag_engine.py`, right 
         }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_rag_engine_comparative_benchmarks.py -v`
 Expected: all 4 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/rag_engine.py tests/test_rag_engine_comparative_benchmarks.py
@@ -714,7 +714,7 @@ git commit -m "feat: add RagEngine.generate_comparative_benchmarks for Level 1/2
   - `save_response(project_id: int, question_id: int, submitted_text: str = None, self_evaluation_notes: str = None, self_evaluation_status: str = None) -> dict` — upserts on `(question_id, project_id)` (the table's existing `UNIQUE` constraint); computes `status` itself: `'Self-Evaluated'` if `self_evaluation_status` is given, else `'Submitted'` if `submitted_text` is given, else `'Draft'`; returns `{"id", "question_id", "project_id", "submitted_text", "self_evaluation_notes", "self_evaluation_status", "status", "updated_at"}`; raises `ValueError` on an invalid `project_id`/`question_id` (FK violation) or an invalid `self_evaluation_status` enum value (CHECK violation).
   - `get_responses_for_project(project_id: int) -> list[dict]` — returns every response row for the project, each joined with its question's `text` (as `question_text`), `level`, and its stage's `name` (as `stage_name`) and `sequence_order`, ordered by `sequence_order` then `question_id` — the exact shape `brief.compile_brief_markdown` (Task 8) expects.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_responses_db.py`:
 
@@ -834,12 +834,12 @@ def test_get_responses_for_project_returns_joined_rows(mock_get_conn):
     }]
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_responses_db.py -v`
 Expected: `ModuleNotFoundError: No module named 'responses_db'` (or collection error) for every test.
 
-- [ ] **Step 3: Implement `backend/responses_db.py`**
+- [x] **Step 3: Implement `backend/responses_db.py`**
 
 ```python
 import contextlib
@@ -923,12 +923,12 @@ def get_responses_for_project(project_id: int) -> list:
     return results
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_responses_db.py -v`
 Expected: all 7 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/responses_db.py tests/test_responses_db.py
@@ -947,7 +947,7 @@ git commit -m "feat: add responses_db save/list functions for the Phase B respon
 - Consumes: `process_db.get_question_by_id` (Task 1), `rag.search_merged` (Task 3), `rag.generate_comparative_benchmarks` (Task 4), `require_project_member`/`require_active_project` (Phase B, existing module-level instances).
 - Produces: `POST /api/projects/{project_id}/evaluate` — any project member (`Consultant` or `ClientUser`) of an `Active` project (a `Consultant` may still use it on their own `Draft` project, per `require_active_project`'s existing semantics); body `{"question_id": int, "submitted_text": str}`; returns `{"question_id", "level_1", "level_2", "level_3", "source_chunks"}` where `source_chunks` is `search_merged`'s tagged hit list; `403` if not a member / project not active for a `ClientUser`; `404` if `question_id` doesn't exist; `400` if the question doesn't belong to the project's own `process_id`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_project_evaluation_endpoint.py`:
 
@@ -1059,12 +1059,12 @@ def test_evaluate_rejects_client_user_on_draft_project(mock_get_member, mock_get
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_project_evaluation_endpoint.py -v`
 Expected: all 5 tests FAIL with `404 Not Found` (the route doesn't exist yet).
 
-- [ ] **Step 3: Add the request model and wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Add the request model and wire the endpoint in `backend/main.py`**
 
 Add this Pydantic model alongside the existing `ProjectUpdateRequest`:
 
@@ -1103,12 +1103,12 @@ def evaluate_project_answer(
     }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_project_evaluation_endpoint.py -v`
 Expected: all 5 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/main.py tests/test_project_evaluation_endpoint.py
@@ -1127,7 +1127,7 @@ git commit -m "feat: add POST /api/projects/{project_id}/evaluate endpoint"
 - Consumes: `responses_db.save_response` (Task 5), `require_project_member`/`require_active_project` (Phase B, existing).
 - Produces: `POST /api/projects/{project_id}/responses` — any project member of an `Active` project; body `{"question_id": int, "submitted_text": str | None, "self_evaluation_notes": str | None, "self_evaluation_status": str | None}`; returns the saved response dict from Task 5; `403` if not a member / project not active for a `ClientUser`; `400` with `{"detail": "..."}` for an invalid `question_id` or `self_evaluation_status`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_response_save_endpoint.py`:
 
@@ -1204,12 +1204,12 @@ def test_save_response_rejects_invalid_question_id(mock_get_member, mock_get_pro
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_response_save_endpoint.py -v`
 Expected: all 3 tests FAIL with `404 Not Found` (the route doesn't exist yet).
 
-- [ ] **Step 3: Add the request model, import, and wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Add the request model, import, and wire the endpoint in `backend/main.py`**
 
 Add this import alongside the existing `import projects_db` / `import users_db` lines:
 
@@ -1246,12 +1246,12 @@ def save_project_response(
         raise HTTPException(status_code=400, detail=str(e))
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_response_save_endpoint.py -v`
 Expected: all 3 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/main.py tests/test_response_save_endpoint.py
@@ -1270,7 +1270,7 @@ git commit -m "feat: add POST /api/projects/{project_id}/responses endpoint"
 - Consumes: nothing (pure function, no DB, no network) — takes the `dict` shapes `projects_db.get_project_by_id` and `responses_db.get_responses_for_project` (Task 5) already produce.
 - Produces (used by Task 9): `compile_brief_markdown(project: dict, responses: list[dict]) -> str` — assembles a markdown document: an H1 title with the project name, customer name, and (if present) industry context, then each response grouped under an H2 per `stage_name` (in the list's existing `sequence_order`), with an H3 per question (`level: question_text`), the submitted answer (or a placeholder if none), the self-evaluation status (or a placeholder), and notes if present. If `responses` is empty, emits a single placeholder line instead of any stage sections.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_brief.py`:
 
@@ -1332,12 +1332,12 @@ def test_compile_brief_markdown_handles_no_responses_at_all():
     assert "_No responses have been submitted for this project yet._" in markdown
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_brief.py -v`
 Expected: `ModuleNotFoundError: No module named 'brief'` (or collection error) for every test.
 
-- [ ] **Step 3: Implement `backend/brief.py`**
+- [x] **Step 3: Implement `backend/brief.py`**
 
 ```python
 def compile_brief_markdown(project: dict, responses: list) -> str:
@@ -1375,12 +1375,12 @@ def compile_brief_markdown(project: dict, responses: list) -> str:
     return "\n".join(lines)
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_brief.py -v`
 Expected: all 5 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/brief.py tests/test_brief.py
@@ -1399,7 +1399,7 @@ git commit -m "feat: add brief.compile_brief_markdown for the strategic brief en
 - Consumes: `responses_db.get_responses_for_project` (Task 5), `brief.compile_brief_markdown` (Task 8), `require_project_member`/`require_active_project` (Phase B, existing).
 - Produces: `GET /api/projects/{project_id}/brief` — any project member of an `Active` project; returns `{"project_id": int, "markdown": str}`; `403` if not a member / project not active for a `ClientUser`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_brief_endpoint.py`:
 
@@ -1458,12 +1458,12 @@ def test_get_brief_returns_compiled_markdown(mock_get_member, mock_get_project, 
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest tests/test_brief_endpoint.py -v`
 Expected: both tests FAIL with `404 Not Found` (the route doesn't exist yet).
 
-- [ ] **Step 3: Add the import and wire the endpoint in `backend/main.py`**
+- [x] **Step 3: Add the import and wire the endpoint in `backend/main.py`**
 
 Add this import alongside the existing `import projects_db` / `import users_db` lines:
 
@@ -1485,17 +1485,17 @@ def get_project_brief(
     return {"project_id": project_id, "markdown": markdown}
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_brief_endpoint.py -v`
 Expected: both tests PASS.
 
-- [ ] **Step 5: Run the full test suite**
+- [x] **Step 5: Run the full test suite**
 
 Run: `python -m pytest -v` from the repo root.
 Expected: every test PASSES — the pre-existing 173 tests plus all tests added by this plan (`tests/test_process_db.py` 4, `tests/test_process_endpoints.py` 3, `tests/test_rag_engine_search_merged.py` 4, `tests/test_rag_engine_comparative_benchmarks.py` 4, `tests/test_responses_db.py` 7, `tests/test_project_evaluation_endpoint.py` 5, `tests/test_response_save_endpoint.py` 3, `tests/test_brief.py` 5, `tests/test_brief_endpoint.py` 2 — 173 + 37 = 210 tests). Confirm in particular that every pre-existing test file still passes unmodified — `tests/test_main_api.py` (the current `/api/evaluate`/`CASES_DATA` contract tests, if present) must show no changes in behavior, proving Global Constraint 1 held throughout.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/main.py tests/test_brief_endpoint.py
