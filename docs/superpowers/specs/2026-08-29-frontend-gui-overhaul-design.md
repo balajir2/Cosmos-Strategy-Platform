@@ -1,0 +1,46 @@
+# Frontend GUI Overhaul — Design Spec
+
+**Status:** Approved (brainstormed 2026-08-29, section-by-section sign-off in conversation)
+
+## Context
+
+Phases A/B/C and Backend API Integration (all landed 2026-08-28) built a complete, real, project-scoped backend: auth, projects, an Engagement Knowledge Base, and a comparative-benchmark evaluation/response/brief flow — all as **new, additive endpoints**, deliberately never touching `/api/evaluate`, `CASES_DATA`, or the existing chat-interview backend. None of it is wired into the frontend yet.
+
+The current frontend (`frontend-react/`, Next.js App Router, plain hand-written CSS, no component library, no HTTP client library beyond `fetch`) has exactly one place that calls a real backend endpoint today: the chat-interview flow (`/client/case/[caseId]/chat`, backed by `/api/chat/sessions/*`). Everything else — project status, project setup, artifacts — is faked via `lib/mockProjectState.ts`, a `localStorage`-backed stopgap whose own top-of-file comment says every function in it "should be REPLACED, not extended, once Phase A/B ship."
+
+This spec covers wiring the frontend to the real backend, including one piece of backend work discovered as a hard dependency mid-design: making the chat-interview engine project-scoped.
+
+## Full research findings
+
+A prior research pass (recorded in this conversation, not duplicated here) covered: exact current directory structure and routes, the full contents of `lib/api-client.ts` and `lib/mockProjectState.ts`, the CSS/typography/color system, `package.json` exact versions, and the full behavior of the chat-interview page and `chat_engine.py`. The implementation plan (a separate document, produced next via the writing-plans skill) should re-derive these specifics directly from the code rather than trusting a stale summary — this spec captures the *decisions*, not a snapshot of the code.
+
+## Key architectural finding: chat and the new backend are on disjoint data models
+
+`chat_engine.py` resolves its questions via `_get_case_questions(case_id) → CASES_DATA[case_id]["questions"]` — a hardcoded dict, no relation to the `processes`/`stages`/`questions` tables. The new `/api/projects/{id}/evaluate` and `/responses` endpoints require a real `project_id` and a `question_id` from those DB tables. A chat session, as built, has neither. This spec's chat-bridging section (below) resolves this by making `chat_sessions` project-scoped, rather than by discarding the chat UI (see "Decisions" below for why).
+
+## Decisions
+
+1. **Chat UI stays as the primary ClientUser interaction model.** The new split-screen benchmark comparison, self-evaluation, and Download Brief are integrated *into* the existing chat flow, not built as a parallel/separate page. Rejected alternative: a from-scratch non-chat, one-question-per-page split-screen flow — cleaner mapping to the new backend, but throws away the working chat UX and its follow-up-question/depth-checking logic for no product reason.
+2. **`chat_sessions` becomes dual-mode**, not migrated wholesale. Add a nullable `project_id` column; keep `case_id` (made nullable) for backward compatibility; a `CHECK` constraint enforces exactly one of the two is set per row. `chat_engine.py`'s functions branch on which one a session has. The existing case_id/`CASES_DATA` path is never modified, only extended alongside — consistent with every prior phase's additive philosophy.
+3. **`POST /api/projects/{id}/members` gets built in this phase**, not deferred. Without it, no project could ever have a `ClientUser` member, making the entire ClientUser flow permanently untestable through the UI. Consultant-only; adds a member to a project by email + role.
+4. **No self-service SystemAdmin promotion UI.** `is_admin` stays `false`-by-default for every registered user; becoming a SystemAdmin requires a manual `UPDATE users SET is_admin = true` via the Neon console. This is a deliberate, permanent choice, not a stopgap — self-service admin promotion in a UI would be a real privilege-escalation hole, not a POC shortcut to fix later.
+5. **JWT stored in `localStorage`**, not an httpOnly cookie or in-memory store. This app has no server-side rendering that needs to read auth state, so the extra complexity of a cookie-based flow buys nothing here; matches the existing `mockProjectState.ts` precedent of using `localStorage` for client-only state. Acceptable for a POC; would need revisiting (httpOnly cookie + CSRF handling) before any production hardening pass.
+6. **No new npm dependencies.** No component library, no HTTP client library (axios/ky), no state manager, no form library. Matches the existing zero-dependency style; the app's scope doesn't justify introducing new tooling.
+7. **Benchmark message content becomes structured JSON for project-scoped sessions only.** `chat_messages.content` stays a plain `TEXT` column (no schema change there) — for a project-scoped session's `"benchmark"` message, the backend writes a JSON-stringified `{level_1, level_2, level_3, source_chunks}` payload instead of prose. `ChatMessageBubble` attempts `JSON.parse` and renders the real split-screen comparison on success, falling back to today's plain-text `.critique-card` rendering on failure — so existing case-based sessions render exactly as they do today, unchanged.
+8. **Self-evaluation status travels as a new optional field on the existing message-post endpoint**, not a separate endpoint. `POST /api/chat/sessions/{id}/messages` gains an optional `self_evaluation_status` string field. When present and the session is project-scoped, `chat_engine.advance_session` persists to `responses_db.save_response` before advancing to the next question: `submitted_text` is the user's original answer for that level (retrieved the same way `_generate_benchmarks` already does — via `get_level_messages`, the message immediately preceding the benchmark message), and `self_evaluation_notes`/`self_evaluation_status` come from the current reply. Safe to call even if a level is somehow revisited, since `save_response` upserts via `COALESCE`. Frontend: the self-eval reply UI gains a status dropdown (Needs Work / Satisfactory / Strong) shown only for project-scoped sessions, alongside the existing free-text reasoning box.
+9. **Download Brief is a client-side download, not a backend-rendered file.** `GET /api/projects/{id}/brief` already returns markdown as JSON; the frontend turns that into a downloadable `.md` via a `Blob` + `<a download>`, no new backend endpoint needed.
+10. **Cutover (retiring `/api/evaluate`, `CASES_DATA`, `GET /api/cases`, `GET /api/case/{case_id}`, and the old case_id chat path) happens last**, as an explicit final task, only once every new path is verified working end to end. Until then both paths coexist.
+
+## Scope boundaries (explicitly out of scope for this phase)
+
+- **Guided Learning Flow** (baseline calibration, adaptive question difficulty, case-study resolution reveal, corpus-relative depth signal, Start/Stop/Continue reflection) — not yet scoped into a build order per the roadmap; unrelated to this phase's wiring work.
+- **Visual redesign / styling refinement** — reuse the existing dark-glassmorphism system and its already-present-but-unused CSS classes (`.rating-card`, `.critique-card`, `.results-grid`, `.artifacts-card`, `.dropzone`, `.purpose-tag`, `.status-pill`) as-is. No new design language, no responsive/mobile pass, no dark/light theme toggle.
+- **Frontend test suite** — the frontend has zero test tooling today (no Jest/Vitest/Playwright config). Adding one is out of scope; verification for this phase is manual (dev server + browser), per the project's own "for UI changes, start the dev server and use the feature in a browser before reporting complete" convention.
+- **Password reset, email verification, SSO** — pre-existing Out of Scope items from the Users/Projects/Engagement KB spec, unaffected by this phase.
+- **Multiple processes / process picker UX polish** — only one process is currently seeded ("Aditya Birla Brand Compass V2"); the "New Project" form's process selector can be a simple fixed dropdown, not a rich picker.
+- **Artifact drag-and-drop, upload progress bars** — a plain `<input type="file">` + submit button is sufficient; the existing `.dropzone` CSS can be reused visually without implementing real drag-and-drop interaction.
+- **Rate limiting, CSRF protection, httpOnly cookie migration for the JWT** — explicitly deferred per Decision 5 above.
+
+## Success criteria
+
+A SystemAdmin can: register, get promoted to admin via SQL, log in, create a project, and (once a Consultant sets things up) it's usable end to end. A Consultant can: log in, see their project, edit its industry context, upload/list/delete Engagement KB artifacts, assign a ClientUser by email, and activate the project. A ClientUser can: log in, see their now-active project, start/resume the chat interview, see real Level 1/2/3 benchmarks with source-tagged context inline in the chat, submit a self-evaluation (notes + status), and download a compiled brief once done. All of this exercises real backend endpoints — no `localStorage`-mocked state remains reachable from any page by the end of this phase, up until the final cutover task retires the legacy `/api/evaluate`/`CASES_DATA` path.
