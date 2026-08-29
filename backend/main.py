@@ -18,6 +18,7 @@ import project_artifacts_db
 import project_knowledge_base
 import process_db
 import responses_db
+import brief
 from auth import (
     hash_password, verify_password, create_access_token, get_current_user,
     require_admin, require_project_role, require_active_project,
@@ -238,6 +239,16 @@ def save_project_response(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/projects/{project_id}/brief")
+def get_project_brief(
+    project_id: int,
+    member: dict = Depends(require_project_member),
+    project: dict = Depends(require_active_project),
+):
+    responses = responses_db.get_responses_for_project(project_id)
+    markdown = brief.compile_brief_markdown(project, responses)
+    return {"project_id": project_id, "markdown": markdown}
 
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
