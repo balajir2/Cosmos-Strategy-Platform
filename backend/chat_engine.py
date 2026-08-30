@@ -1,6 +1,8 @@
 from cases_data import CASES_DATA
 from chat_sessions import add_message, create_session, get_level_messages, get_messages, get_session, update_session
 from llm_providers import get_provider_adapter
+import process_db
+import projects_db
 import settings as platform_settings
 
 QUESTION_CAP_PER_LEVEL = 3
@@ -13,6 +15,30 @@ def _get_case_questions(case_id: str) -> list:
     return case["questions"]
 
 
+def _get_project_questions(project_id: int) -> list:
+    """Flattens the project's process (stages -> questions, already ordered by
+    sequence_order then question id via process_db.get_process_detail) into the
+    same {"id", "level", "question", "search_query"} shape _get_case_questions
+    returns, so every downstream function in this module stays source-agnostic."""
+    project = projects_db.get_project_by_id(project_id)
+    if project is None:
+        raise ValueError(f"Unknown project_id '{project_id}'")
+    process = process_db.get_process_detail(project["process_id"])
+    questions = []
+    for stage in process["stages"]:
+        questions.extend(stage["questions"])
+    return [
+        {"id": q["id"], "level": q["level"], "question": q["text"], "search_query": q["search_query"]}
+        for q in questions
+    ]
+
+
+def _get_questions(case_id, project_id) -> list:
+    if project_id is not None:
+        return _get_project_questions(project_id)
+    return _get_case_questions(case_id)
+
+
 def _context_str(rag, search_query: str) -> str:
     hits = rag.search(search_query, top_k=3)
     return "\n\n".join(
@@ -20,11 +46,11 @@ def _context_str(rag, search_query: str) -> str:
     )
 
 
-def _ask_question(session_id: int, case_id: str, level_index: int) -> dict:
+def _ask_question(session_id: int, case_id, project_id, level_index: int) -> dict:
     """Posts the level's master question verbatim. This is fixed, human-authored
     Consultant IP and must never be reworded by the AI - see the 2026-08-26 review
     meeting notes in documentation/product/roadmap.md's Guided Learning Flow checklist."""
-    questions = _get_case_questions(case_id)
+    questions = _get_questions(case_id, project_id)
     question = questions[level_index]
     return add_message(session_id, "assistant", question["question"], "question", level_index)
 
@@ -34,8 +60,8 @@ def _question_count_for_level(session_id: int, level_index: int) -> int:
     return sum(1 for m in all_messages if m["level_index"] == level_index and m["message_type"] == "question")
 
 
-def _has_sufficient_depth(rag, session_id: int, case_id: str, level_index: int) -> bool:
-    questions = _get_case_questions(case_id)
+def _has_sufficient_depth(rag, session_id: int, case_id, project_id, level_index: int) -> bool:
+    questions = _get_questions(case_id, project_id)
     question = questions[level_index]
     try:
         context = _context_str(rag, question["search_query"])
@@ -58,8 +84,8 @@ def _has_sufficient_depth(rag, session_id: int, case_id: str, level_index: int) 
         return True
 
 
-def _generate_followup_question(rag, session_id: int, case_id: str, level_index: int) -> dict:
-    questions = _get_case_questions(case_id)
+def _generate_followup_question(rag, session_id: int, case_id, project_id, level_index: int) -> dict:
+    questions = _get_questions(case_id, project_id)
     question = questions[level_index]
     try:
         context = _context_str(rag, question["search_query"])
@@ -82,8 +108,8 @@ def _generate_followup_question(rag, session_id: int, case_id: str, level_index:
     return add_message(session_id, "assistant", content, "question", level_index)
 
 
-def _generate_benchmarks(rag, session_id: int, case_id: str, level_index: int) -> list:
-    questions = _get_case_questions(case_id)
+def _generate_benchmarks(rag, session_id: int, case_id, project_id, level_index: int) -> list:
+    questions = _get_questions(case_id, project_id)
     question = questions[level_index]
     try:
         context = _context_str(rag, question["search_query"])
@@ -115,10 +141,12 @@ def _generate_benchmarks(rag, session_id: int, case_id: str, level_index: int) -
     return [benchmark_msg, prompt_msg]
 
 
-def start_session(rag, case_id: str) -> dict:
-    _get_case_questions(case_id)  # raises ValueError early if case_id is unknown
-    session = create_session(case_id)
-    question_msg = _ask_question(session["id"], case_id, 0)
+def start_session(rag, case_id: str = None, project_id: int = None) -> dict:
+    if (case_id is None) == (project_id is None):
+        raise ValueError("Exactly one of case_id or project_id must be provided.")
+    _get_questions(case_id, project_id)  # raises ValueError early if case_id/project_id is unknown
+    session = create_session(case_id=case_id, project_id=project_id)
+    question_msg = _ask_question(session["id"], case_id, project_id, 0)
     update_session(session["id"], 0, "awaiting_answer")
     return {"id": session["id"], "phase": "awaiting_answer", "current_level_index": 0, "messages": [question_msg]}
 
@@ -130,12 +158,13 @@ def advance_session(rag, session_id: int, user_content: str) -> dict:
 
     phase = session["phase"]
     level_index = session["current_level_index"]
-    case_id = session["case_id"]
-    questions = _get_case_questions(case_id)
+    case_id = session.get("case_id")
+    project_id = session.get("project_id")
+    questions = _get_questions(case_id, project_id)
 
     if phase == "awaiting_answer":
         add_message(session_id, "user", user_content, "chat", level_index)
-        new_messages = _generate_benchmarks(rag, session_id, case_id, level_index)
+        new_messages = _generate_benchmarks(rag, session_id, case_id, project_id, level_index)
         update_session(session_id, level_index, "awaiting_self_rating")
         return {"phase": "awaiting_self_rating", "current_level_index": level_index, "messages": new_messages}
 
@@ -144,17 +173,17 @@ def advance_session(rag, session_id: int, user_content: str) -> dict:
 
         question_count = _question_count_for_level(session_id, level_index)
         sufficient = question_count >= QUESTION_CAP_PER_LEVEL or _has_sufficient_depth(
-            rag, session_id, case_id, level_index
+            rag, session_id, case_id, project_id, level_index
         )
 
         if not sufficient:
-            followup_msg = _generate_followup_question(rag, session_id, case_id, level_index)
+            followup_msg = _generate_followup_question(rag, session_id, case_id, project_id, level_index)
             update_session(session_id, level_index, "awaiting_answer")
             return {"phase": "awaiting_answer", "current_level_index": level_index, "messages": [followup_msg]}
 
         if level_index < len(questions) - 1:
             next_level = level_index + 1
-            question_msg = _ask_question(session_id, case_id, next_level)
+            question_msg = _ask_question(session_id, case_id, project_id, next_level)
             update_session(session_id, next_level, "awaiting_answer")
             return {"phase": "awaiting_answer", "current_level_index": next_level, "messages": [question_msg]}
         update_session(session_id, level_index, "complete")

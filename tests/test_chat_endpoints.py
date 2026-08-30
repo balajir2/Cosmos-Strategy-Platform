@@ -22,7 +22,7 @@ def test_create_chat_session_returns_engine_result(mock_start_session):
 
     assert response.status_code == 200
     assert response.json() == mock_start_session.return_value
-    mock_start_session.assert_called_once_with(main.rag, "blazar")
+    mock_start_session.assert_called_once_with(main.rag, "blazar", None)
 
 
 @patch("main.chat_engine.start_session", side_effect=ValueError("Unknown case_id 'nope'"))
@@ -30,6 +30,19 @@ def test_create_chat_session_rejects_unknown_case_id(mock_start_session):
     response = client.post("/api/chat/sessions", json={"case_id": "nope"})
 
     assert response.status_code == 404
+
+
+@patch("main.chat_engine.start_session")
+def test_create_chat_session_accepts_project_id(mock_start_session):
+    mock_start_session.return_value = {
+        "id": 2, "phase": "awaiting_answer", "current_level_index": 0,
+        "messages": [{"id": 10, "role": "assistant", "content": "Q?", "message_type": "question", "level_index": 0, "created_at": "t"}],
+    }
+
+    response = client.post("/api/chat/sessions", json={"project_id": 42})
+
+    assert response.status_code == 200
+    mock_start_session.assert_called_once_with(main.rag, None, 42)
 
 
 @patch("main.chat_engine.advance_session")

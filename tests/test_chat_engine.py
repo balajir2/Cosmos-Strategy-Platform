@@ -291,3 +291,94 @@ def test_advance_session_treats_depth_check_failure_as_sufficient(
 
     assert result["phase"] == "awaiting_answer"
     assert result["current_level_index"] == 1
+
+
+FAKE_PROJECT_ID = 42
+FAKE_PROCESS_DETAIL = {
+    "id": 5, "name": "Aditya Birla Brand Compass V2", "description": "desc", "created_at": "t",
+    "stages": [
+        {
+            "id": 10, "name": "Aim & SWOT", "sequence_order": 1,
+            "questions": [
+                {"id": 100, "level": "Level 7: Business Model", "text": "Project question one?", "search_query": "psq1", "owner_role": "Brand Manager", "reviewer_role": "CMO", "guidance": []},
+            ],
+        },
+        {
+            "id": 11, "name": "Opportunity Expansion", "sequence_order": 2,
+            "questions": [
+                {"id": 101, "level": "Level 6: Market Opportunities", "text": "Project question two?", "search_query": "psq2", "owner_role": "Brand Manager", "reviewer_role": "CMO", "guidance": []},
+            ],
+        },
+    ],
+}
+FAKE_PROJECT = {"id": FAKE_PROJECT_ID, "process_id": 5, "status": "Active"}
+
+
+@patch("chat_engine.process_db.get_process_detail", return_value=FAKE_PROCESS_DETAIL)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.update_session")
+@patch("chat_engine.create_session")
+@patch("chat_engine.get_provider_adapter")
+def test_start_session_with_project_id_asks_first_question_from_process(
+    mock_get_adapter, mock_create_session, mock_update_session, mock_add_message, mock_get_project, mock_get_process
+):
+    mock_create_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "asking"}
+    mock_add_message.return_value = {
+        "id": 10, "role": "assistant", "content": "Project question one?",
+        "message_type": "question", "level_index": 0, "created_at": "t",
+    }
+
+    result = chat_engine.start_session(_fake_rag(), project_id=FAKE_PROJECT_ID)
+
+    assert result["phase"] == "awaiting_answer"
+    assert result["messages"] == [mock_add_message.return_value]
+    mock_add_message.assert_called_once_with(1, "assistant", "Project question one?", "question", 0)
+    mock_create_session.assert_called_once_with(case_id=None, project_id=FAKE_PROJECT_ID)
+    mock_get_adapter.assert_not_called()
+
+
+def test_start_session_rejects_neither_case_id_nor_project_id():
+    with pytest.raises(ValueError):
+        chat_engine.start_session(_fake_rag())
+
+
+def test_start_session_rejects_both_case_id_and_project_id():
+    with pytest.raises(ValueError):
+        chat_engine.start_session(_fake_rag(), case_id=FAKE_CASE_ID, project_id=FAKE_PROJECT_ID)
+
+
+@patch("chat_engine.projects_db.get_project_by_id", return_value=None)
+def test_start_session_rejects_unknown_project_id(mock_get_project):
+    with pytest.raises(ValueError):
+        chat_engine.start_session(_fake_rag(), project_id=999)
+
+
+@patch("chat_engine.process_db.get_process_detail", return_value=FAKE_PROCESS_DETAIL)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.get_level_messages")
+@patch("chat_engine.get_messages")
+@patch("chat_engine.update_session")
+@patch("chat_engine.get_session")
+def test_advance_session_project_scoped_moves_to_next_level_by_question_cap(
+    mock_get_session, mock_update_session, mock_get_messages, mock_get_level_messages, mock_add_message,
+    mock_get_project, mock_get_process,
+):
+    mock_get_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "awaiting_self_rating"}
+    mock_get_messages.return_value = [
+        {"id": 1, "role": "assistant", "content": "Project question one?", "message_type": "question", "level_index": 0, "created_at": "t"},
+        {"id": 5, "role": "assistant", "content": "Follow-up 1?", "message_type": "question", "level_index": 0, "created_at": "t"},
+        {"id": 9, "role": "assistant", "content": "Follow-up 2?", "message_type": "question", "level_index": 0, "created_at": "t"},
+    ]
+    mock_add_message.side_effect = [
+        {"id": 30, "role": "user", "content": "another answer", "message_type": "chat", "level_index": 0, "created_at": "t"},
+        {"id": 31, "role": "assistant", "content": "Project question two?", "message_type": "question", "level_index": 1, "created_at": "t"},
+    ]
+
+    result = chat_engine.advance_session(_fake_rag(), 1, "another answer")
+
+    assert result["phase"] == "awaiting_answer"
+    assert result["current_level_index"] == 1
+    mock_add_message.assert_any_call(1, "assistant", "Project question two?", "question", 1)
+    mock_update_session.assert_called_once_with(1, 1, "awaiting_answer")

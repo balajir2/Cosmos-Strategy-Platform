@@ -53,7 +53,8 @@ class ProviderSettingUpdate(BaseModel):
     active_llm_provider: str
 
 class ChatSessionCreate(BaseModel):
-    case_id: str
+    case_id: Optional[str] = None
+    project_id: Optional[int] = None
 
 
 class ChatMessageCreate(BaseModel):
@@ -284,7 +285,7 @@ def update_settings(payload: ProviderSettingUpdate, _: None = Depends(require_ad
 @app.post("/api/chat/sessions")
 def create_chat_session(payload: ChatSessionCreate):
     try:
-        return chat_engine.start_session(rag, payload.case_id)
+        return chat_engine.start_session(rag, payload.case_id, payload.project_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
