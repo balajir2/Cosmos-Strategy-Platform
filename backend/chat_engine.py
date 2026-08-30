@@ -1,8 +1,11 @@
+import json
+
 from cases_data import CASES_DATA
 from chat_sessions import add_message, create_session, get_level_messages, get_messages, get_session, update_session
 from llm_providers import get_provider_adapter
 import process_db
 import projects_db
+import responses_db
 import settings as platform_settings
 
 QUESTION_CAP_PER_LEVEL = 3
@@ -111,29 +114,49 @@ def _generate_followup_question(rag, session_id: int, case_id, project_id, level
 def _generate_benchmarks(rag, session_id: int, case_id, project_id, level_index: int) -> list:
     questions = _get_questions(case_id, project_id)
     question = questions[level_index]
-    try:
-        context = _context_str(rag, question["search_query"])
+
+    if project_id is not None:
         level_messages = get_level_messages(session_id, level_index)
         question_asked = level_messages[-2]["content"] if len(level_messages) >= 2 else question["question"]
         user_answer = level_messages[-1]["content"] if level_messages else ""
-        system_prompt = (
-            f"You are Cosmos AI. Framework context:\n{context}\n\n"
-            f"You asked the user: {question_asked}\n\n"
-            "Given the user's answer below, write three example answers at increasing depth, labeled "
-            "exactly:\n"
-            "Level 1 (superficial, fact-based)\nLevel 2 (needs-based)\nLevel 3 (insight-driven)\n"
-            "Do not evaluate or grade the user's answer directly - just provide the three benchmark "
-            "answers for comparison."
-        )
-        provider = get_provider_adapter(platform_settings.get_active_provider())
-        content = provider.complete(system_prompt, [{"role": "user", "content": user_answer}])
-    except Exception as e:
-        print(f"Error generating benchmarks for level {level_index}: {e}")
-        content = (
-            "Unable to generate benchmark comparisons right now. As a general guide: a Level 1 answer "
-            "states obvious facts; a Level 2 answer names a customer need or trade-off; a Level 3 answer "
-            "surfaces a deeper anxiety, hidden economic transaction, or cultural tension."
-        )
+        try:
+            hits = rag.search_merged(project_id, question["search_query"], top_k=3)
+            benchmarks = rag.generate_comparative_benchmarks(question_asked, user_answer, hits)
+            content = json.dumps({
+                "level_1": benchmarks.get("level_1", ""),
+                "level_2": benchmarks.get("level_2", ""),
+                "level_3": benchmarks.get("level_3", ""),
+                "source_chunks": hits,
+            })
+        except Exception as e:
+            print(f"Error generating project-scoped benchmarks for level {level_index}: {e}")
+            fallback = rag.fallback_local_benchmarks()
+            content = json.dumps({**fallback, "source_chunks": []})
+    else:
+        try:
+            context = _context_str(rag, question["search_query"])
+            level_messages = get_level_messages(session_id, level_index)
+            question_asked = level_messages[-2]["content"] if len(level_messages) >= 2 else question["question"]
+            user_answer = level_messages[-1]["content"] if level_messages else ""
+            system_prompt = (
+                f"You are Cosmos AI. Framework context:\n{context}\n\n"
+                f"You asked the user: {question_asked}\n\n"
+                "Given the user's answer below, write three example answers at increasing depth, labeled "
+                "exactly:\n"
+                "Level 1 (superficial, fact-based)\nLevel 2 (needs-based)\nLevel 3 (insight-driven)\n"
+                "Do not evaluate or grade the user's answer directly - just provide the three benchmark "
+                "answers for comparison."
+            )
+            provider = get_provider_adapter(platform_settings.get_active_provider())
+            content = provider.complete(system_prompt, [{"role": "user", "content": user_answer}])
+        except Exception as e:
+            print(f"Error generating benchmarks for level {level_index}: {e}")
+            content = (
+                "Unable to generate benchmark comparisons right now. As a general guide: a Level 1 answer "
+                "states obvious facts; a Level 2 answer names a customer need or trade-off; a Level 3 answer "
+                "surfaces a deeper anxiety, hidden economic transaction, or cultural tension."
+            )
+
     benchmark_msg = add_message(session_id, "assistant", content, "benchmark", level_index)
     prompt_msg = add_message(
         session_id, "assistant", "Where does your answer fall, and why?", "self_rating_prompt", level_index
@@ -151,7 +174,7 @@ def start_session(rag, case_id: str = None, project_id: int = None) -> dict:
     return {"id": session["id"], "phase": "awaiting_answer", "current_level_index": 0, "messages": [question_msg]}
 
 
-def advance_session(rag, session_id: int, user_content: str) -> dict:
+def advance_session(rag, session_id: int, user_content: str, self_evaluation_status: str = None) -> dict:
     session = get_session(session_id)
     if session is None:
         raise ValueError(f"Unknown session_id '{session_id}'")
@@ -170,6 +193,19 @@ def advance_session(rag, session_id: int, user_content: str) -> dict:
 
     if phase == "awaiting_self_rating":
         add_message(session_id, "user", user_content, "chat", level_index)
+
+        if project_id is not None and self_evaluation_status is not None:
+            question = questions[level_index]
+            level_messages = get_level_messages(session_id, level_index)
+            # The message immediately preceding the benchmark message - the same
+            # relative position _generate_benchmarks reads as "user_answer" when it
+            # runs, now 3 positions further back since the benchmark message, the
+            # self-rating prompt, and this self-eval reply have since been appended.
+            submitted_text = level_messages[-4]["content"] if len(level_messages) >= 4 else ""
+            responses_db.save_response(
+                project_id, question["id"], submitted_text=submitted_text,
+                self_evaluation_notes=user_content, self_evaluation_status=self_evaluation_status,
+            )
 
         question_count = _question_count_for_level(session_id, level_index)
         sufficient = question_count >= QUESTION_CAP_PER_LEVEL or _has_sufficient_depth(

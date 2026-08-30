@@ -56,7 +56,7 @@ def test_post_chat_message_returns_engine_result(mock_advance_session):
 
     assert response.status_code == 200
     assert response.json() == mock_advance_session.return_value
-    mock_advance_session.assert_called_once_with(main.rag, 1, "my answer")
+    mock_advance_session.assert_called_once_with(main.rag, 1, "my answer", None)
 
 
 @patch("main.chat_engine.advance_session", side_effect=ValueError("Unknown session_id '999'"))
@@ -64,6 +64,19 @@ def test_post_chat_message_rejects_unknown_session(mock_advance_session):
     response = client.post("/api/chat/sessions/999/messages", json={"content": "anything"})
 
     assert response.status_code == 404
+
+
+@patch("main.chat_engine.advance_session")
+def test_post_chat_message_forwards_self_evaluation_status(mock_advance_session):
+    mock_advance_session.return_value = {
+        "phase": "awaiting_answer", "current_level_index": 1,
+        "messages": [{"id": 31, "role": "assistant", "content": "Next question?", "message_type": "question", "level_index": 1, "created_at": "t"}],
+    }
+
+    response = client.post("/api/chat/sessions/1/messages", json={"content": "my reasoning", "self_evaluation_status": "Strong"})
+
+    assert response.status_code == 200
+    mock_advance_session.assert_called_once_with(main.rag, 1, "my reasoning", "Strong")
 
 
 @patch("main.chat_sessions_module.get_messages")

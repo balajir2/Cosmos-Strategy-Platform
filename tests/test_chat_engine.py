@@ -1,4 +1,5 @@
 # tests/test_chat_engine.py
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -17,6 +18,8 @@ def _fake_rag():
     rag.search.return_value = [
         {"source_file": "deck.pdf", "slide_number": 3, "text": "some slide text", "score": 0.5}
     ]
+    rag.search_merged.return_value = []
+    rag.generate_comparative_benchmarks.return_value = {"level_1": "l1", "level_2": "l2", "level_3": "l3"}
     return rag
 
 
@@ -382,3 +385,106 @@ def test_advance_session_project_scoped_moves_to_next_level_by_question_cap(
     assert result["current_level_index"] == 1
     mock_add_message.assert_any_call(1, "assistant", "Project question two?", "question", 1)
     mock_update_session.assert_called_once_with(1, 1, "awaiting_answer")
+
+
+@patch("chat_engine.responses_db.save_response")
+@patch("chat_engine.process_db.get_process_detail", return_value=FAKE_PROCESS_DETAIL)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.get_level_messages")
+@patch("chat_engine.update_session")
+@patch("chat_engine.get_session")
+def test_advance_session_project_scoped_generates_json_benchmark_content(
+    mock_get_session, mock_update_session, mock_get_level_messages, mock_add_message,
+    mock_get_project, mock_get_process, mock_save_response,
+):
+    mock_get_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "awaiting_answer"}
+    mock_get_level_messages.return_value = [
+        {"role": "assistant", "content": "Project question one?"},
+        {"role": "user", "content": "my answer"},
+    ]
+    rag = _fake_rag()
+    rag.search_merged.return_value = [{"id": 1, "source": "framework", "source_file": "deck.pdf", "phase": "Phase 1", "slide_number": 3, "text": "context", "score": 0.9}]
+    rag.generate_comparative_benchmarks.return_value = {"level_1": "l1", "level_2": "l2", "level_3": "l3"}
+    mock_add_message.side_effect = [
+        {"id": 20, "role": "user", "content": "my answer", "message_type": "chat", "level_index": 0, "created_at": "t"},
+        {"id": 21, "role": "assistant", "content": "placeholder", "message_type": "benchmark", "level_index": 0, "created_at": "t"},
+        {"id": 22, "role": "assistant", "content": "Where does your answer fall, and why?", "message_type": "self_rating_prompt", "level_index": 0, "created_at": "t"},
+    ]
+
+    result = chat_engine.advance_session(rag, 1, "my answer")
+
+    assert result["phase"] == "awaiting_self_rating"
+    rag.search_merged.assert_called_once_with(FAKE_PROJECT_ID, "psq1", top_k=3)
+    rag.generate_comparative_benchmarks.assert_called_once_with(
+        "Project question one?", "my answer", rag.search_merged.return_value
+    )
+    benchmark_call = mock_add_message.call_args_list[1]
+    content = benchmark_call[0][2]
+    parsed = json.loads(content)
+    assert parsed == {"level_1": "l1", "level_2": "l2", "level_3": "l3", "source_chunks": rag.search_merged.return_value}
+    mock_save_response.assert_not_called()
+
+
+@patch("chat_engine.responses_db.save_response")
+@patch("chat_engine.process_db.get_process_detail", return_value=FAKE_PROCESS_DETAIL)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.get_level_messages")
+@patch("chat_engine.get_messages")
+@patch("chat_engine.update_session")
+@patch("chat_engine.get_session")
+def test_advance_session_project_scoped_saves_response_when_status_given(
+    mock_get_session, mock_update_session, mock_get_messages, mock_get_level_messages, mock_add_message,
+    mock_get_project, mock_get_process, mock_save_response,
+):
+    mock_get_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "awaiting_self_rating"}
+    # Cap already reached this level, so the test stays focused on save_response, not depth-checking.
+    mock_get_messages.return_value = [
+        {"id": 1, "role": "assistant", "content": "q", "message_type": "question", "level_index": 0, "created_at": "t"},
+        {"id": 5, "role": "assistant", "content": "q", "message_type": "question", "level_index": 0, "created_at": "t"},
+        {"id": 9, "role": "assistant", "content": "q", "message_type": "question", "level_index": 0, "created_at": "t"},
+    ]
+    mock_get_level_messages.return_value = [
+        {"role": "assistant", "content": "Project question one?"},
+        {"role": "user", "content": "my original answer"},
+        {"role": "assistant", "content": '{"level_1": "l1", "level_2": "l2", "level_3": "l3", "source_chunks": []}'},
+        {"role": "assistant", "content": "Where does your answer fall, and why?"},
+        {"role": "user", "content": "I think this is Strong because..."},
+    ]
+    mock_add_message.side_effect = [
+        {"id": 30, "role": "user", "content": "I think this is Strong because...", "message_type": "chat", "level_index": 0, "created_at": "t"},
+        {"id": 31, "role": "assistant", "content": "Project question two?", "message_type": "question", "level_index": 1, "created_at": "t"},
+    ]
+
+    result = chat_engine.advance_session(_fake_rag(), 1, "I think this is Strong because...", self_evaluation_status="Strong")
+
+    assert result["phase"] == "awaiting_answer"
+    mock_save_response.assert_called_once_with(
+        FAKE_PROJECT_ID, 100, submitted_text="my original answer",
+        self_evaluation_notes="I think this is Strong because...", self_evaluation_status="Strong",
+    )
+
+
+@patch("chat_engine.CASES_DATA", {FAKE_CASE_ID: {"id": FAKE_CASE_ID, "questions": FAKE_QUESTIONS}})
+@patch("chat_engine.responses_db.save_response")
+@patch("chat_engine.add_message")
+@patch("chat_engine.get_level_messages")
+@patch("chat_engine.get_messages")
+@patch("chat_engine.update_session")
+@patch("chat_engine.get_session")
+def test_advance_session_case_based_ignores_self_evaluation_status(
+    mock_get_session, mock_update_session, mock_get_messages, mock_get_level_messages, mock_add_message, mock_save_response,
+):
+    mock_get_session.return_value = {"id": 1, "case_id": FAKE_CASE_ID, "project_id": None, "current_level_index": 1, "phase": "awaiting_self_rating"}
+    mock_get_messages.return_value = [
+        {"id": 1, "role": "assistant", "content": "q", "message_type": "question", "level_index": 1, "created_at": "t"},
+        {"id": 5, "role": "assistant", "content": "q", "message_type": "question", "level_index": 1, "created_at": "t"},
+        {"id": 9, "role": "assistant", "content": "q", "message_type": "question", "level_index": 1, "created_at": "t"},
+    ]
+    mock_add_message.return_value = {"id": 40, "role": "user", "content": "done", "message_type": "chat", "level_index": 1, "created_at": "t"}
+
+    result = chat_engine.advance_session(_fake_rag(), 1, "done", self_evaluation_status="Strong")
+
+    assert result["phase"] == "complete"
+    mock_save_response.assert_not_called()

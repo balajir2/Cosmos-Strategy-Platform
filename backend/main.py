@@ -59,6 +59,7 @@ class ChatSessionCreate(BaseModel):
 
 class ChatMessageCreate(BaseModel):
     content: str
+    self_evaluation_status: Optional[str] = None
 
 class RegisterRequest(BaseModel):
     email: str
@@ -293,7 +294,7 @@ def create_chat_session(payload: ChatSessionCreate):
 @app.post("/api/chat/sessions/{session_id}/messages")
 def post_chat_message(session_id: int, payload: ChatMessageCreate):
     try:
-        return chat_engine.advance_session(rag, session_id, payload.content)
+        return chat_engine.advance_session(rag, session_id, payload.content, payload.self_evaluation_status)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
