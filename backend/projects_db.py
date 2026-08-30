@@ -140,3 +140,29 @@ def get_project_member(project_id: int, user_id: int):
         "id": row[0], "project_id": row[1], "user_id": row[2], "role": row[3],
         "org_title": row[4], "assigned_at": row[5].isoformat(),
     }
+
+
+def add_project_member(project_id: int, user_id: int, role: str) -> dict:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO project_members (project_id, user_id, role)
+                    VALUES (%s, %s, %s)
+                    RETURNING id, project_id, user_id, role, org_title, assigned_at;
+                    """,
+                    (project_id, user_id, role),
+                )
+            except psycopg2.errors.UniqueViolation as e:
+                conn.rollback()
+                raise ValueError(f"User {user_id} is already a member of project {project_id}: {e}")
+            except (psycopg2.errors.ForeignKeyViolation, psycopg2.errors.CheckViolation) as e:
+                conn.rollback()
+                raise ValueError(f"Invalid project_id, user_id, or role: {e}")
+            row = cursor.fetchone()
+        conn.commit()
+    return {
+        "id": row[0], "project_id": row[1], "user_id": row[2], "role": row[3],
+        "org_title": row[4], "assigned_at": row[5].isoformat(),
+    }

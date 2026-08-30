@@ -159,3 +159,57 @@ def test_get_project_member_returns_dict_when_found(mock_get_conn):
     result = projects_db.get_project_member(1, 5)
 
     assert result == _MEMBER_DICT
+
+
+@patch("projects_db.get_db_connection")
+def test_add_project_member_inserts_and_returns_row(mock_get_conn):
+    row = (3, 1, 7, "ClientUser", None, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    conn, cursor = _fake_conn(fetchone_result=row)
+    mock_get_conn.return_value = conn
+
+    result = projects_db.add_project_member(1, 7, "ClientUser")
+
+    assert result == {
+        "id": 3, "project_id": 1, "user_id": 7, "role": "ClientUser",
+        "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+    }
+    sql, params = cursor.execute.call_args[0]
+    assert "INSERT INTO project_members" in sql
+    assert params == (1, 7, "ClientUser")
+    conn.commit.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_add_project_member_raises_value_error_on_duplicate_membership(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.execute.side_effect = psycopg2.errors.UniqueViolation("duplicate key")
+    mock_get_conn.return_value = conn
+
+    with pytest.raises(ValueError):
+        projects_db.add_project_member(1, 7, "ClientUser")
+
+    conn.rollback.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_add_project_member_raises_value_error_on_invalid_role(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.execute.side_effect = psycopg2.errors.CheckViolation("violates check constraint")
+    mock_get_conn.return_value = conn
+
+    with pytest.raises(ValueError):
+        projects_db.add_project_member(1, 7, "NotARole")
+
+    conn.rollback.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_add_project_member_raises_value_error_on_invalid_foreign_key(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.execute.side_effect = psycopg2.errors.ForeignKeyViolation("no such project")
+    mock_get_conn.return_value = conn
+
+    with pytest.raises(ValueError):
+        projects_db.add_project_member(999, 7, "ClientUser")
+
+    conn.rollback.assert_called_once()

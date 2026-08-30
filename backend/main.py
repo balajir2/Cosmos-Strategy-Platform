@@ -82,6 +82,10 @@ class ProjectUpdateRequest(BaseModel):
     description: Optional[str] = None
     industry_context: Optional[str] = None
 
+class ProjectMemberAddRequest(BaseModel):
+    email: str
+    role: str
+
 class ProjectEvaluationRequest(BaseModel):
     question_id: int
     submitted_text: str
@@ -193,6 +197,20 @@ def delete_project_artifact(project_id: int, artifact_id: int, member: dict = De
     if not deleted:
         raise HTTPException(status_code=404, detail="Artifact not found.")
     return {"deleted": True}
+
+@app.post("/api/projects/{project_id}/members")
+def add_member_to_project(
+    project_id: int,
+    payload: ProjectMemberAddRequest,
+    member: dict = Depends(require_consultant),
+):
+    user = users_db.get_user_by_email(payload.email)
+    if user is None:
+        raise HTTPException(status_code=404, detail=f"No user registered with email '{payload.email}'.")
+    try:
+        return projects_db.add_project_member(project_id, user["id"], payload.role)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/projects/{project_id}/evaluate")
 def evaluate_project_answer(
