@@ -1,6 +1,8 @@
 import datetime
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 import chat_sessions
 
 
@@ -16,14 +18,39 @@ def _fake_conn(fetchone_result=None, fetchall_result=None):
 
 
 @patch("chat_sessions.get_db_connection")
-def test_create_session_inserts_and_returns_row(mock_get_conn):
-    conn, cursor = _fake_conn(fetchone_result=(1, "blazar", 0, "asking"))
+def test_create_session_inserts_case_id_session_and_returns_row(mock_get_conn):
+    conn, cursor = _fake_conn(fetchone_result=(1, "blazar", None, 0, "asking"))
     mock_get_conn.return_value = conn
 
-    result = chat_sessions.create_session("blazar")
+    result = chat_sessions.create_session(case_id="blazar")
 
-    assert result == {"id": 1, "case_id": "blazar", "current_level_index": 0, "phase": "asking"}
+    assert result == {"id": 1, "case_id": "blazar", "project_id": None, "current_level_index": 0, "phase": "asking"}
+    _, params = cursor.execute.call_args[0]
+    assert params == ("blazar", None)
     conn.commit.assert_called_once()
+
+
+@patch("chat_sessions.get_db_connection")
+def test_create_session_inserts_project_id_session_and_returns_row(mock_get_conn):
+    conn, cursor = _fake_conn(fetchone_result=(2, None, 10, 0, "asking"))
+    mock_get_conn.return_value = conn
+
+    result = chat_sessions.create_session(project_id=10)
+
+    assert result == {"id": 2, "case_id": None, "project_id": 10, "current_level_index": 0, "phase": "asking"}
+    _, params = cursor.execute.call_args[0]
+    assert params == (None, 10)
+    conn.commit.assert_called_once()
+
+
+def test_create_session_rejects_neither_case_id_nor_project_id():
+    with pytest.raises(ValueError):
+        chat_sessions.create_session()
+
+
+def test_create_session_rejects_both_case_id_and_project_id():
+    with pytest.raises(ValueError):
+        chat_sessions.create_session(case_id="blazar", project_id=10)
 
 
 @patch("chat_sessions.get_db_connection")
@@ -35,13 +62,23 @@ def test_get_session_returns_none_when_missing(mock_get_conn):
 
 
 @patch("chat_sessions.get_db_connection")
-def test_get_session_returns_dict_when_found(mock_get_conn):
-    conn, _ = _fake_conn(fetchone_result=(1, "blazar", 2, "awaiting_answer"))
+def test_get_session_returns_dict_for_case_id_session(mock_get_conn):
+    conn, _ = _fake_conn(fetchone_result=(1, "blazar", None, 2, "awaiting_answer"))
     mock_get_conn.return_value = conn
 
     result = chat_sessions.get_session(1)
 
-    assert result == {"id": 1, "case_id": "blazar", "current_level_index": 2, "phase": "awaiting_answer"}
+    assert result == {"id": 1, "case_id": "blazar", "project_id": None, "current_level_index": 2, "phase": "awaiting_answer"}
+
+
+@patch("chat_sessions.get_db_connection")
+def test_get_session_returns_dict_for_project_id_session(mock_get_conn):
+    conn, _ = _fake_conn(fetchone_result=(2, None, 10, 0, "awaiting_answer"))
+    mock_get_conn.return_value = conn
+
+    result = chat_sessions.get_session(2)
+
+    assert result == {"id": 2, "case_id": None, "project_id": 10, "current_level_index": 0, "phase": "awaiting_answer"}
 
 
 @patch("chat_sessions.get_db_connection")

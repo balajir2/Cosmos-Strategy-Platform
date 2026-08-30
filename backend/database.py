@@ -202,14 +202,40 @@ def init_db():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS chat_sessions (
         id BIGSERIAL PRIMARY KEY,
-        case_id TEXT NOT NULL,
+        case_id TEXT,
+        project_id BIGINT REFERENCES projects(id) ON DELETE CASCADE,
         current_level_index INTEGER NOT NULL DEFAULT 0,
         phase TEXT NOT NULL DEFAULT 'asking'
             CHECK (phase IN ('asking', 'awaiting_answer', 'benchmarking', 'awaiting_self_rating', 'complete')),
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        CONSTRAINT chat_sessions_exactly_one_of_case_or_project CHECK (
+            (case_id IS NOT NULL AND project_id IS NULL) OR (case_id IS NULL AND project_id IS NOT NULL)
+        )
     );
     """)
+
+    # Migration for a chat_sessions table that already exists from before this
+    # column/constraint existed (case_id was NOT NULL, no project_id column) -
+    # the CREATE TABLE IF NOT EXISTS above is a no-op against an existing
+    # table, so bring it up to the dual-mode shape explicitly and idempotently.
+    cursor.execute("ALTER TABLE chat_sessions ALTER COLUMN case_id DROP NOT NULL;")
+    cursor.execute("ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS project_id BIGINT REFERENCES projects(id) ON DELETE CASCADE;")
+    cursor.execute(
+        """
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_name = 'chat_sessions' AND constraint_name = 'chat_sessions_exactly_one_of_case_or_project';
+        """
+    )
+    if cursor.fetchone() is None:
+        cursor.execute(
+            """
+            ALTER TABLE chat_sessions
+            ADD CONSTRAINT chat_sessions_exactly_one_of_case_or_project CHECK (
+                (case_id IS NOT NULL AND project_id IS NULL) OR (case_id IS NULL AND project_id IS NOT NULL)
+            );
+            """
+        )
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS chat_messages (

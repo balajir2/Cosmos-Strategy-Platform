@@ -3,33 +3,35 @@ import contextlib
 from database import get_db_connection
 
 
-def create_session(case_id: str) -> dict:
+def create_session(case_id: str = None, project_id: int = None) -> dict:
+    if (case_id is None) == (project_id is None):
+        raise ValueError("Exactly one of case_id or project_id must be provided.")
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO chat_sessions (case_id, current_level_index, phase)
-                VALUES (%s, 0, 'asking')
-                RETURNING id, case_id, current_level_index, phase;
+                INSERT INTO chat_sessions (case_id, project_id, current_level_index, phase)
+                VALUES (%s, %s, 0, 'asking')
+                RETURNING id, case_id, project_id, current_level_index, phase;
                 """,
-                (case_id,),
+                (case_id, project_id),
             )
             row = cursor.fetchone()
         conn.commit()
-    return {"id": row[0], "case_id": row[1], "current_level_index": row[2], "phase": row[3]}
+    return {"id": row[0], "case_id": row[1], "project_id": row[2], "current_level_index": row[3], "phase": row[4]}
 
 
 def get_session(session_id: int):
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                "SELECT id, case_id, current_level_index, phase FROM chat_sessions WHERE id = %s;",
+                "SELECT id, case_id, project_id, current_level_index, phase FROM chat_sessions WHERE id = %s;",
                 (session_id,),
             )
             row = cursor.fetchone()
     if not row:
         return None
-    return {"id": row[0], "case_id": row[1], "current_level_index": row[2], "phase": row[3]}
+    return {"id": row[0], "case_id": row[1], "project_id": row[2], "current_level_index": row[3], "phase": row[4]}
 
 
 def update_session(session_id: int, current_level_index: int, phase: str) -> None:
