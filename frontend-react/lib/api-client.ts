@@ -1,11 +1,339 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
+// --- Auth token storage (Decision 5: localStorage, not an httpOnly cookie) ---
+
+const TOKEN_KEY = "cosmos_jwt";
+
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+async function authFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const token = getToken();
+  const headers = new Headers(options.headers);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (res.status === 401) {
+    clearToken();
+    if (typeof window !== "undefined") window.location.href = "/login";
+  }
+  return res;
+}
+
+async function errorDetail(res: Response, fallback: string): Promise<string> {
+  const body = await res.json().catch(() => ({}));
+  return body.detail || fallback;
+}
+
+// --- Auth ---------------------------------------------------------------
+
+export interface User {
+  id: number;
+  email: string;
+  full_name: string;
+  is_active: boolean;
+  is_admin: boolean;
+  created_at: string;
+}
+
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  full_name: string;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export async function registerUser(payload: RegisterPayload): Promise<User> {
+  const res = await fetch(`${API_BASE}/api/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Registration failed: ${res.status}`));
+  return res.json();
+}
+
+export async function login(payload: LoginPayload): Promise<string> {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Login failed: ${res.status}`));
+  const data = await res.json();
+  setToken(data.access_token);
+  return data.access_token;
+}
+
+export async function getMe(): Promise<User> {
+  const res = await authFetch("/api/auth/me");
+  if (!res.ok) throw new Error(`Failed to load current user: ${res.status}`);
+  return res.json();
+}
+
+// --- Projects -------------------------------------------------------------
+
+export interface Project {
+  id: number;
+  name: string;
+  customer_name: string;
+  description: string | null;
+  industry_context: string | null;
+  status: "Draft" | "Active" | "Completed" | "Archived";
+  process_id: number;
+  created_by: number;
+  created_at: string;
+}
+
+export interface ProjectMember {
+  id: number;
+  project_id: number;
+  user_id: number;
+  role: "Consultant" | "ClientUser";
+  org_title: string | null;
+  assigned_at: string;
+}
+
+export interface CreateProjectPayload {
+  name: string;
+  customer_name: string;
+  description?: string;
+  industry_context?: string;
+  process_id: number;
+  consultant_user_id: number;
+}
+
+export interface UpdateProjectPayload {
+  name?: string;
+  customer_name?: string;
+  description?: string;
+  industry_context?: string;
+}
+
+export async function listProjects(): Promise<Project[]> {
+  const res = await authFetch("/api/projects");
+  if (!res.ok) throw new Error(`Failed to load projects: ${res.status}`);
+  return res.json();
+}
+
+export async function createProject(payload: CreateProjectPayload): Promise<Project> {
+  const res = await authFetch("/api/projects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to create project: ${res.status}`));
+  return res.json();
+}
+
+export async function getProject(projectId: number): Promise<Project> {
+  const res = await authFetch(`/api/projects/${projectId}`);
+  if (!res.ok) throw new Error(`Failed to load project: ${res.status}`);
+  return res.json();
+}
+
+export async function updateProject(projectId: number, payload: UpdateProjectPayload): Promise<Project> {
+  const res = await authFetch(`/api/projects/${projectId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to update project: ${res.status}`));
+  return res.json();
+}
+
+export async function activateProject(projectId: number): Promise<Project> {
+  const res = await authFetch(`/api/projects/${projectId}/activate`, { method: "POST" });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to activate project: ${res.status}`));
+  return res.json();
+}
+
+export async function addProjectMember(
+  projectId: number,
+  email: string,
+  role: "Consultant" | "ClientUser"
+): Promise<ProjectMember> {
+  const res = await authFetch(`/api/projects/${projectId}/members`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, role }),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to add member: ${res.status}`));
+  return res.json();
+}
+
+// --- Artifacts --------------------------------------------------------------
+
+export interface ProjectArtifact {
+  id: number;
+  project_id: number;
+  filename: string;
+  artifact_type: "document" | "audio";
+  source_format: "pdf" | "docx" | "pptx" | "txt" | "audio";
+  purpose: "reference" | "case_study_external" | "case_study_internal" | "case_study_resolution";
+  status: "Uploaded" | "Processing" | "Indexed" | "Failed" | "Transcript Needed";
+  transcript_text: string | null;
+  uploaded_by: number;
+  uploaded_at: string;
+}
+
+export async function listArtifacts(projectId: number): Promise<ProjectArtifact[]> {
+  const res = await authFetch(`/api/projects/${projectId}/artifacts`);
+  if (!res.ok) throw new Error(`Failed to load artifacts: ${res.status}`);
+  return res.json();
+}
+
+export async function uploadArtifact(projectId: number, file: File, purpose: string): Promise<ProjectArtifact> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("purpose", purpose);
+  const res = await authFetch(`/api/projects/${projectId}/artifacts`, { method: "POST", body: formData });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to upload artifact: ${res.status}`));
+  return res.json();
+}
+
+export async function deleteArtifact(projectId: number, artifactId: number): Promise<void> {
+  const res = await authFetch(`/api/projects/${projectId}/artifacts/${artifactId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`Failed to delete artifact: ${res.status}`);
+}
+
+// --- Process (shared framework content) --------------------------------------
+
+export interface Guidance {
+  id: number;
+  type: string;
+  content: string;
+}
+
+export interface Question {
+  id: number;
+  level: string;
+  text: string;
+  search_query: string | null;
+  owner_role: string;
+  reviewer_role: string | null;
+  guidance: Guidance[];
+}
+
+export interface Stage {
+  id: number;
+  name: string;
+  sequence_order: number;
+  questions: Question[];
+}
+
+export interface ProcessDetail {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  stages: Stage[];
+}
+
+export async function getProcess(processId: number): Promise<ProcessDetail> {
+  const res = await authFetch(`/api/process/${processId}`);
+  if (!res.ok) throw new Error(`Failed to load process: ${res.status}`);
+  return res.json();
+}
+
+// --- Evaluation, responses, brief ---------------------------------------------
+
+export interface SourceChunk {
+  id: number;
+  source: "framework" | "customer_document";
+  source_file: string;
+  phase?: string;
+  slide_number?: number;
+  text: string;
+  score: number;
+}
+
+export interface EvaluationResult {
+  question_id: number;
+  level_1: string;
+  level_2: string;
+  level_3: string;
+  source_chunks: SourceChunk[];
+}
+
+export async function evaluateAnswer(projectId: number, questionId: number, submittedText: string): Promise<EvaluationResult> {
+  const res = await authFetch(`/api/projects/${projectId}/evaluate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question_id: questionId, submitted_text: submittedText }),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to evaluate answer: ${res.status}`));
+  return res.json();
+}
+
+export interface SaveResponsePayload {
+  question_id: number;
+  submitted_text?: string | null;
+  self_evaluation_notes?: string | null;
+  self_evaluation_status?: string | null;
+}
+
+export interface ResponseRecord {
+  id: number;
+  question_id: number;
+  project_id: number;
+  submitted_text: string | null;
+  self_evaluation_notes: string | null;
+  self_evaluation_status: "Needs Work" | "Satisfactory" | "Strong" | null;
+  status: "Draft" | "Submitted" | "Self-Evaluated" | "Reviewed";
+  updated_at: string;
+}
+
+export async function saveResponse(projectId: number, payload: SaveResponsePayload): Promise<ResponseRecord> {
+  const res = await authFetch(`/api/projects/${projectId}/responses`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to save response: ${res.status}`));
+  return res.json();
+}
+
+export interface Brief {
+  project_id: number;
+  markdown: string;
+}
+
+export async function getBrief(projectId: number): Promise<Brief> {
+  const res = await authFetch(`/api/projects/${projectId}/brief`);
+  if (!res.ok) throw new Error(`Failed to load brief: ${res.status}`);
+  return res.json();
+}
+
+// --- Legacy case catalog (removed by the final cutover task) -----------------
+
 export interface CaseSummary {
   id: string;
   title: string;
   subtitle: string;
   description: string;
 }
+
+export async function getCases(): Promise<CaseSummary[]> {
+  const res = await fetch(`${API_BASE}/api/cases`);
+  if (!res.ok) throw new Error(`Failed to load cases: ${res.status}`);
+  return res.json();
+}
+
+// --- Chat interview (extended for project-scoped sessions) -------------------
 
 export interface ChatMessage {
   id: number;
@@ -31,40 +359,53 @@ export interface ChatSessionAdvance {
 
 export interface ChatSessionDetail {
   id: number;
-  case_id: string;
+  case_id: string | null;
+  project_id: number | null;
   current_level_index: number;
   phase: string;
   messages: ChatMessage[];
 }
 
-export async function getCases(): Promise<CaseSummary[]> {
-  const res = await fetch(`${API_BASE}/api/cases`);
-  if (!res.ok) throw new Error(`Failed to load cases: ${res.status}`);
-  return res.json();
-}
-
-export async function createChatSession(caseId: string): Promise<ChatSessionStart> {
-  const res = await fetch(`${API_BASE}/api/chat/sessions`, {
+export async function createChatSession(params: { caseId?: string; projectId?: number }): Promise<ChatSessionStart> {
+  const res = await authFetch(`/api/chat/sessions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ case_id: caseId }),
+    body: JSON.stringify({ case_id: params.caseId, project_id: params.projectId }),
   });
   if (!res.ok) throw new Error(`Failed to start session: ${res.status}`);
   return res.json();
 }
 
-export async function postChatMessage(sessionId: number, content: string): Promise<ChatSessionAdvance> {
-  const res = await fetch(`${API_BASE}/api/chat/sessions/${sessionId}/messages`, {
+export async function postChatMessage(
+  sessionId: number,
+  content: string,
+  selfEvaluationStatus?: string
+): Promise<ChatSessionAdvance> {
+  const res = await authFetch(`/api/chat/sessions/${sessionId}/messages`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, self_evaluation_status: selfEvaluationStatus }),
   });
   if (!res.ok) throw new Error(`Failed to send message: ${res.status}`);
   return res.json();
 }
 
 export async function getChatSession(sessionId: number): Promise<ChatSessionDetail> {
-  const res = await fetch(`${API_BASE}/api/chat/sessions/${sessionId}`);
+  const res = await authFetch(`/api/chat/sessions/${sessionId}`);
   if (!res.ok) throw new Error(`Failed to load session: ${res.status}`);
   return res.json();
+}
+
+// --- Chat session id cache (Global Constraint 16 - not a "mock", a real-id cache) --
+
+const SESSION_ID_PREFIX = "cosmos_chat_session_project_";
+
+export function getCachedChatSessionId(projectId: number): number | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(`${SESSION_ID_PREFIX}${projectId}`);
+  return raw ? parseInt(raw, 10) : null;
+}
+
+export function setCachedChatSessionId(projectId: number, sessionId: number): void {
+  localStorage.setItem(`${SESSION_ID_PREFIX}${projectId}`, String(sessionId));
 }
