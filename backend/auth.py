@@ -73,6 +73,15 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
     return current_user
 
 
+def require_admin_or_consultant(project_id: int, current_user: dict = Depends(get_current_user)) -> dict:
+    if current_user.get("is_admin"):
+        return current_user
+    member = get_project_member(project_id, current_user["id"])
+    if member is None or member["role"] != "Consultant":
+        raise HTTPException(status_code=403, detail="You are not authorized to manage this project's members.")
+    return member
+
+
 def require_project_role(allowed_roles: List[str]):
     def _dependency(project_id: int, current_user: dict = Depends(get_current_user)) -> dict:
         member = get_project_member(project_id, current_user["id"])

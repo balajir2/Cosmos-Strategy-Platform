@@ -218,3 +218,33 @@ def test_require_active_project_allows_non_member_on_draft_project(mock_get_proj
 def test_require_active_project_allows_client_user_on_active_project(mock_get_project, mock_get_member):
     result = auth.require_active_project(project_id=1, current_user={"id": 1})
     assert result == _ACTIVE_PROJECT
+
+
+_ADMIN_USER = {"id": 1, "email": "admin@x.com", "is_admin": True}
+_NON_ADMIN_USER = {"id": 2, "email": "b@x.com", "is_admin": False}
+
+
+def test_require_admin_or_consultant_allows_admin_without_membership():
+    result = auth.require_admin_or_consultant(project_id=1, current_user=_ADMIN_USER)
+    assert result == _ADMIN_USER
+
+
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_require_admin_or_consultant_allows_consultant(mock_get_member):
+    result = auth.require_admin_or_consultant(project_id=1, current_user=_NON_ADMIN_USER)
+    assert result == _CONSULTANT_MEMBER
+    mock_get_member.assert_called_once_with(1, 2)
+
+
+@patch("auth.get_project_member", return_value=_CLIENT_USER_MEMBER)
+def test_require_admin_or_consultant_rejects_client_user(mock_get_member):
+    with pytest.raises(HTTPException) as exc_info:
+        auth.require_admin_or_consultant(project_id=1, current_user=_NON_ADMIN_USER)
+    assert exc_info.value.status_code == 403
+
+
+@patch("auth.get_project_member", return_value=None)
+def test_require_admin_or_consultant_rejects_non_member(mock_get_member):
+    with pytest.raises(HTTPException) as exc_info:
+        auth.require_admin_or_consultant(project_id=1, current_user=_NON_ADMIN_USER)
+    assert exc_info.value.status_code == 403
