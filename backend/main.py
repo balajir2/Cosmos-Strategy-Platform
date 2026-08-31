@@ -77,6 +77,9 @@ class ProjectUpdateRequest(BaseModel):
     description: Optional[str] = None
     industry_context: Optional[str] = None
 
+class AdminProjectStatusUpdate(BaseModel):
+    status: str
+
 class ProjectMemberAddRequest(BaseModel):
     email: str
     role: str
@@ -318,6 +321,32 @@ def update_settings(payload: ProviderSettingUpdate, _: None = Depends(require_ad
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"active_llm_provider": payload.active_llm_provider}
+
+@app.get("/api/admin/projects")
+def admin_list_projects(admin: dict = Depends(require_admin)):
+    return projects_db.list_all_projects()
+
+@app.patch("/api/admin/projects/{project_id}")
+def admin_update_project(project_id: int, payload: ProjectUpdateRequest, admin: dict = Depends(require_admin)):
+    updated = projects_db.update_project(project_id, payload.name, payload.customer_name, payload.description, payload.industry_context)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return updated
+
+@app.patch("/api/admin/projects/{project_id}/status")
+def admin_set_project_status(project_id: int, payload: AdminProjectStatusUpdate, admin: dict = Depends(require_admin)):
+    if payload.status not in ("Draft", "Active"):
+        raise HTTPException(status_code=400, detail="Status must be 'Draft' or 'Active'.")
+    updated = projects_db.set_project_status(project_id, payload.status)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return updated
+
+@app.delete("/api/admin/projects/{project_id}")
+def admin_delete_project(project_id: int, admin: dict = Depends(require_admin)):
+    if not projects_db.delete_project(project_id):
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return {"deleted": True}
 
 @app.post("/api/chat/sessions")
 def create_chat_session(payload: ChatSessionCreate):
