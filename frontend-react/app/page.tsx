@@ -3,17 +3,24 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { listProjects, Project } from "@/lib/api-client";
+import NewProjectModal from "@/components/NewProjectModal";
 
 export default function AdminProjectList() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showNewProject, setShowNewProject] = useState(false);
 
-  useEffect(() => {
+  function reload() {
+    setLoading(true);
     listProjects()
       .then(setProjects)
       .catch(() => setError("Could not load projects. Are you logged in, and is the backend running?"))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    reload();
   }, []);
 
   if (loading) {
@@ -60,12 +67,19 @@ export default function AdminProjectList() {
         ))}
         <div
           className="glass-card"
-          style={{ opacity: 0.6, padding: 24, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8 }}
+          onClick={() => setShowNewProject(true)}
+          style={{ opacity: 0.85, padding: 24, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8, cursor: "pointer" }}
         >
           <i className="fa-solid fa-plus" style={{ fontSize: "1.5rem" }}></i>
           <span>New Project</span>
         </div>
       </div>
+      {showNewProject && (
+        <NewProjectModal
+          onClose={() => setShowNewProject(false)}
+          onCreated={() => { setShowNewProject(false); reload(); }}
+        />
+      )}
     </>
   );
 }
