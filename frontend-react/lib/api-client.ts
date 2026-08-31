@@ -179,6 +179,117 @@ export async function addProjectMember(
   return res.json();
 }
 
+// --- Admin: users -----------------------------------------------------------
+
+export interface AdminCreateUserPayload {
+  email: string;
+  password: string;
+  full_name: string;
+  is_admin?: boolean;
+}
+
+export interface AdminUpdateUserPayload {
+  full_name?: string;
+  is_admin?: boolean;
+  is_active?: boolean;
+}
+
+export async function adminListUsers(): Promise<User[]> {
+  const res = await authFetch("/api/admin/users");
+  if (!res.ok) throw new Error(`Failed to load users: ${res.status}`);
+  return res.json();
+}
+
+export async function adminCreateUser(payload: AdminCreateUserPayload): Promise<User> {
+  const res = await authFetch("/api/admin/users", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to create user: ${res.status}`));
+  return res.json();
+}
+
+export async function adminUpdateUser(userId: number, payload: AdminUpdateUserPayload): Promise<User> {
+  const res = await authFetch(`/api/admin/users/${userId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to update user: ${res.status}`));
+  return res.json();
+}
+
+export async function adminResetPassword(userId: number, password: string): Promise<void> {
+  const res = await authFetch(`/api/admin/users/${userId}/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to reset password: ${res.status}`));
+}
+
+// --- Admin: projects ---------------------------------------------------------
+
+export async function adminListProjects(): Promise<Project[]> {
+  const res = await authFetch("/api/admin/projects");
+  if (!res.ok) throw new Error(`Failed to load projects: ${res.status}`);
+  return res.json();
+}
+
+export async function adminUpdateProject(projectId: number, payload: UpdateProjectPayload): Promise<Project> {
+  const res = await authFetch(`/api/admin/projects/${projectId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to update project: ${res.status}`));
+  return res.json();
+}
+
+export async function adminSetProjectStatus(projectId: number, status: "Draft" | "Active"): Promise<Project> {
+  const res = await authFetch(`/api/admin/projects/${projectId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to update project status: ${res.status}`));
+  return res.json();
+}
+
+export async function adminDeleteProject(projectId: number): Promise<void> {
+  const res = await authFetch(`/api/admin/projects/${projectId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to delete project: ${res.status}`));
+}
+
+// --- Project members ----------------------------------------------------------
+
+export interface ProjectMemberDetail extends ProjectMember {
+  email: string;
+  full_name: string;
+}
+
+export async function listProjectMembers(projectId: number): Promise<ProjectMemberDetail[]> {
+  const res = await authFetch(`/api/projects/${projectId}/members`);
+  if (!res.ok) throw new Error(`Failed to load members: ${res.status}`);
+  return res.json();
+}
+
+export async function updateProjectMemberRole(projectId: number, userId: number, role: "Consultant" | "ClientUser"): Promise<ProjectMember> {
+  const res = await authFetch(`/api/projects/${projectId}/members/${userId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role }),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to change member role: ${res.status}`));
+  return res.json();
+}
+
+export async function removeProjectMember(projectId: number, userId: number): Promise<void> {
+  const res = await authFetch(`/api/projects/${projectId}/members/${userId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to remove member: ${res.status}`));
+}
+
 // --- Artifacts --------------------------------------------------------------
 
 export interface ProjectArtifact {
