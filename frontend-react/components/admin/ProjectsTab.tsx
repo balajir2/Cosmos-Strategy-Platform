@@ -132,6 +132,12 @@ export default function ProjectsTab() {
     <div>
       {error && <p style={{ color: "var(--level-1)", marginBottom: 12 }}>{error}</p>}
 
+      {projects.length === 0 && !error && (
+        <p style={{ color: "var(--text-muted)", marginBottom: 12 }}>
+          No projects yet. Create one from the Projects dashboard, then it will appear here.
+        </p>
+      )}
+
       {editing && (
         <div className="glass-card" style={{ padding: 20, marginBottom: 20 }}>
           <h3><i className="fa-solid fa-pen"></i> Edit Project</h3>
