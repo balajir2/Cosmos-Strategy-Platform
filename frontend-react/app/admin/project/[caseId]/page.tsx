@@ -26,6 +26,7 @@ export default function ProjectSetupPage() {
   const [uploadPurpose, setUploadPurpose] = useState("reference");
   const [activating, setActivating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [memberEmail, setMemberEmail] = useState("");
@@ -60,9 +61,11 @@ export default function ProjectSetupPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null);
+    setUploading(true);
     uploadArtifact(projectId, file, uploadPurpose)
       .then(() => reloadArtifacts())
-      .catch((err) => setError(err instanceof Error ? err.message : "Could not upload the file."));
+      .catch((err) => setError(err instanceof Error ? err.message : "Could not upload the file."))
+      .finally(() => setUploading(false));
     e.target.value = "";
   }
 
@@ -189,11 +192,11 @@ export default function ProjectSetupPage() {
               ))}
             </select>
           </div>
-          <label className="dropzone" style={{ display: "block" }}>
-            <input type="file" onChange={handleFileSelected} style={{ display: "none" }} />
+          <label className="dropzone" style={{ display: "block", pointerEvents: uploading ? "none" : undefined, opacity: uploading ? 0.6 : 1 }}>
+            <input type="file" onChange={handleFileSelected} style={{ display: "none" }} disabled={uploading} />
             <i className="fa-solid fa-cloud-arrow-up"></i>
             <p>
-              Click to <span className="dropzone-browse">browse</span>
+              {uploading ? "Uploading and indexing..." : <>Click to <span className="dropzone-browse">browse</span></>}
             </p>
             <span className="dropzone-hint">PDF, DOCX, PPTX, TXT, or audio - tagged with the purpose selected above</span>
           </label>

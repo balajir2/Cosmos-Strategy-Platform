@@ -2,6 +2,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 from fastapi import FastAPI, HTTPException, Body, Depends, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 
@@ -229,7 +230,7 @@ async def upload_project_artifact(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    project_knowledge_base.ingest_artifact(rag, artifact["id"], file_bytes)
+    await run_in_threadpool(project_knowledge_base.ingest_artifact, rag, artifact["id"], file_bytes)
     return project_artifacts_db.get_artifact_by_id(artifact["id"])
 
 @app.get("/api/projects/{project_id}/artifacts")
