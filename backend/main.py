@@ -91,6 +91,20 @@ class ResponseSaveRequest(BaseModel):
     self_evaluation_notes: Optional[str] = None
     self_evaluation_status: Optional[str] = None
 
+class AdminUserCreate(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    is_admin: Optional[bool] = False
+
+class AdminUserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    is_admin: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+class AdminPasswordReset(BaseModel):
+    password: str
+
 @app.get("/api/status")
 def get_status():
     return {
@@ -116,6 +130,35 @@ def login(payload: LoginRequest):
 @app.get("/api/auth/me")
 def get_me(current_user: dict = Depends(get_current_user)):
     return current_user
+
+@app.get("/api/admin/users")
+def admin_list_users(admin: dict = Depends(require_admin)):
+    return users_db.list_users()
+
+@app.post("/api/admin/users")
+def admin_create_user(payload: AdminUserCreate, admin: dict = Depends(require_admin)):
+    try:
+        user = users_db.create_user(payload.email, hash_password(payload.password), payload.full_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if payload.is_admin:
+        user = users_db.update_user(user["id"], is_admin=True)
+    return user
+
+@app.patch("/api/admin/users/{user_id}")
+def admin_update_user(user_id: int, payload: AdminUserUpdate, admin: dict = Depends(require_admin)):
+    if user_id == admin["id"] and (payload.is_admin is False or payload.is_active is False):
+        raise HTTPException(status_code=400, detail="You cannot modify your own admin or active status.")
+    updated = users_db.update_user(user_id, payload.full_name, payload.is_admin, payload.is_active)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return updated
+
+@app.post("/api/admin/users/{user_id}/reset-password")
+def admin_reset_password(user_id: int, payload: AdminPasswordReset, admin: dict = Depends(require_admin)):
+    if not users_db.set_password(user_id, hash_password(payload.password)):
+        raise HTTPException(status_code=404, detail="User not found.")
+    return {"reset": True}
 
 @app.post("/api/projects")
 def create_project(payload: ProjectCreateRequest, admin: dict = Depends(require_admin)):
