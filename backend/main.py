@@ -21,6 +21,7 @@ import brief
 from auth import (
     hash_password, verify_password, create_access_token, get_current_user,
     require_admin, require_project_role, require_active_project,
+    require_admin_or_consultant,
 )
 
 app = FastAPI(title="Cosmos Strategic Capability Platform", version="1.0.0")
@@ -82,6 +83,9 @@ class AdminProjectStatusUpdate(BaseModel):
 
 class ProjectMemberAddRequest(BaseModel):
     email: str
+    role: str
+
+class MemberRoleUpdate(BaseModel):
     role: str
 
 class ProjectEvaluationRequest(BaseModel):
@@ -252,6 +256,25 @@ def add_member_to_project(
         return projects_db.add_project_member(project_id, user["id"], payload.role)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/projects/{project_id}/members")
+def list_members(project_id: int, member: dict = Depends(require_admin_or_consultant)):
+    return projects_db.list_project_members(project_id)
+
+@app.patch("/api/projects/{project_id}/members/{user_id}")
+def change_member_role(project_id: int, user_id: int, payload: MemberRoleUpdate, member: dict = Depends(require_admin_or_consultant)):
+    if payload.role not in ("Consultant", "ClientUser"):
+        raise HTTPException(status_code=400, detail="Role must be 'Consultant' or 'ClientUser'.")
+    updated = projects_db.update_project_member_role(project_id, user_id, payload.role)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Member not found.")
+    return updated
+
+@app.delete("/api/projects/{project_id}/members/{user_id}")
+def remove_member(project_id: int, user_id: int, member: dict = Depends(require_admin_or_consultant)):
+    if not projects_db.remove_project_member(project_id, user_id):
+        raise HTTPException(status_code=404, detail="Member not found.")
+    return {"deleted": True}
 
 @app.post("/api/projects/{project_id}/evaluate")
 def evaluate_project_answer(

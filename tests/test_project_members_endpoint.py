@@ -89,3 +89,98 @@ def test_add_member_returns_400_on_duplicate_membership(mock_get_member, mock_ge
         assert response.status_code == 400
     finally:
         main.app.dependency_overrides.clear()
+
+
+_ADMIN_USER = {"id": 99, "email": "admin@x.com", "full_name": "Admin", "is_active": True, "is_admin": True, "created_at": "2026-08-28T09:00:00"}
+_MEMBER_DETAIL = {"id": 3, "project_id": 1, "user_id": 9, "role": "ClientUser", "org_title": None, "assigned_at": "2026-08-28T09:00:00", "email": "client@customer.com", "full_name": "Cindy Client"}
+
+
+@patch("main.projects_db.list_project_members", return_value=[_MEMBER_DETAIL])
+def test_list_members_allows_admin(mock_list):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
+    try:
+        response = client.get("/api/projects/1/members")
+        assert response.status_code == 200
+        assert response.json() == [_MEMBER_DETAIL]
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.list_project_members", return_value=[_MEMBER_DETAIL])
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_list_members_allows_consultant(mock_get_member, mock_list):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.get("/api/projects/1/members")
+        assert response.status_code == 200
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("auth.get_project_member", return_value=_CLIENT_USER_MEMBER)
+def test_list_members_rejects_client_user(mock_get_member):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.get("/api/projects/1/members")
+        assert response.status_code == 403
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.update_project_member_role", return_value={**_MEMBER_DICT, "role": "Consultant"})
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_change_member_role_updates_role(mock_get_member, mock_update):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.patch("/api/projects/1/members/9", json={"role": "Consultant"})
+        assert response.status_code == 200
+        mock_update.assert_called_once_with(1, 9, "Consultant")
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.update_project_member_role")
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_change_member_role_rejects_invalid_role(mock_get_member, mock_update):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.patch("/api/projects/1/members/9", json={"role": "NotARole"})
+        assert response.status_code == 400
+        mock_update.assert_not_called()
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.update_project_member_role", return_value=None)
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_change_member_role_returns_404_when_missing(mock_get_member, mock_update):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.patch("/api/projects/1/members/999", json={"role": "Consultant"})
+        assert response.status_code == 404
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.remove_project_member", return_value=True)
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_remove_member_deletes(mock_get_member, mock_remove):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.delete("/api/projects/1/members/9")
+        assert response.status_code == 200
+        assert response.json() == {"deleted": True}
+        mock_remove.assert_called_once_with(1, 9)
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.remove_project_member", return_value=False)
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_remove_member_returns_404_when_missing(mock_get_member, mock_remove):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.delete("/api/projects/1/members/999")
+        assert response.status_code == 404
+    finally:
+        main.app.dependency_overrides.clear()
