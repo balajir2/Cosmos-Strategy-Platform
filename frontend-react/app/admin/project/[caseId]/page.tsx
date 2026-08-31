@@ -1,17 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { createChatSession, getCases, CaseSummary } from "@/lib/api-client";
-import {
-  getProjectSetup,
-  setProjectSetup,
-  getArtifacts,
-  setArtifacts,
-  setProjectStatus,
-  setSessionId,
-  MockArtifact,
-} from "@/lib/mockProjectState";
+import { useParams } from "next/navigation";
+import { getProject, updateProject, activateProject, Project } from "@/lib/api-client";
+import { getArtifacts, setArtifacts, MockArtifact } from "@/lib/mockProjectState";
 
 const PURPOSE_LABELS: Record<string, string> = {
   reference: "Reference",
@@ -22,40 +14,41 @@ const PURPOSE_LABELS: Record<string, string> = {
 
 export default function ProjectSetupPage() {
   const params = useParams();
-  const router = useRouter();
-  const caseId = params.caseId as string;
+  const projectId = Number(params.caseId);
 
+  const [project, setProject] = useState<Project | null>(null);
   const [industryContext, setIndustryContext] = useState("");
   const [assignedClient, setAssignedClient] = useState("");
   const [clientInput, setClientInput] = useState("");
   const [artifacts, setArtifactsState] = useState<MockArtifact[]>([]);
   const [activating, setActivating] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [caseInfo, setCaseInfo] = useState<CaseSummary | null>(null);
 
   useEffect(() => {
-    const setup = getProjectSetup(caseId);
-    setIndustryContext(
-      setup.industryContext ||
-        "B2C premium natural personal care, entering via salon and modern trade; competes with mass-premium incumbents."
-    );
-    setAssignedClient(setup.assignedClient);
-    setArtifactsState(getArtifacts(caseId));
-    getCases()
-      .then((cases) => setCaseInfo(cases.find((c) => c.id === caseId) ?? null))
-      .catch(() => setCaseInfo(null));
-  }, [caseId]);
+    setArtifactsState(getArtifacts(String(projectId)));
+    getProject(projectId)
+      .then((p) => {
+        setProject(p);
+        setIndustryContext(p.industry_context || "");
+      })
+      .catch(() => setError("Could not load this project. Are you a Consultant on it, and is the backend running?"))
+      .finally(() => setLoading(false));
+  }, [projectId]);
 
-  function handleContextChange(value: string) {
-    setIndustryContext(value);
-    setProjectSetup(caseId, { industryContext: value, assignedClient });
+  async function handleContextBlur() {
+    if (!project) return;
+    try {
+      const updated = await updateProject(projectId, { industry_context: industryContext });
+      setProject(updated);
+    } catch {
+      setError("Could not save the industry context.");
+    }
   }
 
   function handleAssignClient() {
     if (!clientInput.trim()) return;
-    const updated = clientInput.trim();
-    setAssignedClient(updated);
-    setProjectSetup(caseId, { industryContext, assignedClient: updated });
+    setAssignedClient(clientInput.trim());
     setClientInput("");
   }
 
@@ -67,30 +60,45 @@ export default function ProjectSetupPage() {
     };
     const updated = [...artifacts, newArtifact];
     setArtifactsState(updated);
-    setArtifacts(caseId, updated);
+    setArtifacts(String(projectId), updated);
   }
 
   async function handleActivate() {
     setActivating(true);
     setError(null);
     try {
-      const session = await createChatSession(caseId);
-      setSessionId(caseId, session.id);
-      setProjectStatus(caseId, "Active");
-      router.push("/client");
-    } catch {
-      setError("Could not activate the project. Is the backend running?");
+      const updated = await activateProject(projectId);
+      setProject(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not activate the project.");
+    } finally {
       setActivating(false);
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="loading-spinner">
+        <i className="fa-solid fa-circle-notch fa-spin"></i> Loading...
+      </div>
+    );
+  }
+
+  if (error && !project) {
+    return (
+      <div className="loading-spinner">
+        <i className="fa-solid fa-circle-exclamation"></i> {error}
+      </div>
+    );
   }
 
   return (
     <div className="project-shell">
       <header className="project-header">
         <div className="project-header-info">
-          <span className="project-status-badge">Draft</span>
-          <h2>{caseInfo?.title ?? caseId}</h2>
-          <p>Consultant View</p>
+          <span className={`project-status-badge ${project?.status === "Active" ? "active" : ""}`}>{project?.status}</span>
+          <h2>{project?.name}</h2>
+          <p>Consultant View - {project?.customer_name}</p>
         </div>
       </header>
 
@@ -106,7 +114,8 @@ export default function ProjectSetupPage() {
               id="industry-context-input"
               rows={3}
               value={industryContext}
-              onChange={(e) => handleContextChange(e.target.value)}
+              onChange={(e) => setIndustryContext(e.target.value)}
+              onBlur={handleContextBlur}
             />
           </div>
 
@@ -124,6 +133,7 @@ export default function ProjectSetupPage() {
                 <i className="fa-solid fa-user-plus"></i> Assign
               </button>
             </div>
+            <span className="dropzone-hint">Real member assignment lands in the next task.</span>
           </div>
           {assignedClient && (
             <ul className="assigned-list">
@@ -148,13 +158,7 @@ export default function ProjectSetupPage() {
           <div className="artifact-list">
             {artifacts.map((a, i) => {
               const statusClass =
-                a.status === "Indexed"
-                  ? "indexed"
-                  : a.status === "Processing"
-                  ? "processing"
-                  : a.status === "Transcript Needed"
-                  ? "transcript-needed"
-                  : "";
+                a.status === "Indexed" ? "indexed" : a.status === "Processing" ? "processing" : a.status === "Transcript Needed" ? "transcript-needed" : "";
               return (
                 <div className="artifact-item" key={i}>
                   <i className={`artifact-icon fa-solid ${a.filename.endsWith(".mp3") ? "fa-microphone" : "fa-file-lines"}`}></i>
@@ -170,11 +174,10 @@ export default function ProjectSetupPage() {
 
       <div className="project-actions-row">
         <span className="activate-hint">
-          <i className="fa-solid fa-circle-info"></i> Activating unlocks the engagement for the assigned Client User and
-          starts a real chat session.
+          <i className="fa-solid fa-circle-info"></i> Activating unlocks the engagement for assigned Client Users.
         </span>
-        <button className="btn btn-primary" onClick={handleActivate} disabled={activating}>
-          <i className="fa-solid fa-bolt"></i> {activating ? "Activating..." : "Activate Project"}
+        <button className="btn btn-primary" onClick={handleActivate} disabled={activating || project?.status === "Active"}>
+          <i className="fa-solid fa-bolt"></i> {activating ? "Activating..." : project?.status === "Active" ? "Active" : "Activate Project"}
         </button>
       </div>
       {error && <p style={{ color: "var(--level-1)", marginTop: 12 }}>{error}</p>}
