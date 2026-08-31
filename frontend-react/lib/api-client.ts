@@ -318,21 +318,6 @@ export async function getBrief(projectId: number): Promise<Brief> {
   return res.json();
 }
 
-// --- Legacy case catalog (removed by the final cutover task) -----------------
-
-export interface CaseSummary {
-  id: string;
-  title: string;
-  subtitle: string;
-  description: string;
-}
-
-export async function getCases(): Promise<CaseSummary[]> {
-  const res = await fetch(`${API_BASE}/api/cases`);
-  if (!res.ok) throw new Error(`Failed to load cases: ${res.status}`);
-  return res.json();
-}
-
 // --- Chat interview (extended for project-scoped sessions) -------------------
 
 export interface ChatMessage {

@@ -9,7 +9,6 @@ from typing import List, Dict, Optional
 from rag_engine import RagEngine
 import settings as platform_settings
 from admin_auth import require_admin_token
-from cases_data import CASES_DATA
 import chat_engine
 import chat_sessions as chat_sessions_module
 import projects_db
@@ -42,12 +41,6 @@ app.add_middleware(
 rag = RagEngine()
 
 MAX_ARTIFACT_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
-
-class EvaluationRequest(BaseModel):
-    case_id: str
-    question_id: str
-    question_text: str
-    user_answer: str
 
 class ProviderSettingUpdate(BaseModel):
     active_llm_provider: str
@@ -307,54 +300,12 @@ def get_chat_session(session_id: int):
     messages = chat_sessions_module.get_messages(session_id)
     return {**session, "messages": messages}
 
-@app.get("/api/cases")
-def get_cases():
-    # Return cases summary (omit large question details for index)
-    return [
-        {
-            "id": val["id"],
-            "title": val["title"],
-            "subtitle": val["subtitle"],
-            "description": val["description"]
-        }
-        for val in CASES_DATA.values()
-    ]
-
-@app.get("/api/case/{case_id}")
-def get_case(case_id: str):
-    if case_id not in CASES_DATA:
-        raise HTTPException(status_code=404, detail="Case study not found.")
-    return CASES_DATA[case_id]
-
 @app.get("/api/process/{process_id}")
 def get_process(process_id: int, current_user: dict = Depends(get_current_user)):
     process = process_db.get_process_detail(process_id)
     if process is None:
         raise HTTPException(status_code=404, detail="Process not found.")
     return process
-
-@app.post("/api/evaluate")
-def evaluate_answer(req: EvaluationRequest):
-    # Find search query for this question if it exists, otherwise default to question text
-    search_query = req.question_text
-    if req.case_id in CASES_DATA:
-        for q in CASES_DATA[req.case_id]["questions"]:
-            if q["id"] == req.question_id:
-                search_query = q["search_query"]
-                break
-
-    # RAG Vector Search
-    hits = rag.search(search_query, top_k=3)
-
-    # AWS Bedrock evaluation
-    critique = rag.generate_evaluation(req.question_text, req.user_answer, hits)
-
-    return {
-        "rating": critique.get("rating", "🟡 Level 2"),
-        "critique": critique.get("critique", "Evaluation completed successfully."),
-        "recommendations": critique.get("recommendations", "No specific recommendations provided."),
-        "source_slides": hits
-    }
 
 if __name__ == "__main__":
     import uvicorn
