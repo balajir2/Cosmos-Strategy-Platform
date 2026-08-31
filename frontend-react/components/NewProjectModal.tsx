@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { createProject } from "@/lib/api-client";
+import { useEffect, useState } from "react";
+import { createProject, adminListUsers, User } from "@/lib/api-client";
 
 // Only one process is currently seeded ("Aditya Birla Brand Compass V2", id 1) -
 // per the spec's scope boundary, this stays a fixed value rather than a picker.
@@ -11,11 +11,22 @@ export default function NewProjectModal({ onClose, onCreated }: { onClose: () =>
   const [name, setName] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [consultantUserId, setConsultantUserId] = useState("");
+  const [users, setUsers] = useState<User[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    adminListUsers()
+      .then(setUsers)
+      .catch(() => setError("Could not load users to assign a consultant."));
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!consultantUserId) {
+      setError("Select the consultant who will lead this engagement.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -50,16 +61,14 @@ export default function NewProjectModal({ onClose, onCreated }: { onClose: () =>
             <input id="np-customer" type="text" required value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="e.g. Blazar" />
           </div>
           <div className="answer-wrapper">
-            <label htmlFor="np-consultant">Consultant User ID</label>
-            <input
-              id="np-consultant"
-              type="text"
-              required
-              value={consultantUserId}
-              onChange={(e) => setConsultantUserId(e.target.value)}
-              placeholder="Numeric id from the users table"
-            />
-            <span className="dropzone-hint">Process is fixed to &quot;Aditya Birla Brand Compass V2&quot; - the only seeded process.</span>
+            <label htmlFor="np-consultant">Consultant</label>
+            <select id="np-consultant" required value={consultantUserId} onChange={(e) => setConsultantUserId(e.target.value)}>
+              <option value="">Select a consultant...</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
+              ))}
+            </select>
+            <span className="dropzone-hint">The selected user becomes the Consultant who leads this engagement.</span>
           </div>
           <div className="actions-row">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>

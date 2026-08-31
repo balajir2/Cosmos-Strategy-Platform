@@ -35,7 +35,14 @@ async function authFetch(path: string, options: RequestInit = {}): Promise<Respo
 
 async function errorDetail(res: Response, fallback: string): Promise<string> {
   const body = await res.json().catch(() => ({}));
-  return body.detail || fallback;
+  const detail = body.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail
+      .map((d) => (d && typeof d.msg === "string" ? d.msg : JSON.stringify(d)))
+      .join("; ");
+  }
+  return fallback;
 }
 
 // --- Auth ---------------------------------------------------------------

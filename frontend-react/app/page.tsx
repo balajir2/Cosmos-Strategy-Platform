@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listProjects, Project } from "@/lib/api-client";
+import { listProjects, getMe, Project } from "@/lib/api-client";
 import NewProjectModal from "@/components/NewProjectModal";
 
 export default function AdminProjectList() {
@@ -10,6 +10,7 @@ export default function AdminProjectList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   function reload() {
     setLoading(true);
@@ -21,6 +22,9 @@ export default function AdminProjectList() {
 
   useEffect(() => {
     reload();
+    getMe()
+      .then((u) => setIsAdmin(u.is_admin))
+      .catch(() => setIsAdmin(false));
   }, []);
 
   if (loading) {
@@ -65,14 +69,16 @@ export default function AdminProjectList() {
             </div>
           </Link>
         ))}
-        <div
-          className="glass-card"
-          onClick={() => setShowNewProject(true)}
-          style={{ opacity: 0.85, padding: 24, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8, cursor: "pointer" }}
-        >
-          <i className="fa-solid fa-plus" style={{ fontSize: "1.5rem" }}></i>
-          <span>New Project</span>
-        </div>
+        {isAdmin && (
+          <div
+            className="glass-card"
+            onClick={() => setShowNewProject(true)}
+            style={{ opacity: 0.85, padding: 24, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8, cursor: "pointer" }}
+          >
+            <i className="fa-solid fa-plus" style={{ fontSize: "1.5rem" }}></i>
+            <span>New Project</span>
+          </div>
+        )}
       </div>
       {showNewProject && (
         <NewProjectModal
