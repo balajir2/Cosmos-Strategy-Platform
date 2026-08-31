@@ -64,3 +64,57 @@ def get_user_by_id(user_id: int):
         "id": row[0], "email": row[1], "full_name": row[2],
         "is_active": row[3], "is_admin": row[4], "created_at": row[5].isoformat(),
     }
+
+
+def list_users() -> list:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, email, full_name, is_active, is_admin, created_at
+                FROM users ORDER BY created_at ASC;
+                """
+            )
+            rows = cursor.fetchall()
+    return [
+        {
+            "id": row[0], "email": row[1], "full_name": row[2],
+            "is_active": row[3], "is_admin": row[4], "created_at": row[5].isoformat(),
+        }
+        for row in rows
+    ]
+
+
+def update_user(user_id: int, full_name=None, is_admin=None, is_active=None):
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE users
+                SET full_name = COALESCE(%s, full_name),
+                    is_admin = COALESCE(%s, is_admin),
+                    is_active = COALESCE(%s, is_active)
+                WHERE id = %s
+                RETURNING id, email, full_name, is_active, is_admin, created_at;
+                """,
+                (full_name, is_admin, is_active, user_id),
+            )
+            row = cursor.fetchone()
+        conn.commit()
+    if not row:
+        return None
+    return {
+        "id": row[0], "email": row[1], "full_name": row[2],
+        "is_active": row[3], "is_admin": row[4], "created_at": row[5].isoformat(),
+    }
+
+
+def set_password(user_id: int, password_hash: str) -> bool:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "UPDATE users SET password_hash = %s WHERE id = %s;",
+                (password_hash, user_id),
+            )
+        conn.commit()
+        return cursor.rowcount > 0
