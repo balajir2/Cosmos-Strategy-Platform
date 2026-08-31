@@ -19,8 +19,12 @@ export function clearToken(): void {
 
 async function authFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = getToken();
+  if (!token) {
+    if (typeof window !== "undefined") window.location.href = "/login";
+    throw new Error("Not authenticated.");
+  }
   const headers = new Headers(options.headers);
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  headers.set("Authorization", `Bearer ${token}`);
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (res.status === 401) {
     clearToken();
