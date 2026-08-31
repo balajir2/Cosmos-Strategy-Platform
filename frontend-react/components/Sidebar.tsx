@@ -9,6 +9,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const isClientSection = pathname.startsWith("/client");
+  const isAdminSection = pathname.startsWith("/admin");
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -37,12 +38,17 @@ export default function Sidebar() {
           {isClientSection ? "Client User" : "Consultant / Admin"}
         </span>
         <nav className="sidebar-nav">
-          <Link href="/" className={!isClientSection ? "active" : ""}>
+          <Link href="/" className={pathname === "/" ? "active" : ""}>
             <i className="fa-solid fa-clipboard-list"></i> Projects
           </Link>
           <Link href="/client" className={isClientSection ? "active" : ""}>
             <i className="fa-solid fa-user"></i> My Engagements
           </Link>
+          {user?.is_admin && (
+            <Link href="/admin" className={isAdminSection ? "active" : ""}>
+              <i className="fa-solid fa-user-shield"></i> Admin
+            </Link>
+          )}
         </nav>
       </div>
       <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--border-card)" }}>
