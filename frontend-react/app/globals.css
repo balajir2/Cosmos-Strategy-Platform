@@ -589,6 +589,24 @@ body {
     box-shadow: 0 0 15px rgba(0, 122, 255, 0.15);
 }
 
+.answer-wrapper select {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-card);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    outline: none;
+    transition: var(--transition-smooth);
+}
+
+.answer-wrapper select:focus {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 15px rgba(0, 122, 255, 0.15);
+}
+
 .textarea-footer {
     display: flex;
     justify-content: space-between;
@@ -982,6 +1000,17 @@ body {
 .assign-row input:focus {
     background: rgba(255, 255, 255, 0.04);
     border-color: var(--accent-blue);
+}
+
+.assign-row select {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-card);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    outline: none;
 }
 
 .assigned-list {

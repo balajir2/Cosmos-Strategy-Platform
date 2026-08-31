@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getProject, updateProject, activateProject, Project } from "@/lib/api-client";
-import { getArtifacts, setArtifacts, MockArtifact } from "@/lib/mockProjectState";
+import {
+  getProject, updateProject, activateProject, listArtifacts, uploadArtifact, deleteArtifact,
+  addProjectMember, Project, ProjectArtifact,
+} from "@/lib/api-client";
 
 const PURPOSE_LABELS: Record<string, string> = {
   reference: "Reference",
@@ -12,28 +14,36 @@ const PURPOSE_LABELS: Record<string, string> = {
   case_study_resolution: "Hidden Resolution",
 };
 
+const PURPOSE_OPTIONS = Object.keys(PURPOSE_LABELS);
+
 export default function ProjectSetupPage() {
   const params = useParams();
   const projectId = Number(params.caseId);
 
   const [project, setProject] = useState<Project | null>(null);
   const [industryContext, setIndustryContext] = useState("");
-  const [assignedClient, setAssignedClient] = useState("");
-  const [clientInput, setClientInput] = useState("");
-  const [artifacts, setArtifactsState] = useState<MockArtifact[]>([]);
+  const [artifacts, setArtifactsState] = useState<ProjectArtifact[]>([]);
+  const [uploadPurpose, setUploadPurpose] = useState("reference");
   const [activating, setActivating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberRole, setMemberRole] = useState<"Consultant" | "ClientUser">("ClientUser");
+  const [assigning, setAssigning] = useState(false);
+  const [assignedEmails, setAssignedEmails] = useState<string[]>([]);
+
+  function reloadArtifacts() {
+    listArtifacts(projectId).then(setArtifactsState).catch(() => setError("Could not load artifacts."));
+  }
+
   useEffect(() => {
-    setArtifactsState(getArtifacts(String(projectId)));
     getProject(projectId)
-      .then((p) => {
-        setProject(p);
-        setIndustryContext(p.industry_context || "");
-      })
+      .then((p) => { setProject(p); setIndustryContext(p.industry_context || ""); })
       .catch(() => setError("Could not load this project. Are you a Consultant on it, and is the backend running?"))
       .finally(() => setLoading(false));
+    reloadArtifacts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   async function handleContextBlur() {
@@ -46,21 +56,38 @@ export default function ProjectSetupPage() {
     }
   }
 
-  function handleAssignClient() {
-    if (!clientInput.trim()) return;
-    setAssignedClient(clientInput.trim());
-    setClientInput("");
+  function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    uploadArtifact(projectId, file, uploadPurpose)
+      .then(() => reloadArtifacts())
+      .catch((err) => setError(err instanceof Error ? err.message : "Could not upload the file."));
+    e.target.value = "";
   }
 
-  function handleAddArtifact() {
-    const newArtifact: MockArtifact = {
-      filename: `Uploaded_Document_${artifacts.length + 1}.pdf`,
-      purpose: "reference",
-      status: "Processing",
-    };
-    const updated = [...artifacts, newArtifact];
-    setArtifactsState(updated);
-    setArtifacts(String(projectId), updated);
+  async function handleDeleteArtifact(artifactId: number) {
+    try {
+      await deleteArtifact(projectId, artifactId);
+      reloadArtifacts();
+    } catch {
+      setError("Could not delete the artifact.");
+    }
+  }
+
+  async function handleAssignMember() {
+    if (!memberEmail.trim()) return;
+    setAssigning(true);
+    setError(null);
+    try {
+      await addProjectMember(projectId, memberEmail.trim(), memberRole);
+      setAssignedEmails((prev) => [...prev, `${memberEmail.trim()} (${memberRole})`]);
+      setMemberEmail("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not assign this team member.");
+    } finally {
+      setAssigning(false);
+    }
   }
 
   async function handleActivate() {
@@ -120,26 +147,32 @@ export default function ProjectSetupPage() {
           </div>
 
           <div className="answer-wrapper">
-            <label htmlFor="client-user-input">Assign Client User</label>
+            <label htmlFor="member-email-input">Assign Team Member</label>
             <div className="assign-row">
               <input
-                type="text"
-                id="client-user-input"
+                type="email"
+                id="member-email-input"
                 placeholder="name@customer.com"
-                value={clientInput}
-                onChange={(e) => setClientInput(e.target.value)}
+                value={memberEmail}
+                onChange={(e) => setMemberEmail(e.target.value)}
               />
-              <button className="btn btn-secondary" onClick={handleAssignClient}>
-                <i className="fa-solid fa-user-plus"></i> Assign
+              <select value={memberRole} onChange={(e) => setMemberRole(e.target.value as "Consultant" | "ClientUser")}>
+                <option value="ClientUser">ClientUser</option>
+                <option value="Consultant">Consultant</option>
+              </select>
+              <button className="btn btn-secondary" onClick={handleAssignMember} disabled={assigning}>
+                <i className="fa-solid fa-user-plus"></i> {assigning ? "Assigning..." : "Assign"}
               </button>
             </div>
-            <span className="dropzone-hint">Real member assignment lands in the next task.</span>
+            <span className="dropzone-hint">The person must already have registered an account.</span>
           </div>
-          {assignedClient && (
+          {assignedEmails.length > 0 && (
             <ul className="assigned-list">
-              <li>
-                <i className="fa-solid fa-circle-user"></i> {assignedClient} <span className="role-tag">ClientUser</span>
-              </li>
+              {assignedEmails.map((entry, i) => (
+                <li key={i}>
+                  <i className="fa-solid fa-circle-user"></i> {entry}
+                </li>
+              ))}
             </ul>
           )}
         </div>
@@ -148,26 +181,39 @@ export default function ProjectSetupPage() {
           <h3>
             <i className="fa-solid fa-folder-plus"></i> Engagement Documents
           </h3>
-          <div className="dropzone" onClick={handleAddArtifact}>
+          <div className="answer-wrapper" style={{ marginBottom: 12 }}>
+            <label htmlFor="upload-purpose-select">Purpose for the next upload</label>
+            <select id="upload-purpose-select" value={uploadPurpose} onChange={(e) => setUploadPurpose(e.target.value)}>
+              {PURPOSE_OPTIONS.map((p) => (
+                <option key={p} value={p}>{PURPOSE_LABELS[p]}</option>
+              ))}
+            </select>
+          </div>
+          <label className="dropzone" style={{ display: "block" }}>
+            <input type="file" onChange={handleFileSelected} style={{ display: "none" }} />
             <i className="fa-solid fa-cloud-arrow-up"></i>
             <p>
-              Drag files here, or <span className="dropzone-browse">browse</span>
+              Click to <span className="dropzone-browse">browse</span>
             </p>
-            <span className="dropzone-hint">PDF, DOCX, PPTX, TXT, or audio - tagged by purpose below</span>
-          </div>
+            <span className="dropzone-hint">PDF, DOCX, PPTX, TXT, or audio - tagged with the purpose selected above</span>
+          </label>
           <div className="artifact-list">
-            {artifacts.map((a, i) => {
+            {artifacts.map((a) => {
               const statusClass =
                 a.status === "Indexed" ? "indexed" : a.status === "Processing" ? "processing" : a.status === "Transcript Needed" ? "transcript-needed" : "";
               return (
-                <div className="artifact-item" key={i}>
-                  <i className={`artifact-icon fa-solid ${a.filename.endsWith(".mp3") ? "fa-microphone" : "fa-file-lines"}`}></i>
+                <div className="artifact-item" key={a.id}>
+                  <i className={`artifact-icon fa-solid ${a.source_format === "audio" ? "fa-microphone" : "fa-file-lines"}`}></i>
                   <span className="artifact-name">{a.filename}</span>
                   <span className={`purpose-tag purpose-${a.purpose}`}>{PURPOSE_LABELS[a.purpose]}</span>
                   <span className={`status-pill ${statusClass}`}>{a.status}</span>
+                  <button className="btn btn-secondary" onClick={() => handleDeleteArtifact(a.id)} style={{ padding: "6px 10px" }}>
+                    <i className="fa-solid fa-trash"></i>
+                  </button>
                 </div>
               );
             })}
+            {artifacts.length === 0 && <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No documents uploaded yet.</p>}
           </div>
         </div>
       </div>
