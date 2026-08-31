@@ -82,6 +82,45 @@ def list_projects_for_user(user_id: int) -> list:
     return [_project_dict(row) for row in rows]
 
 
+def list_all_projects() -> list:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, name, customer_name, description, industry_context, status, process_id, created_by, created_at
+                FROM projects ORDER BY created_at DESC;
+                """
+            )
+            rows = cursor.fetchall()
+    return [_project_dict(row) for row in rows]
+
+
+def set_project_status(project_id: int, status: str):
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE projects SET status = %s
+                WHERE id = %s
+                RETURNING id, name, customer_name, description, industry_context, status, process_id, created_by, created_at;
+                """,
+                (status, project_id),
+            )
+            row = cursor.fetchone()
+        conn.commit()
+    if not row:
+        return None
+    return _project_dict(row)
+
+
+def delete_project(project_id: int) -> bool:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM projects WHERE id = %s;", (project_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
 def update_project(project_id: int, name=None, customer_name=None, description=None, industry_context=None):
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:

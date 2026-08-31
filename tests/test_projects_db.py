@@ -213,3 +213,56 @@ def test_add_project_member_raises_value_error_on_invalid_foreign_key(mock_get_c
         projects_db.add_project_member(999, 7, "ClientUser")
 
     conn.rollback.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_list_all_projects_returns_dict_list(mock_get_conn):
+    conn, _ = _fake_conn(fetchall_result=[_PROJECT_ROW])
+    mock_get_conn.return_value = conn
+
+    assert projects_db.list_all_projects() == [_PROJECT_DICT]
+
+
+@patch("projects_db.get_db_connection")
+def test_set_project_status_returns_none_when_missing(mock_get_conn):
+    conn, _ = _fake_conn(fetchone_result=None)
+    mock_get_conn.return_value = conn
+
+    assert projects_db.set_project_status(999, "Draft") is None
+
+
+@patch("projects_db.get_db_connection")
+def test_set_project_status_updates_and_returns_row(mock_get_conn):
+    active_row = (1, "Blazar India Entry", "Blazar", "Market entry", "B2C, personal care", "Draft", 1, 1, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    conn, cursor = _fake_conn(fetchone_result=active_row)
+    mock_get_conn.return_value = conn
+
+    result = projects_db.set_project_status(1, "Draft")
+
+    assert result["status"] == "Draft"
+    sql, params = cursor.execute.call_args[0]
+    assert "UPDATE projects SET status" in sql
+    assert params == ("Draft", 1)
+    conn.commit.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_delete_project_returns_true_when_row_deleted(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.rowcount = 1
+    mock_get_conn.return_value = conn
+
+    assert projects_db.delete_project(1) is True
+    sql, params = cursor.execute.call_args[0]
+    assert "DELETE FROM projects" in sql
+    assert params == (1,)
+    conn.commit.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_delete_project_returns_false_when_missing(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.rowcount = 0
+    mock_get_conn.return_value = conn
+
+    assert projects_db.delete_project(999) is False
