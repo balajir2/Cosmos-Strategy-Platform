@@ -205,3 +205,64 @@ def add_project_member(project_id: int, user_id: int, role: str) -> dict:
         "id": row[0], "project_id": row[1], "user_id": row[2], "role": row[3],
         "org_title": row[4], "assigned_at": row[5].isoformat(),
     }
+
+
+def list_project_members(project_id: int) -> list:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT pm.id, pm.project_id, pm.user_id, pm.role, pm.org_title, pm.assigned_at,
+                       u.email, u.full_name
+                FROM project_members pm
+                JOIN users u ON u.id = pm.user_id
+                WHERE pm.project_id = %s
+                ORDER BY pm.assigned_at ASC;
+                """,
+                (project_id,),
+            )
+            rows = cursor.fetchall()
+    return [
+        {
+            "id": row[0], "project_id": row[1], "user_id": row[2], "role": row[3],
+            "org_title": row[4], "assigned_at": row[5].isoformat(),
+            "email": row[6], "full_name": row[7],
+        }
+        for row in rows
+    ]
+
+
+def update_project_member_role(project_id: int, user_id: int, role: str):
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            try:
+                cursor.execute(
+                    """
+                    UPDATE project_members SET role = %s
+                    WHERE project_id = %s AND user_id = %s
+                    RETURNING id, project_id, user_id, role, org_title, assigned_at;
+                    """,
+                    (role, project_id, user_id),
+                )
+            except psycopg2.errors.CheckViolation as e:
+                conn.rollback()
+                raise ValueError(f"Invalid role: {e}")
+            row = cursor.fetchone()
+        conn.commit()
+    if not row:
+        return None
+    return {
+        "id": row[0], "project_id": row[1], "user_id": row[2], "role": row[3],
+        "org_title": row[4], "assigned_at": row[5].isoformat(),
+    }
+
+
+def remove_project_member(project_id: int, user_id: int) -> bool:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM project_members WHERE project_id = %s AND user_id = %s;",
+                (project_id, user_id),
+            )
+        conn.commit()
+        return cursor.rowcount > 0

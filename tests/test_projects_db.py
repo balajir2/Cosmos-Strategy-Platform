@@ -266,3 +266,77 @@ def test_delete_project_returns_false_when_missing(mock_get_conn):
     mock_get_conn.return_value = conn
 
     assert projects_db.delete_project(999) is False
+
+
+@patch("projects_db.get_db_connection")
+def test_list_project_members_returns_dict_list(mock_get_conn):
+    now = datetime.datetime(2026, 8, 28, 9, 0, 0)
+    conn, _ = _fake_conn(fetchall_result=[(3, 1, 9, "ClientUser", None, now, "c@x.com", "Cindy")])
+    mock_get_conn.return_value = conn
+
+    result = projects_db.list_project_members(1)
+
+    assert result == [{
+        "id": 3, "project_id": 1, "user_id": 9, "role": "ClientUser",
+        "org_title": None, "assigned_at": now.isoformat(), "email": "c@x.com", "full_name": "Cindy",
+    }]
+
+
+@patch("projects_db.get_db_connection")
+def test_update_project_member_role_returns_none_when_missing(mock_get_conn):
+    conn, _ = _fake_conn(fetchone_result=None)
+    mock_get_conn.return_value = conn
+
+    assert projects_db.update_project_member_role(1, 999, "Consultant") is None
+
+
+@patch("projects_db.get_db_connection")
+def test_update_project_member_role_updates_and_returns_row(mock_get_conn):
+    row = (2, 1, 9, "Consultant", None, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    conn, cursor = _fake_conn(fetchone_result=row)
+    mock_get_conn.return_value = conn
+
+    result = projects_db.update_project_member_role(1, 9, "Consultant")
+
+    assert result == {
+        "id": 2, "project_id": 1, "user_id": 9, "role": "Consultant",
+        "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+    }
+    sql, params = cursor.execute.call_args[0]
+    assert "UPDATE project_members" in sql
+    assert params == ("Consultant", 1, 9)
+    conn.commit.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_update_project_member_role_raises_value_error_on_invalid_role(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.execute.side_effect = psycopg2.errors.CheckViolation("bad role")
+    mock_get_conn.return_value = conn
+
+    with pytest.raises(ValueError):
+        projects_db.update_project_member_role(1, 9, "NotARole")
+
+    conn.rollback.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_remove_project_member_returns_true_when_removed(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.rowcount = 1
+    mock_get_conn.return_value = conn
+
+    assert projects_db.remove_project_member(1, 9) is True
+    sql, params = cursor.execute.call_args[0]
+    assert "DELETE FROM project_members" in sql
+    assert params == (1, 9)
+    conn.commit.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_remove_project_member_returns_false_when_missing(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.rowcount = 0
+    mock_get_conn.return_value = conn
+
+    assert projects_db.remove_project_member(1, 999) is False
