@@ -1,11 +1,31 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { getMe, getToken, clearToken, User } from "@/lib/api-client";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const isClientSection = pathname.startsWith("/client");
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (!getToken()) {
+      setUser(null);
+      return;
+    }
+    getMe()
+      .then(setUser)
+      .catch(() => setUser(null));
+  }, [pathname]);
+
+  function handleLogout() {
+    clearToken();
+    setUser(null);
+    router.push("/login");
+  }
 
   return (
     <aside className="sidebar">
@@ -24,6 +44,22 @@ export default function Sidebar() {
             <i className="fa-solid fa-user"></i> My Engagements
           </Link>
         </nav>
+      </div>
+      <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--border-card)" }}>
+        {user ? (
+          <>
+            <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", padding: "0 14px", marginBottom: 8 }}>
+              <i className="fa-solid fa-circle-user"></i> {user.full_name}
+            </div>
+            <button className="btn btn-secondary" onClick={handleLogout} style={{ width: "100%", justifyContent: "center" }}>
+              <i className="fa-solid fa-right-from-bracket"></i> Log Out
+            </button>
+          </>
+        ) : (
+          <Link href="/login" className="btn btn-secondary" style={{ width: "100%", justifyContent: "center", textDecoration: "none" }}>
+            <i className="fa-solid fa-right-to-bracket"></i> Log In
+          </Link>
+        )}
       </div>
     </aside>
   );
