@@ -269,6 +269,12 @@ def init_db():
         seed_database(cursor)
         conn.commit()
 
+    # Re-point any project still sharing the template onto its own clone.
+    from framework_db import migrate_existing_projects  # local import to avoid a circular import
+    cloned = migrate_existing_projects()
+    if cloned:
+        print(f"Cloned the template framework for {cloned} existing project(s).")
+
     cursor.close()
     conn.close()
 
