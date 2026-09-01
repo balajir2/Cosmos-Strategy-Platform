@@ -7,6 +7,7 @@ import {
   addProjectMember, Project, ProjectArtifact,
 } from "@/lib/api-client";
 import FrameworkEditor from "@/components/FrameworkEditor";
+import CalibrationEditor from "@/components/CalibrationEditor";
 
 const PURPOSE_LABELS: Record<string, string> = {
   reference: "Reference",
@@ -223,6 +224,8 @@ export default function ProjectSetupPage() {
       </div>
 
       <FrameworkEditor projectId={projectId} />
+
+      <CalibrationEditor projectId={projectId} />
 
       <div className="project-actions-row">
         <span className="activate-hint">
