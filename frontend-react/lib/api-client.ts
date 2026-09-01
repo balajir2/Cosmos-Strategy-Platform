@@ -469,6 +469,50 @@ export async function deleteFrameworkQuestion(projectId: number, questionId: num
   if (!res.ok) throw new Error(await errorDetail(res, `Failed to delete question: ${res.status}`));
 }
 
+export interface CalibrationConcept {
+  id: number;
+  concept_name: string;
+  org_definition: string;
+  sequence_order: number;
+}
+
+export interface CalibrationConceptUpdate {
+  concept_name?: string;
+  org_definition?: string;
+  action?: "move_up" | "move_down";
+}
+
+export async function getCalibrationConcepts(projectId: number): Promise<CalibrationConcept[]> {
+  const res = await authFetch(`/api/projects/${projectId}/framework/calibration`);
+  if (!res.ok) throw new Error(`Failed to load calibration concepts: ${res.status}`);
+  return res.json();
+}
+
+export async function addCalibrationConcept(projectId: number, conceptName: string, orgDefinition: string): Promise<CalibrationConcept> {
+  const res = await authFetch(`/api/projects/${projectId}/framework/calibration`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ concept_name: conceptName, org_definition: orgDefinition }),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to add calibration concept: ${res.status}`));
+  return res.json();
+}
+
+export async function updateCalibrationConcept(projectId: number, conceptId: number, payload: CalibrationConceptUpdate): Promise<CalibrationConcept> {
+  const res = await authFetch(`/api/projects/${projectId}/framework/calibration/${conceptId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to update calibration concept: ${res.status}`));
+  return res.json();
+}
+
+export async function deleteCalibrationConcept(projectId: number, conceptId: number): Promise<void> {
+  const res = await authFetch(`/api/projects/${projectId}/framework/calibration/${conceptId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to delete calibration concept: ${res.status}`));
+}
+
 // --- Evaluation, responses, brief ---------------------------------------------
 
 export interface SourceChunk {
@@ -544,7 +588,7 @@ export interface ChatMessage {
   id: number;
   role: "assistant" | "user";
   content: string;
-  message_type: "question" | "benchmark" | "self_rating_prompt" | "chat" | "level_transition";
+  message_type: "question" | "benchmark" | "self_rating_prompt" | "chat" | "level_transition" | "calibration_prompt" | "calibration_feedback";
   level_index: number | null;
   created_at: string;
 }
