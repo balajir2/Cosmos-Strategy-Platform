@@ -70,3 +70,42 @@ def delete_concept(concept_id: int, process_id: int) -> bool:
             )
         conn.commit()
         return cursor.rowcount > 0
+
+
+def _response_dict(row: tuple) -> dict:
+    return {
+        "id": row[0], "concept_id": row[1], "project_id": row[2],
+        "submitted_definition": row[3], "feedback_text": row[4], "updated_at": row[5].isoformat(),
+    }
+
+
+def save_response(project_id: int, concept_id: int, submitted_definition: str = None, feedback_text: str = None) -> dict:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO calibration_responses (concept_id, project_id, submitted_definition, feedback_text)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (concept_id, project_id) DO UPDATE SET
+                    submitted_definition = COALESCE(EXCLUDED.submitted_definition, calibration_responses.submitted_definition),
+                    feedback_text = COALESCE(EXCLUDED.feedback_text, calibration_responses.feedback_text),
+                    updated_at = now()
+                RETURNING id, concept_id, project_id, submitted_definition, feedback_text, updated_at;
+                """,
+                (concept_id, project_id, submitted_definition, feedback_text),
+            )
+            row = cursor.fetchone()
+        conn.commit()
+    return _response_dict(row)
+
+
+def get_responses_for_project(project_id: int) -> list:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT id, concept_id, project_id, submitted_definition, feedback_text, updated_at "
+                "FROM calibration_responses WHERE project_id = %s ORDER BY id ASC;",
+                (project_id,),
+            )
+            rows = cursor.fetchall()
+    return [_response_dict(r) for r in rows]

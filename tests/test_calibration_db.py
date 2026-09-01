@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+import datetime
 
 import calibration_db
 
@@ -83,3 +84,55 @@ def test_delete_concept_returns_false_when_not_found(mock_get_conn):
     mock_get_conn.return_value = conn
 
     assert calibration_db.delete_concept(999, 7) is False
+
+
+_RESPONSE_ROW = (1, 10, 42, "my definition", "constructive feedback", datetime.datetime(2026, 9, 1, 9, 0, 0))
+_RESPONSE_DICT = {
+    "id": 1, "concept_id": 10, "project_id": 42,
+    "submitted_definition": "my definition", "feedback_text": "constructive feedback",
+    "updated_at": "2026-09-01T09:00:00",
+}
+
+
+@patch("calibration_db.get_db_connection")
+def test_save_response_inserts_and_returns_row(mock_get_conn):
+    conn, cursor = _fake_conn(fetchone_results=[_RESPONSE_ROW])
+    mock_get_conn.return_value = conn
+
+    result = calibration_db.save_response(42, 10, submitted_definition="my definition", feedback_text="constructive feedback")
+
+    assert result == _RESPONSE_DICT
+    sql, params = cursor.execute.call_args[0]
+    assert "INSERT INTO calibration_responses" in sql
+    assert "ON CONFLICT (concept_id, project_id) DO UPDATE" in sql
+    assert params == (10, 42, "my definition", "constructive feedback")
+    conn.commit.assert_called_once()
+
+
+@patch("calibration_db.get_db_connection")
+def test_save_response_preserves_prior_columns_via_coalesce(mock_get_conn):
+    conn, cursor = _fake_conn(fetchone_results=[_RESPONSE_ROW])
+    mock_get_conn.return_value = conn
+
+    calibration_db.save_response(42, 10, submitted_definition="my definition")
+
+    sql, _ = cursor.execute.call_args[0]
+    assert "COALESCE(EXCLUDED.feedback_text, calibration_responses.feedback_text)" in sql
+
+
+@patch("calibration_db.get_db_connection")
+def test_get_responses_for_project_returns_list(mock_get_conn):
+    conn, _ = _fake_conn(fetchall_results=[[_RESPONSE_ROW]])
+    mock_get_conn.return_value = conn
+
+    result = calibration_db.get_responses_for_project(42)
+
+    assert result == [_RESPONSE_DICT]
+
+
+@patch("calibration_db.get_db_connection")
+def test_get_responses_for_project_returns_empty_list_when_none(mock_get_conn):
+    conn, _ = _fake_conn(fetchall_results=[[]])
+    mock_get_conn.return_value = conn
+
+    assert calibration_db.get_responses_for_project(42) == []
