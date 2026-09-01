@@ -113,110 +113,133 @@ def test_infer_artifact_type_maps_audio_and_document():
     assert pkb.infer_artifact_type("docx") == "document"
 
 
-from botocore.exceptions import NoCredentialsError
+from google.auth.exceptions import DefaultCredentialsError
 
 
 def test_transcribe_audio_skips_when_bucket_not_configured(monkeypatch):
-    monkeypatch.delenv("AWS_TRANSCRIBE_S3_BUCKET", raising=False)
+    monkeypatch.delenv("GCS_TRANSCRIBE_BUCKET", raising=False)
 
-    with patch("project_knowledge_base.boto3.client") as mock_client:
+    with patch("project_knowledge_base.storage.Client") as mock_storage:
         result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
 
     assert result is None
-    mock_client.assert_not_called()
+    mock_storage.assert_not_called()
 
 
-@patch("project_knowledge_base.boto3.client")
-def test_transcribe_audio_returns_none_when_credentials_missing(mock_client, monkeypatch):
-    monkeypatch.setenv("AWS_TRANSCRIBE_S3_BUCKET", "cosmos-transcribe-bucket")
-    mock_client.side_effect = NoCredentialsError()
+def test_transcribe_audio_skips_unsupported_audio_format(monkeypatch):
+    monkeypatch.setenv("GCS_TRANSCRIBE_BUCKET", "cosmos-transcribe-bucket")
+
+    with patch("project_knowledge_base.storage.Client") as mock_storage:
+        result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.m4a")
+
+    assert result is None
+    mock_storage.assert_not_called()
+
+
+@patch("project_knowledge_base.storage.Client")
+def test_transcribe_audio_returns_none_when_credentials_missing(mock_storage_cls, monkeypatch):
+    monkeypatch.setenv("GCS_TRANSCRIBE_BUCKET", "cosmos-transcribe-bucket")
+    mock_storage_cls.side_effect = DefaultCredentialsError()
 
     result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
 
     assert result is None
 
 
-@patch("project_knowledge_base._fetch_transcript_text", return_value="hello from the meeting")
-@patch("project_knowledge_base.boto3.client")
-def test_transcribe_audio_returns_transcript_on_completed_job(mock_client, mock_fetch, monkeypatch):
-    monkeypatch.setenv("AWS_TRANSCRIBE_S3_BUCKET", "cosmos-transcribe-bucket")
-
-    mock_s3 = MagicMock()
-    mock_transcribe = MagicMock()
-    mock_transcribe.get_transcription_job.return_value = {
-        "TranscriptionJob": {
-            "TranscriptionJobStatus": "COMPLETED",
-            "Transcript": {"TranscriptFileUri": "https://example.com/transcript.json"},
-        }
-    }
-    mock_client.side_effect = lambda service_name: mock_s3 if service_name == "s3" else mock_transcribe
-
-    result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
-
-    assert result == "hello from the meeting"
-    mock_s3.put_object.assert_called_once()
-    mock_transcribe.start_transcription_job.assert_called_once()
+def _mock_storage_client():
+    mock_storage_client = MagicMock()
+    mock_blob = MagicMock()
+    mock_storage_client.bucket.return_value.blob.return_value = mock_blob
+    return mock_storage_client, mock_blob
 
 
-@patch("project_knowledge_base.boto3.client")
-def test_transcribe_audio_returns_none_when_job_fails(mock_client, monkeypatch):
-    monkeypatch.setenv("AWS_TRANSCRIBE_S3_BUCKET", "cosmos-transcribe-bucket")
+@patch("project_knowledge_base.speech.SpeechClient")
+@patch("project_knowledge_base.storage.Client")
+def test_transcribe_audio_returns_transcript_on_completed_job(mock_storage_cls, mock_speech_cls):
+    import os
+    os.environ["GCS_TRANSCRIBE_BUCKET"] = "cosmos-transcribe-bucket"
+    try:
+        mock_storage_client, mock_blob = _mock_storage_client()
+        mock_storage_cls.return_value = mock_storage_client
 
-    mock_s3 = MagicMock()
-    mock_transcribe = MagicMock()
-    mock_transcribe.get_transcription_job.return_value = {
-        "TranscriptionJob": {"TranscriptionJobStatus": "FAILED"}
-    }
-    mock_client.side_effect = lambda service_name: mock_s3 if service_name == "s3" else mock_transcribe
+        mock_speech_client = MagicMock()
+        mock_speech_cls.return_value = mock_speech_client
+        mock_operation = MagicMock()
+        mock_operation.done.return_value = True
+        mock_result_alt = MagicMock()
+        mock_result_alt.transcript = "hello from the meeting"
+        mock_result = MagicMock()
+        mock_result.alternatives = [mock_result_alt]
+        mock_operation.result.return_value.results = [mock_result]
+        mock_speech_client.long_running_recognize.return_value = mock_operation
+
+        result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
+
+        assert result == "hello from the meeting"
+        mock_blob.upload_from_string.assert_called_once_with(b"fake-audio-bytes")
+        mock_speech_client.long_running_recognize.assert_called_once()
+    finally:
+        del os.environ["GCS_TRANSCRIBE_BUCKET"]
+
+
+@patch("project_knowledge_base.speech.SpeechClient")
+@patch("project_knowledge_base.storage.Client")
+def test_transcribe_audio_returns_none_when_job_raises(mock_storage_cls, mock_speech_cls, monkeypatch):
+    from google.api_core.exceptions import GoogleAPICallError
+
+    monkeypatch.setenv("GCS_TRANSCRIBE_BUCKET", "cosmos-transcribe-bucket")
+
+    mock_storage_client, mock_blob = _mock_storage_client()
+    mock_storage_cls.return_value = mock_storage_client
+
+    mock_speech_client = MagicMock()
+    mock_speech_cls.return_value = mock_speech_client
+    mock_operation = MagicMock()
+    mock_operation.done.return_value = True
+    mock_operation.result.side_effect = GoogleAPICallError("job failed")
+    mock_speech_client.long_running_recognize.return_value = mock_operation
 
     result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
 
     assert result is None
 
 
-@patch("project_knowledge_base.boto3.client")
-def test_transcribe_audio_returns_none_when_transcript_fetch_network_fails(mock_client, monkeypatch):
-    import urllib.error
+@patch("project_knowledge_base.speech.SpeechClient")
+@patch("project_knowledge_base.storage.Client")
+def test_transcribe_audio_returns_none_when_no_speech_detected(mock_storage_cls, mock_speech_cls, monkeypatch):
+    monkeypatch.setenv("GCS_TRANSCRIBE_BUCKET", "cosmos-transcribe-bucket")
 
-    monkeypatch.setenv("AWS_TRANSCRIBE_S3_BUCKET", "cosmos-transcribe-bucket")
+    mock_storage_client, mock_blob = _mock_storage_client()
+    mock_storage_cls.return_value = mock_storage_client
 
-    mock_s3 = MagicMock()
-    mock_transcribe = MagicMock()
-    mock_transcribe.get_transcription_job.return_value = {
-        "TranscriptionJob": {
-            "TranscriptionJobStatus": "COMPLETED",
-            "Transcript": {"TranscriptFileUri": "https://example.com/transcript.json"},
-        }
-    }
-    mock_client.side_effect = lambda service_name: mock_s3 if service_name == "s3" else mock_transcribe
+    mock_speech_client = MagicMock()
+    mock_speech_cls.return_value = mock_speech_client
+    mock_operation = MagicMock()
+    mock_operation.done.return_value = True
+    mock_operation.result.return_value.results = []
+    mock_speech_client.long_running_recognize.return_value = mock_operation
 
-    with patch("project_knowledge_base.urllib.request.urlopen", side_effect=urllib.error.URLError("boom")):
-        result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
+    result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
 
     assert result is None
 
 
-@patch("project_knowledge_base.boto3.client")
-def test_transcribe_audio_returns_none_on_malformed_transcript_json(mock_client, monkeypatch):
-    monkeypatch.setenv("AWS_TRANSCRIBE_S3_BUCKET", "cosmos-transcribe-bucket")
+@patch("project_knowledge_base.time.sleep")
+@patch("project_knowledge_base.speech.SpeechClient")
+@patch("project_knowledge_base.storage.Client")
+def test_transcribe_audio_returns_none_when_polling_window_exceeded(mock_storage_cls, mock_speech_cls, mock_sleep, monkeypatch):
+    monkeypatch.setenv("GCS_TRANSCRIBE_BUCKET", "cosmos-transcribe-bucket")
 
-    mock_s3 = MagicMock()
-    mock_transcribe = MagicMock()
-    mock_transcribe.get_transcription_job.return_value = {
-        "TranscriptionJob": {
-            "TranscriptionJobStatus": "COMPLETED",
-            "Transcript": {"TranscriptFileUri": "https://example.com/transcript.json"},
-        }
-    }
-    mock_client.side_effect = lambda service_name: mock_s3 if service_name == "s3" else mock_transcribe
+    mock_storage_client, mock_blob = _mock_storage_client()
+    mock_storage_cls.return_value = mock_storage_client
 
-    mock_response = MagicMock()
-    mock_response.read.return_value = b'{"unexpected": "shape"}'
-    mock_response.__enter__.return_value = mock_response
-    mock_response.__exit__.return_value = False
+    mock_speech_client = MagicMock()
+    mock_speech_cls.return_value = mock_speech_client
+    mock_operation = MagicMock()
+    mock_operation.done.return_value = False
+    mock_speech_client.long_running_recognize.return_value = mock_operation
 
-    with patch("project_knowledge_base.urllib.request.urlopen", return_value=mock_response):
-        result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
+    result = pkb.transcribe_audio(b"fake-audio-bytes", "meeting.mp3")
 
     assert result is None
 
@@ -309,7 +332,7 @@ def test_ingest_artifact_indexes_audio_with_transcript(mock_update, mock_get, mo
     "project_knowledge_base.project_artifacts_db.update_artifact_status",
     return_value={**_AUDIO_ARTIFACT, "status": "Transcript Needed"},
 )
-def test_ingest_artifact_marks_transcript_needed_when_aws_unavailable(mock_update, mock_get, mock_transcribe):
+def test_ingest_artifact_marks_transcript_needed_when_gcs_unavailable(mock_update, mock_get, mock_transcribe):
     rag = _fake_rag()
 
     result = pkb.ingest_artifact(rag, 2, b"audio-bytes")

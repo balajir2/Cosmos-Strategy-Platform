@@ -1,14 +1,12 @@
 import contextlib
 import io
-import json
 import os
 import time
-import urllib.error
-import urllib.request
 import uuid
 
-import boto3
-from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
+from google.api_core.exceptions import GoogleAPICallError
+from google.auth.exceptions import DefaultCredentialsError
+from google.cloud import speech, storage
 from docx import Document
 from pptx import Presentation
 from pypdf import PdfReader
@@ -98,60 +96,65 @@ def infer_artifact_type(source_format: str) -> str:
 _TRANSCRIBE_POLL_INTERVAL_SECONDS = 5
 _TRANSCRIBE_MAX_POLL_ATTEMPTS = 60
 
-
-def _fetch_transcript_text(transcript_uri: str) -> str:
-    with urllib.request.urlopen(transcript_uri) as response:
-        payload = json.loads(response.read())
-    return payload["results"]["transcripts"][0]["transcript"]
+_SPEECH_ENCODING_BY_EXTENSION = {
+    "mp3": speech.RecognitionConfig.AudioEncoding.MP3,
+    "wav": speech.RecognitionConfig.AudioEncoding.LINEAR16,
+    "flac": speech.RecognitionConfig.AudioEncoding.FLAC,
+    "ogg": speech.RecognitionConfig.AudioEncoding.OGG_OPUS,
+}
 
 
 def transcribe_audio(file_bytes: bytes, filename: str):
-    """Transcribes an audio artifact via AWS Transcribe. Returns the transcript
-    text, or None if AWS isn't configured or the job fails - mirroring
-    rag_engine.py's graceful-degradation philosophy (missing external-service
-    configuration skips the automatic path rather than crashing the upload).
-    Callers should set the artifact's status to 'Transcript Needed' (not
-    'Failed') when this returns None, so a Consultant can paste a transcript
-    manually instead."""
-    bucket = os.environ.get("AWS_TRANSCRIBE_S3_BUCKET")
-    if not bucket:
-        print("AWS_TRANSCRIBE_S3_BUCKET is not set. Skipping automatic transcription.")
+    """Transcribes an audio artifact via Google Cloud Speech-to-Text. Returns
+    the transcript text, or None if GCS isn't configured, the format isn't
+    supported, or the job fails - mirroring rag_engine.py's graceful-degradation
+    philosophy (missing external-service configuration skips the automatic path
+    rather than crashing the upload). Callers should set the artifact's status
+    to 'Transcript Needed' (not 'Failed') when this returns None, so a
+    Consultant can paste a transcript manually instead."""
+    bucket_name = os.environ.get("GCS_TRANSCRIBE_BUCKET")
+    if not bucket_name:
+        print("GCS_TRANSCRIBE_BUCKET is not set. Skipping automatic transcription.")
+        return None
+
+    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    encoding = _SPEECH_ENCODING_BY_EXTENSION.get(extension)
+    if encoding is None:
+        print(f"Unsupported audio format '.{extension}' for automatic transcription. Skipping.")
         return None
 
     job_name = f"cosmos-transcribe-{uuid.uuid4().hex}"
-    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else "mp3"
-    key = f"transcribe-uploads/{job_name}.{extension}"
+    blob_name = f"transcribe-uploads/{job_name}.{extension}"
 
     try:
-        s3 = boto3.client("s3")
-        s3.put_object(Bucket=bucket, Key=key, Body=file_bytes)
+        bucket = storage.Client().bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+        blob.upload_from_string(file_bytes)
 
-        transcribe = boto3.client("transcribe")
-        transcribe.start_transcription_job(
-            TranscriptionJobName=job_name,
-            Media={"MediaFileUri": f"s3://{bucket}/{key}"},
-            MediaFormat=extension,
-            LanguageCode="en-US",
+        speech_client = speech.SpeechClient()
+        config = speech.RecognitionConfig(
+            encoding=encoding,
+            language_code="en-US",
+            enable_automatic_punctuation=True,
         )
+        audio = speech.RecognitionAudio(uri=f"gs://{bucket_name}/{blob_name}")
+        operation = speech_client.long_running_recognize(config=config, audio=audio)
 
         for _ in range(_TRANSCRIBE_MAX_POLL_ATTEMPTS):
-            status = transcribe.get_transcription_job(TranscriptionJobName=job_name)
-            job_status = status["TranscriptionJob"]["TranscriptionJobStatus"]
-            if job_status == "COMPLETED":
-                transcript_uri = status["TranscriptionJob"]["Transcript"]["TranscriptFileUri"]
-                return _fetch_transcript_text(transcript_uri)
-            if job_status == "FAILED":
-                print(f"AWS Transcribe job '{job_name}' failed.")
-                return None
+            if operation.done():
+                response = operation.result()
+                transcript = " ".join(
+                    result.alternatives[0].transcript
+                    for result in response.results
+                    if result.alternatives
+                ).strip()
+                return transcript or None
             time.sleep(_TRANSCRIBE_POLL_INTERVAL_SECONDS)
 
-        print(f"AWS Transcribe job '{job_name}' did not complete within the polling window.")
+        print(f"Google Speech-to-Text job '{job_name}' did not complete within the polling window.")
         return None
-    except (
-        BotoCoreError, ClientError, NoCredentialsError,
-        urllib.error.URLError, ValueError, KeyError, IndexError,
-    ) as e:
-        print(f"AWS Transcribe unavailable ({e}). Falling back to manual transcript entry.")
+    except (GoogleAPICallError, DefaultCredentialsError, ValueError, KeyError, IndexError) as e:
+        print(f"Google Speech-to-Text unavailable ({e}). Falling back to manual transcript entry.")
         return None
 
 
