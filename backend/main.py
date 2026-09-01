@@ -17,6 +17,7 @@ import users_db
 import project_artifacts_db
 import project_knowledge_base
 import process_db
+import framework_db
 import responses_db
 import brief
 from auth import (
@@ -70,7 +71,7 @@ class ProjectCreateRequest(BaseModel):
     customer_name: str
     description: Optional[str] = None
     industry_context: Optional[str] = None
-    process_id: int
+    process_id: Optional[int] = None
     consultant_user_id: int
 
 class ProjectUpdateRequest(BaseModel):
@@ -88,6 +89,29 @@ class ProjectMemberAddRequest(BaseModel):
 
 class MemberRoleUpdate(BaseModel):
     role: str
+
+class FrameworkStageCreate(BaseModel):
+    name: str
+
+class FrameworkStageUpdate(BaseModel):
+    name: Optional[str] = None
+    action: Optional[str] = None
+
+class FrameworkQuestionCreate(BaseModel):
+    level: str
+    text: str
+    search_query: Optional[str] = None
+    owner_role: str
+    reviewer_role: Optional[str] = None
+
+class FrameworkQuestionUpdate(BaseModel):
+    level: Optional[str] = None
+    text: Optional[str] = None
+    search_query: Optional[str] = None
+    owner_role: Optional[str] = None
+    reviewer_role: Optional[str] = None
+    guidance: Optional[str] = None
+    action: Optional[str] = None
 
 class ProjectEvaluationRequest(BaseModel):
     question_id: int
@@ -170,10 +194,16 @@ def admin_reset_password(user_id: int, payload: AdminPasswordReset, admin: dict 
 
 @app.post("/api/projects")
 def create_project(payload: ProjectCreateRequest, admin: dict = Depends(require_admin)):
+    template = framework_db.get_template_process()
+    if template is None:
+        raise HTTPException(status_code=500, detail="No template process configured.")
     try:
+        process_id = framework_db.clone_process(
+            template["id"], f"{payload.name} Framework", template["description"],
+        )
         return projects_db.create_project(
             payload.name, payload.customer_name, payload.description, payload.industry_context,
-            payload.process_id, admin["id"], payload.consultant_user_id,
+            process_id, admin["id"], payload.consultant_user_id,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -332,6 +362,78 @@ def get_project_brief(
     responses = responses_db.get_responses_for_project(project_id)
     markdown = brief.compile_brief_markdown(project, responses)
     return {"project_id": project_id, "markdown": markdown}
+
+
+def _require_project_for_framework(project_id: int) -> dict:
+    project = projects_db.get_project_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return project
+
+
+@app.get("/api/projects/{project_id}/framework")
+def get_project_framework(project_id: int, member: dict = Depends(require_consultant)):
+    project = _require_project_for_framework(project_id)
+    return process_db.get_process_detail(project["process_id"])
+
+
+@app.post("/api/projects/{project_id}/framework/stages")
+def add_framework_stage(project_id: int, payload: FrameworkStageCreate, member: dict = Depends(require_consultant)):
+    project = _require_project_for_framework(project_id)
+    return framework_db.add_stage(project["process_id"], payload.name)
+
+
+@app.patch("/api/projects/{project_id}/framework/stages/{stage_id}")
+def update_framework_stage(project_id: int, stage_id: int, payload: FrameworkStageUpdate, member: dict = Depends(require_consultant)):
+    if payload.action is not None and payload.action not in ("move_up", "move_down"):
+        raise HTTPException(status_code=400, detail="action must be 'move_up' or 'move_down'.")
+    project = _require_project_for_framework(project_id)
+    updated = framework_db.update_stage(stage_id, project["process_id"], payload.name, payload.action)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Stage not found.")
+    return updated
+
+
+@app.delete("/api/projects/{project_id}/framework/stages/{stage_id}")
+def delete_framework_stage(project_id: int, stage_id: int, member: dict = Depends(require_consultant)):
+    project = _require_project_for_framework(project_id)
+    if not framework_db.delete_stage(stage_id, project["process_id"]):
+        raise HTTPException(status_code=404, detail="Stage not found.")
+    return {"deleted": True}
+
+
+@app.post("/api/projects/{project_id}/framework/stages/{stage_id}/questions")
+def add_framework_question(project_id: int, stage_id: int, payload: FrameworkQuestionCreate, member: dict = Depends(require_consultant)):
+    project = _require_project_for_framework(project_id)
+    question = framework_db.add_question(
+        stage_id, project["process_id"], payload.level, payload.text,
+        payload.search_query, payload.owner_role, payload.reviewer_role,
+    )
+    if question is None:
+        raise HTTPException(status_code=404, detail="Stage not found.")
+    return question
+
+
+@app.patch("/api/projects/{project_id}/framework/questions/{question_id}")
+def update_framework_question(project_id: int, question_id: int, payload: FrameworkQuestionUpdate, member: dict = Depends(require_consultant)):
+    if payload.action is not None and payload.action not in ("move_up", "move_down"):
+        raise HTTPException(status_code=400, detail="action must be 'move_up' or 'move_down'.")
+    project = _require_project_for_framework(project_id)
+    updated = framework_db.update_question(
+        question_id, project["process_id"], payload.level, payload.text, payload.search_query,
+        payload.owner_role, payload.reviewer_role, payload.guidance, payload.action,
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Question not found.")
+    return updated
+
+
+@app.delete("/api/projects/{project_id}/framework/questions/{question_id}")
+def delete_framework_question(project_id: int, question_id: int, member: dict = Depends(require_consultant)):
+    project = _require_project_for_framework(project_id)
+    if not framework_db.delete_question(question_id, project["process_id"]):
+        raise HTTPException(status_code=404, detail="Question not found.")
+    return {"deleted": True}
 
 @app.get("/api/admin/settings")
 def get_settings(_: None = Depends(require_admin_token)):
