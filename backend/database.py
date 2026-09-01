@@ -90,6 +90,16 @@ def init_db():
     """)
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS calibration_concepts (
+        id BIGSERIAL PRIMARY KEY,
+        process_id BIGINT NOT NULL REFERENCES processes(id) ON DELETE CASCADE,
+        concept_name TEXT NOT NULL,
+        org_definition TEXT NOT NULL,
+        sequence_order INTEGER NOT NULL DEFAULT 0
+    );
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id BIGSERIAL PRIMARY KEY,
         email TEXT NOT NULL UNIQUE,
@@ -141,6 +151,18 @@ def init_db():
             CHECK (status IN ('Draft', 'Submitted', 'Self-Evaluated', 'Reviewed')),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         UNIQUE(question_id, project_id)
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS calibration_responses (
+        id BIGSERIAL PRIMARY KEY,
+        concept_id BIGINT NOT NULL REFERENCES calibration_concepts(id) ON DELETE CASCADE,
+        project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        submitted_definition TEXT,
+        feedback_text TEXT,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE(concept_id, project_id)
     );
     """)
 
