@@ -43,6 +43,7 @@ def init_db():
         id BIGSERIAL PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT,
+        is_template BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     """)
@@ -64,9 +65,20 @@ def init_db():
         text TEXT NOT NULL,
         search_query TEXT,
         owner_role TEXT NOT NULL,
-        reviewer_role TEXT
+        reviewer_role TEXT,
+        sequence_order INTEGER NOT NULL DEFAULT 0
     );
     """)
+
+    # Migrations for pre-existing tables (CREATE TABLE IF NOT EXISTS above is a
+    # no-op against them) — bring them to the authoring shape idempotently.
+    cursor.execute("ALTER TABLE processes ADD COLUMN IF NOT EXISTS is_template BOOLEAN NOT NULL DEFAULT false;")
+    cursor.execute("UPDATE processes SET is_template = true WHERE id = (SELECT min(id) FROM processes);")
+
+    cursor.execute("ALTER TABLE questions ADD COLUMN IF NOT EXISTS sequence_order INTEGER;")
+    cursor.execute("UPDATE questions SET sequence_order = id WHERE sequence_order IS NULL;")
+    cursor.execute("ALTER TABLE questions ALTER COLUMN sequence_order SET NOT NULL;")
+    cursor.execute("ALTER TABLE questions ALTER COLUMN sequence_order SET DEFAULT 0;")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS guidance (
@@ -266,7 +278,7 @@ def seed_database(cursor):
 
     cursor.execute(
         """
-        INSERT INTO processes (name, description) VALUES (%s, %s) RETURNING id;
+        INSERT INTO processes (name, description, is_template) VALUES (%s, %s, true) RETURNING id;
         """,
         (
             "Aditya Birla Brand Compass V2",
@@ -351,13 +363,16 @@ def seed_database(cursor):
         ),
     ]
 
+    stage_question_seq = {}
     for stage_id, level, text, search_query, owner, reviewer in questions:
+        seq = stage_question_seq.get(stage_id, 0) + 1
+        stage_question_seq[stage_id] = seq
         cursor.execute(
             """
-            INSERT INTO questions (stage_id, level, text, search_query, owner_role, reviewer_role)
-            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id;
+            INSERT INTO questions (stage_id, level, text, search_query, owner_role, reviewer_role, sequence_order)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id;
             """,
-            (stage_id, level, text, search_query, owner, reviewer),
+            (stage_id, level, text, search_query, owner, reviewer, seq),
         )
         question_id = cursor.fetchone()[0]
 
