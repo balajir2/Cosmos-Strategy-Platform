@@ -5,7 +5,7 @@ from vertexai.generative_models import GenerativeModel
 
 from .base import LLMProvider
 
-DEFAULT_MODEL = "gemini-1.5-pro"
+DEFAULT_MODEL = "gemini-2.5-pro"
 
 
 class GeminiProvider(LLMProvider):
