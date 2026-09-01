@@ -97,3 +97,78 @@ def migrate_existing_projects() -> int:
             conn.commit()
         count += 1
     return count
+
+
+def _move_sibling(cursor, table, id_col, parent_col, parent_value, row_id, current_seq, action):
+    """Swap sequence_order with the adjacent sibling; return the new seq for row_id.
+
+    `table`/`id_col`/`parent_col` are hardcoded internal identifiers (never user
+    input), so the f-string SQL is safe.
+    """
+    delta = -1 if action == "move_up" else 1
+    cursor.execute(
+        f"SELECT {id_col}, sequence_order FROM {table} WHERE {parent_col} = %s ORDER BY sequence_order ASC;",
+        (parent_value,),
+    )
+    ordered = cursor.fetchall()
+    ids = [r[0] for r in ordered]
+    idx = ids.index(row_id)
+    target = idx + delta
+    if target < 0 or target >= len(ids):
+        return current_seq  # boundary no-op
+    neighbor_id = ids[target]
+    neighbor_seq = ordered[target][1]
+    cursor.execute(f"UPDATE {table} SET sequence_order = %s WHERE {id_col} = %s;", (neighbor_seq, row_id))
+    cursor.execute(f"UPDATE {table} SET sequence_order = %s WHERE {id_col} = %s;", (current_seq, neighbor_id))
+    return neighbor_seq
+
+
+def add_stage(process_id: int, name: str):
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT COALESCE(MAX(sequence_order), 0) FROM stages WHERE process_id = %s;",
+                (process_id,),
+            )
+            next_seq = cursor.fetchone()[0] + 1
+            cursor.execute(
+                "INSERT INTO stages (process_id, name, sequence_order) VALUES (%s, %s, %s) "
+                "RETURNING id, name, sequence_order;",
+                (process_id, name, next_seq),
+            )
+            row = cursor.fetchone()
+        conn.commit()
+    return {"id": row[0], "name": row[1], "sequence_order": row[2]}
+
+
+def update_stage(stage_id: int, process_id: int, name=None, action=None):
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT id, name, sequence_order FROM stages WHERE id = %s AND process_id = %s;",
+                (stage_id, process_id),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            new_name = name if name is not None else row[1]
+            new_seq = row[2]
+            if action in ("move_up", "move_down"):
+                new_seq = _move_sibling(cursor, "stages", "id", "process_id", process_id, stage_id, row[2], action)
+            cursor.execute(
+                "UPDATE stages SET name = %s, sequence_order = %s WHERE id = %s;",
+                (new_name, new_seq, stage_id),
+            )
+        conn.commit()
+    return {"id": stage_id, "name": new_name, "sequence_order": new_seq}
+
+
+def delete_stage(stage_id: int, process_id: int) -> bool:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM stages WHERE id = %s AND process_id = %s;",
+                (stage_id, process_id),
+            )
+        conn.commit()
+        return cursor.rowcount > 0

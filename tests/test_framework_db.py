@@ -94,3 +94,85 @@ def test_migrate_existing_projects_repoints_each(mock_template, mock_clone, mock
 @patch("framework_db.get_template_process", return_value=None)
 def test_migrate_existing_projects_returns_zero_when_no_template(mock_template):
     assert framework_db.migrate_existing_projects() == 0
+
+
+@patch("framework_db.get_db_connection")
+def test_add_stage_appends_after_last(mock_get_conn):
+    conn, cursor = _fake_conn(fetchone_results=[(3,), (20, "Insight Spiral", 3)])
+    mock_get_conn.return_value = conn
+
+    result = framework_db.add_stage(1, "Insight Spiral")
+
+    assert result == {"id": 20, "name": "Insight Spiral", "sequence_order": 3}
+    conn.commit.assert_called_once()
+
+
+@patch("framework_db.get_db_connection")
+def test_update_stage_returns_none_when_not_in_process(mock_get_conn):
+    conn, _ = _fake_conn(fetchone_results=[None])
+    mock_get_conn.return_value = conn
+
+    assert framework_db.update_stage(999, 1, name="X") is None
+
+
+@patch("framework_db.get_db_connection")
+def test_update_stage_renames(mock_get_conn):
+    conn, cursor = _fake_conn(fetchone_results=[(20, "Old Name", 2)])
+    mock_get_conn.return_value = conn
+
+    result = framework_db.update_stage(20, 1, name="New Name")
+
+    assert result == {"id": 20, "name": "New Name", "sequence_order": 2}
+    update = [c for c in cursor.execute.call_args_list if "UPDATE stages" in c[0][0]][0]
+    assert update[0][1] == ("New Name", 2, 20)
+
+
+@patch("framework_db.get_db_connection")
+def test_update_stage_move_down_swaps_sequence(mock_get_conn):
+    conn, cursor = _fake_conn(
+        fetchone_results=[(20, "Aim & SWOT", 1)],
+        fetchall_results=[[(20, 1), (21, 2), (22, 3)]],
+    )
+    mock_get_conn.return_value = conn
+
+    result = framework_db.update_stage(20, 1, action="move_down")
+
+    assert result["sequence_order"] == 2
+    update_calls = [c for c in cursor.execute.call_args_list if "UPDATE stages" in c[0][0]]
+    # First the row itself gets the neighbor's seq (2), then the neighbor gets (1).
+    assert update_calls[0][0][1] == (2, 20)
+    assert update_calls[1][0][1] == (1, 21)
+
+
+@patch("framework_db.get_db_connection")
+def test_update_stage_move_up_at_top_is_noop(mock_get_conn):
+    conn, cursor = _fake_conn(
+        fetchone_results=[(20, "Aim & SWOT", 1)],
+        fetchall_results=[[(20, 1), (21, 2)]],
+    )
+    mock_get_conn.return_value = conn
+
+    result = framework_db.update_stage(20, 1, action="move_up")
+
+    assert result["sequence_order"] == 1
+    update_calls = [c for c in cursor.execute.call_args_list if "UPDATE stages SET sequence_order" in c[0][0]]
+    assert len(update_calls) == 0
+
+
+@patch("framework_db.get_db_connection")
+def test_delete_stage_returns_false_when_not_in_process(mock_get_conn):
+    conn, cursor = _fake_conn(rowcount=0)
+    mock_get_conn.return_value = conn
+
+    assert framework_db.delete_stage(999, 1) is False
+
+
+@patch("framework_db.get_db_connection")
+def test_delete_stage_returns_true_when_deleted(mock_get_conn):
+    conn, cursor = _fake_conn(rowcount=1)
+    mock_get_conn.return_value = conn
+
+    assert framework_db.delete_stage(20, 1) is True
+    sql, params = cursor.execute.call_args[0]
+    assert "DELETE FROM stages" in sql
+    assert params == (20, 1)

@@ -29,7 +29,7 @@ def get_process_detail(process_id: int):
                 FROM questions q
                 JOIN stages s ON s.id = q.stage_id
                 WHERE s.process_id = %s
-                ORDER BY q.id ASC;
+                ORDER BY q.sequence_order ASC, q.id ASC;
                 """,
                 (process_id,),
             )
