@@ -4,6 +4,8 @@
 
 This document is the authoritative DB schema and API contract reference — both the current (implemented) state and the near-term target state. Full design rationale: [Users/Projects/Engagement KB Spec](../../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md) (roles, project lifecycle, knowledge bases) and [Neon Postgres + pgvector Spec](../../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md) (storage platform — **authoritative for all DDL below**). What's actually built vs. planned: [`documentation/product/roadmap.md`](../product/roadmap.md).
 
+> **⚠️ Section 4 (API Endpoints) below is stale as of 2026-09-01 and has not been rewritten yet.** It still describes `GET /api/cases`, `GET /api/case/{case_id}`, and `POST /api/evaluate` (with a `case_id` param) as "implemented today" — these were **removed from the codebase on 2026-08-31**, not just superseded, once `frontend-react/` was fully wired to the real backend. Its "Planned" endpoint list is also out of date: `/api/auth/*`, `/api/projects/*` (incl. `/members`, `/artifacts`, `/framework/*`), `/api/process/{id}`, `/api/projects/{id}/evaluate`, `/api/projects/{id}/responses`, `/api/projects/{id}/brief`, and the admin endpoints under `/api/admin/*` are all built and live. **For the actual current API, see [`CLAUDE.md` Part 4](../../CLAUDE.md#part-4-data--api)** — that table is kept in sync with the running code; this document's Section 4 is not.
+
 ---
 
 ## 1. Directory Structure
@@ -18,8 +20,8 @@ Cosmos Strategy Platform/
 ├── backend/                   # Python FastAPI codebase
 │   ├── main.py                  # API endpoints & server configuration
 │   ├── database.py              # Neon Postgres connection, DDL & seed logic (Phase 0, done)
-│   ├── rag_engine.py            # SentenceTransformer, pgvector search & AWS Bedrock RAG client (Framework Knowledge Base)
-│   ├── project_knowledge_base.py  # Planned (Phase C) — per-project ingestion pipeline (Engagement Knowledge Base)
+│   ├── rag_engine.py            # SentenceTransformer, pgvector search & pluggable multi-provider LLM client (Framework Knowledge Base)
+│   ├── project_knowledge_base.py  # Done (Phase C) — per-project ingestion pipeline (Engagement Knowledge Base)
 │   └── requirements.txt         # Backend Python dependencies
 │
 ├── frontend/                  # Client UI (Vanilla HTML, CSS, JS)
@@ -44,11 +46,11 @@ Cosmos Strategy Platform/
 * **Database (current)**: Neon Postgres with the `pgvector` extension (`psycopg2-binary` driver, `pgvector` Python package for the vector type, `DATABASE_URL` environment variable). Covers `processes`/`stages`/`questions`/`guidance` and the Framework Knowledge Base (`framework_kb_chunks`) — migrated off SQLite + a flat-file vector JSON in Phase 0 (2026-08-24). See the Neon spec.
 * **Database (target)**: the same Neon Postgres database additionally holds `users`, `projects`, `project_members`, `responses`, `project_artifacts`, and `project_kb_chunks` (Engagement Knowledge Base) once Phases A/B/C land — see Section 3.2.
 * **Embeddings Model**: `SentenceTransformer("all-MiniLM-L6-v2")` (local execution) — unchanged by the Neon move; only the storage/query backend for the resulting vectors changed.
-* **LLM Engine**: AWS Bedrock Runtime Client (using Anthropic Claude 3.5 Sonnet / local heuristic fallback).
+* **LLM Engine**: pluggable multi-provider layer (`backend/llm_providers/`) — Anthropic direct API (default), OpenAI direct API, or Gemini via Vertex AI, admin-switchable at runtime; local heuristic fallback when no provider is configured/available.
 * **Frontend**: HTML5, Vanilla JavaScript (ES6+), and custom CSS.
 * **Auth (planned, Phase A)**: `passlib[bcrypt]` for password hashing, `python-jose` (or `PyJWT`) for JWT issuance/verification.
 * **Document parsing (planned, Phase C)**: `pypdf` (already in use), plus new `python-docx` and `python-pptx` dependencies for Engagement Knowledge Base document uploads.
-* **Audio transcription (planned, Phase C)**: AWS Transcribe (`boto3`, same AWS account already configured for Bedrock), with a manual-transcript-paste fallback when AWS is unavailable.
+* **Audio transcription (done, Phase C)**: Google Speech-to-Text (`google-cloud-speech`, `google-cloud-storage`) — migrated 2026-09-01 from an original AWS Transcribe implementation to align with the GCP platform decision. Falls back to a `'Transcript Needed'` artifact status (no automatic API-level manual-paste endpoint exists yet) when the transcription bucket isn't configured, the audio format is unsupported, or the provider is otherwise unavailable.
 
 ---
 
@@ -234,7 +236,7 @@ Case studies (external, internal, hidden resolution) are `project_artifacts` row
 
 ### 4.1 Implemented today
 
-* **`GET /api/status`**: Returns embedding count and AWS connection status.
+* **`GET /api/status`**: Returns embedding count and the active LLM provider.
 * **`GET /api/cases`**: Fetches the hardcoded case list (Blazar, Basil). **Planned to be removed** once `GET /api/projects` (below) replaces it.
 * **`GET /api/case/{case_id}`**: Full case detail. **Planned to be removed** once `GET /api/projects/{project_id}` replaces it.
 * **`POST /api/evaluate`**: Receives `case_id`, `question_id`, `question_text`, `user_answer`; runs RAG search over the Framework Knowledge Base only; returns `rating`/`critique`/`recommendations`/`source_slides` (the legacy shape — see Section 4.2 for the target shape).
@@ -287,7 +289,7 @@ Kept here for reference only; no longer how the app works. Before Phase 0:
 
 A second, per-project index in a new `backend/project_knowledge_base.py`, built the pgvector way from the start (no flat-file interim):
 
-1. **Ingestion**: documents (PDF/DOCX/PPTX/TXT) parsed and embedded the same way as the Framework Knowledge Base; audio transcribed via AWS Transcribe first (or a manually pasted transcript if AWS is unavailable — artifact `status` becomes `Transcript Needed` rather than failing outright). Chunks are inserted into `project_kb_chunks`, tagged with the source `project_artifacts.id`.
+1. **Ingestion**: documents (PDF/DOCX/PPTX/TXT) parsed and embedded the same way as the Framework Knowledge Base; audio transcribed via Google Speech-to-Text first (or a manually pasted transcript if the provider is unavailable — artifact `status` becomes `Transcript Needed` rather than failing outright). Chunks are inserted into `project_kb_chunks`, tagged with the source `project_artifacts.id`.
 2. **Isolation**: enforced by `WHERE project_id = :project_id` on every query — no risk of cross-project leakage regardless of how many projects exist.
 3. **Merged retrieval**: `POST /api/evaluate` queries both `framework_kb_chunks` and `project_kb_chunks` (filtered to the current project, excluding `case_study_resolution`-purpose artifacts), merges/re-ranks by cosine distance, and tags each result by source so the frontend can label it "Framework Reference" vs. "Customer Document".
 

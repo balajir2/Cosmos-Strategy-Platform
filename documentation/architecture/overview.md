@@ -26,7 +26,7 @@ Three-tier architecture: a Client Interface, an API Application Layer, and a sin
         ▼                    ▼                    ▼
  ┌──────────────┐    ┌──────────────┐    ┌────────────────┐
  │  3a. RAG     │    │  3b. LLM     │    │  3c. SQL DB    │
- │ Embedding    │    │ AWS Bedrock  │    │ Neon Postgres  │
+ │ Embedding    │    │ Multi-provider│   │ Neon Postgres  │
  └──────┬───────┘    └──────────────┘    └────────┬───────┘
         │                                         │
         ▼                                         ▼
@@ -49,7 +49,7 @@ Three-tier architecture: a Client Interface, an API Application Layer, and a sin
 - Routing Controller: CRUD paths for configurations and evaluation transactions.
 - Database Manager (`backend/database.py`): Neon Postgres connection, DDL, and seeding.
 - RAG Orchestrator (`backend/rag_engine.py`): `pgvector` search, PDF extraction/ingestion, cosine-distance query via SQL.
-- Generative Gateway: talks to AWS Bedrock via `boto3` to invoke Claude models, with a local heuristic fallback when no AWS credentials are configured.
+- Generative Gateway (`backend/llm_providers/`): pluggable multi-provider layer — Anthropic direct API (default), OpenAI direct API, or Gemini via Vertex AI, admin-switchable at runtime — with a local heuristic fallback when no provider is configured/available.
 
 **Storage Layer**: one Neon Postgres database (`DATABASE_URL`), `pgvector` extension enabled:
 - `processes`, `stages`, `questions`, `guidance`: seeded process/stage/question configuration.
@@ -62,7 +62,7 @@ Three-tier architecture: a Client Interface, an API Application Layer, and a sin
 2. The API retrieves the question's `search_query` and embeds it using `SentenceTransformer`.
 3. The embedding is compared against `framework_kb_chunks` rows via a `pgvector` cosine-distance query.
 4. The top 3 matching slide contexts are fetched.
-5. The API sends the question, the user's answer, and the retrieved context slides to AWS Bedrock.
+5. The API sends the question, the user's answer, and the retrieved context slides to the active LLM provider.
 6. The LLM returns a structured JSON containing Level 1 (Superficial), Level 2 (Needs-based), and Level 3 (Insight-driven) benchmark answers, plus targeted diagnostic questions.
 7. The frontend displays these comparative benchmarks to the user.
 8. The user updates their response, logs self-reflection notes, sets a self-evaluation rating, and saves.
@@ -141,7 +141,7 @@ Simple built-in auth (email/password, JWT) — no external identity provider. A 
 ### 3.3 Data Flow — Onboarding a Customer Engagement
 
 1. A **SystemAdmin** creates a `Project` (status `Draft`) against a chosen process (e.g. Brand Compass V2) and assigns a **Consultant**.
-2. The **Consultant** preps the engagement: records `industry_context`, uploads reference documents, and uploads/tags the external case study, internal case study, and hidden resolution artifacts. Documents are parsed and embedded immediately into `project_kb_chunks`; audio is transcribed via AWS Transcribe first (or pasted manually if AWS is unavailable).
+2. The **Consultant** preps the engagement: records `industry_context`, uploads reference documents, and uploads/tags the external case study, internal case study, and hidden resolution artifacts. Documents are parsed and embedded immediately into `project_kb_chunks`; audio is transcribed via Google Speech-to-Text first (or pasted manually if the provider is unavailable).
 3. The Consultant assigns **ClientUser**(s) via `project_members`, then activates the project (`Draft` → `Active`).
 4. From this point on, every question a **ClientUser** answers retrieves from both knowledge bases automatically — the Guided Self-Evaluation flow described in Section 1.3 is unchanged in shape, it just has richer, customer-specific context feeding it, plus the case-study reveal flow described in Section 4.
 

@@ -1,48 +1,48 @@
 # Test Strategy — Cosmos Strategic Capability Platform
 
-**Last Updated:** 2026-08-24
+**Last Updated:** 2026-09-01
 
 ## Philosophy
 
-Test what exists, honestly. The backend is mid-migration (see `documentation/product/roadmap.md`): the current API contract is already scheduled to change. Tests added now document *current* behavior so regressions are caught during the migration, not to lock in a design we already know is temporary.
+Test what exists, honestly. Tests document *current* behavior so regressions are caught as the codebase evolves, not to lock in a design that's still changing.
 
 ## Current Test Bed
 
 Location: `tests/` at the repo root, run with `pytest` from the repo root.
 
 - **Framework**: `pytest` + FastAPI's `TestClient` (via `httpx`).
-- **Scope**: the current (pre-migration) REST API in `backend/main.py` — `/api/status`, `/api/cases`, `/api/case/{case_id}`, `/api/evaluate`.
-- **No network/AWS dependency required to pass**: `backend/rag_engine.py` already degrades gracefully — no AWS credentials means `bedrock_client` stays `None` and evaluation falls back to a local heuristic critique (`fallback_local_critique`); if the archive PDFs were ever missing, vector indexing falls back to a synthetic in-memory dataset. The tests exercise these fallback paths rather than mocking around them.
+- **Scope**: 316 tests covering essentially every backend module — see "What's Covered" below.
+- **CI**: `.github/workflows/ci.yml` runs the full suite on every push/PR to `main`.
+- **No network dependency required to pass**: `backend/rag_engine.py` degrades gracefully — no active LLM provider credentials configured means evaluation falls back to a local heuristic critique (`fallback_local_critique`); if the archive PDFs were ever missing, vector indexing falls back to a synthetic in-memory dataset. The tests exercise these fallback paths rather than mocking around them.
 - **First-run cost**: `RagEngine.__init__` always loads the `all-MiniLM-L6-v2` SentenceTransformer model (downloaded once, ~80MB, cached locally after) and, if the `framework_kb_chunks` table (Neon Postgres) is empty, ingests the `archives/` PDFs into it. This is the same cost the app already pays on every startup — the test bed doesn't add to it.
+- **Requires a live `DATABASE_URL`**: Phase 0 moved the app off SQLite onto Neon Postgres + `pgvector`; there's no local/file-based fallback for the DB layer, so the test bed needs a reachable Postgres (a Neon branch or local Postgres+pgvector) to run against.
 
 ## What's Covered
 
-| Test file | Covers |
+| Area | Test files |
 |---|---|
-| `tests/test_api_status.py` | `GET /api/status` shape (`vector_db_size` int, `aws_connected` bool, `region` str). |
-| `tests/test_api_cases.py` | `GET /api/cases` returns the seeded Blazar/Basil cases; `GET /api/case/{id}` 200 for a known id and 404 for an unknown one. |
-| `tests/test_api_evaluate.py` | `POST /api/evaluate` against the *current* `rating`/`critique`/`recommendations`/`source_slides` response shape. |
+| LLM Provider Abstraction / admin settings | `test_settings.py`, `test_admin_settings_endpoint.py`, `test_rag_engine_generate_evaluation.py` |
+| Auth (Phase A) | `test_users_db.py`, `test_auth.py`, `test_auth_endpoints.py`, `test_admin_auth.py` |
+| Projects (Phase B) | `test_projects_db.py`, `test_project_endpoints.py`, `test_project_members_endpoint.py` |
+| Engagement Knowledge Base (Phase C) | `test_project_artifacts_db.py`, `test_project_artifact_endpoints.py`, `test_project_knowledge_base.py` (incl. Google Speech-to-Text transcription) |
+| Backend API Integration | `test_process_db.py`, `test_process_endpoints.py`, `test_responses_db.py`, `test_response_save_endpoint.py`, `test_brief.py`, `test_brief_endpoint.py`, `test_project_evaluation_endpoint.py`, `test_rag_engine_search_merged.py`, `test_rag_engine_comparative_benchmarks.py` |
+| Chat-style interview (the live, frontend-facing evaluation path) | `test_chat_sessions.py`, `test_chat_engine.py`, `test_chat_endpoints.py` |
+| Framework Authoring Mode | `test_framework_db.py`, `test_framework_endpoints.py` |
+| Admin UI backend | `test_admin_users_endpoints.py`, `test_admin_projects_endpoints.py` |
+| Legacy/misc | `test_main_api.py` (`GET /api/status`) |
 
-*(As of 2026-08-24, this test bed is planned but not yet built — see `documentation/product/roadmap.md` for current status. This document will be updated once it lands.)*
+**Not covered**: `frontend-react/` has no test runner configured — `npx tsc --noEmit` and `npm run build` catch type/build errors, but there's no automated UI test coverage; the frontend is verified manually. Also not covered: Framework Knowledge Base ingestion correctness beyond what `RagEngine` unit tests already exercise, and any end-to-end (browser-driven) flow.
 
-## Known Limitation — Will Break On Purpose
+## Historical Note
 
-`test_api_evaluate.py` and the `/api/case/{id}` assertions in `test_api_cases.py` are pinned to the **pre-migration** contract: the hardcoded `CASES_DATA` dict and the `rating`/`critique`/`recommendations` payload shape. Once the roadmap's "Backend API Integration" checklist lands (DB-backed cases, Level 1/2/3 benchmark payload, `self_evaluation_notes`/`self_evaluation_status`), these two files must be rewritten, not just extended. Treat their failure after that migration as expected, not a bug.
+Earlier versions of this document described a "pre-migration API contract" test bed (`/api/cases`, `/api/case/{id}`, `/api/evaluate`) as the near-term plan. That API — `CASES_DATA`, `GET /api/cases`, `GET /api/case/{case_id}`, `POST /api/evaluate` — was retired from the codebase on 2026-08-31 once the real `/api/projects/*`/`/api/auth/*`/`/api/chat/*` backend was fully wired into the frontend (see `documentation/product/roadmap.md`). There is nothing left to write contract tests against for that API; the table above reflects what's actually tested today instead.
 
 ## Planned Coverage (not yet implemented)
 
-From the original implementation plan's verification section — tracked here so it isn't lost, not yet built:
-- Schema migration validation for process creation (the Insights POC module's process/stage/question seed).
-- A test for the `GET /api/process/{process_id}/brief` endpoint once it exists, verifying it extracts structured execution data into a well-formed strategic briefing document.
-- Frontend testing approach is not yet scoped — `frontend/` is vanilla JS with no test runner configured today.
-
-**From the Users/Projects/Engagement Knowledge Base spec** ([`docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md`](../../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md)) — will need its own dedicated test files once built, distinct from the pre-migration tests above since this is new behavior, not a contract change:
-- Auth: register/login, invalid credentials rejected, a protected route without a token returns 401, a non-admin gets 403 on `POST /api/projects`.
-- Authorization: a role-mismatched request returns 403; a `ClientUser` gets 403 on learning-flow endpoints while a project is `Draft`; a user only sees projects where they have a `project_members` row; a non-member gets no visibility into a project at all.
-- Engagement Knowledge Base: artifact upload/list correctly scoped to `project_id` and `purpose`; retrieval results carry the correct `source` tag (`"framework"` vs. `"customer_document"`) for both knowledge bases and never include a `case_study_resolution`-purpose chunk.
-
-**Database platform note** ([`docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md`](../../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md)) — Phase 0 already moved the app itself off zero-network SQLite onto Neon Postgres; `backend/database.py` and `backend/rag_engine.py` now require a live `DATABASE_URL`, no local SQLite fallback exists anymore. This changes *how* the test bed will need to run once it's written: tests will need a dedicated Neon test branch (or a local Postgres+pgvector container) rather than an ephemeral local file. Not decided which — see that spec's "Local Development & Testing" section.
+- Guided Learning Flow (baseline calibration, adaptive difficulty, case-study reveal, corpus-relative depth signal, Start/Stop/Continue) — not built yet, so nothing to test. See `documentation/product/roadmap.md`.
+- Production deployment infrastructure (`/healthz`, Dockerfile, deploy workflow) — only the CI test workflow itself exists today; the rest of the GCP deployment plan isn't built, so there's no deploy pipeline to test yet.
+- A manual-transcript-paste endpoint (completing the `'Transcript Needed'` fallback loop) doesn't exist yet.
 
 ## Manual Verification
 
-Until the migration lands, the meaningful manual check is the one described in `documentation/product/roadmap.md`: author a custom Insights process, map user roles, submit answers, run guided self-evaluation, generate a brief. No automated coverage exists for that flow yet because the underlying features don't exist yet.
+The meaningful manual check today: author a custom framework via Framework Authoring Mode, activate a project, upload engagement artifacts, run the chat interview end-to-end with Level 1/2/3 benchmarks and self-evaluation, download the compiled brief. This flow is exercised by the automated suite at the unit/endpoint level but not end-to-end through a real browser.

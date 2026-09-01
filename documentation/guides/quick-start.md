@@ -59,6 +59,6 @@ See `documentation/testing/test-strategy.md` for what's covered and what isn't y
 
 ## Troubleshooting
 
-- **No AWS credentials configured**: expected during local development. `/api/evaluate` falls back to a local heuristic critique instead of calling Bedrock — see `documentation/architecture/overview.md`.
+- **No LLM provider credentials configured**: expected during local development. `/api/evaluate` falls back to a local heuristic critique instead of calling the active provider — see `documentation/architecture/overview.md`.
 - **`DATABASE_URL is not set` error**: you skipped step 2. Copy `.env.example` to `.env` at the repo root and set `DATABASE_URL` to your Neon Postgres connection string.
 - **First `python main.py` run is slow**: it's parsing two large PDFs and computing embeddings for every slide before inserting them into `framework_kb_chunks`. Subsequent runs see the table already populated and skip ingestion, so they're fast.
