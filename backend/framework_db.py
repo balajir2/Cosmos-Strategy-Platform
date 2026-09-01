@@ -197,14 +197,16 @@ def add_question(stage_id: int, process_id: int, level: str, text: str, search_q
             )
             new_q_id = cursor.fetchone()[0]
             cursor.execute(
-                "INSERT INTO guidance (question_id, type, content) VALUES (%s, 'Framework', %s);",
+                "INSERT INTO guidance (question_id, type, content) VALUES (%s, 'Framework', %s) RETURNING id;",
                 (new_q_id, ""),
             )
+            guidance_id = cursor.fetchone()[0]
         conn.commit()
     return {
         "id": new_q_id, "stage_id": stage_id, "level": level, "text": text,
         "search_query": search_query, "owner_role": owner_role, "reviewer_role": reviewer_role,
         "sequence_order": next_seq,
+        "guidance": [{"id": guidance_id, "type": "Framework", "content": ""}],
     }
 
 
@@ -248,11 +250,18 @@ def update_question(question_id: int, process_id: int, level=None, text=None, se
                         "INSERT INTO guidance (question_id, type, content) VALUES (%s, 'Framework', %s);",
                         (q_id, guidance),
                     )
+
+            cursor.execute(
+                "SELECT id, type, content FROM guidance WHERE question_id = %s ORDER BY id ASC;",
+                (q_id,),
+            )
+            guidance_rows = cursor.fetchall()
         conn.commit()
     return {
         "id": q_id, "stage_id": stage_id, "level": new_level, "text": new_text,
         "search_query": new_search, "owner_role": new_owner, "reviewer_role": new_reviewer,
         "sequence_order": new_seq,
+        "guidance": [{"id": g[0], "type": g[1], "content": g[2]} for g in guidance_rows],
     }
 
 

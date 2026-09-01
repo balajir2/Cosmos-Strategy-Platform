@@ -188,7 +188,7 @@ def test_add_question_returns_none_when_stage_not_in_process(mock_get_conn):
 
 @patch("framework_db.get_db_connection")
 def test_add_question_appends_and_creates_guidance(mock_get_conn):
-    conn, cursor = _fake_conn(fetchone_results=[(20,), (2,), (30,)])
+    conn, cursor = _fake_conn(fetchone_results=[(20,), (2,), (30,), (40,)])
     mock_get_conn.return_value = conn
 
     result = framework_db.add_question(20, 1, "L1", "text", "sq", "CMO", "CEO")
@@ -197,6 +197,7 @@ def test_add_question_appends_and_creates_guidance(mock_get_conn):
         "id": 30, "stage_id": 20, "level": "L1", "text": "text",
         "search_query": "sq", "owner_role": "CMO", "reviewer_role": "CEO",
         "sequence_order": 3,
+        "guidance": [{"id": 40, "type": "Framework", "content": ""}],
     }
     guidance_inserts = [c[0][0] for c in cursor.execute.call_args_list if "INSERT INTO guidance" in c[0][0]]
     assert len(guidance_inserts) == 1
@@ -213,7 +214,10 @@ def test_update_question_returns_none_when_not_in_process(mock_get_conn):
 
 @patch("framework_db.get_db_connection")
 def test_update_question_edits_fields_and_upserts_guidance(mock_get_conn):
-    conn, cursor = _fake_conn(fetchone_results=[(30, 20, "L1", "old", "sq", "CMO", "CEO", 1)])
+    conn, cursor = _fake_conn(
+        fetchone_results=[(30, 20, "L1", "old", "sq", "CMO", "CEO", 1)],
+        fetchall_results=[[(40, "Framework", "New guidance")]],
+    )
     cursor.rowcount = 1
     mock_get_conn.return_value = conn
 
@@ -221,6 +225,7 @@ def test_update_question_edits_fields_and_upserts_guidance(mock_get_conn):
 
     assert result["text"] == "new text"
     assert result["sequence_order"] == 1
+    assert result["guidance"] == [{"id": 40, "type": "Framework", "content": "New guidance"}]
     update_q = [c for c in cursor.execute.call_args_list if "UPDATE questions" in c[0][0]][0]
     assert update_q[0][1] == ("L1", "new text", "sq", "CMO", "CEO", 1, 30)
     update_g = [c for c in cursor.execute.call_args_list if "UPDATE guidance" in c[0][0]][0]
@@ -244,7 +249,7 @@ def test_update_question_inserts_guidance_when_missing(mock_get_conn):
 def test_update_question_move_down_swaps_sequence(mock_get_conn):
     conn, cursor = _fake_conn(
         fetchone_results=[(30, 20, "L1", "t", "sq", "CMO", "CEO", 1)],
-        fetchall_results=[[(30, 1), (31, 2)]],
+        fetchall_results=[[(30, 1), (31, 2)], []],
     )
     mock_get_conn.return_value = conn
 

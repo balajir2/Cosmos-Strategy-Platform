@@ -47,12 +47,17 @@ def test_create_project_rejects_non_admin_user():
 
 
 _TEMPLATE = {"id": 1, "name": "Aditya Birla Brand Compass V2", "description": "desc", "created_at": "2026-08-28T09:00:00"}
+_CONSULTANT_USER = {
+    "id": 5, "email": "c@x.com", "full_name": "Consultant", "is_active": True,
+    "is_admin": False, "created_at": "2026-08-28T09:00:00",
+}
 
 
+@patch("main.users_db.get_user_by_id", return_value=_CONSULTANT_USER)
 @patch("main.projects_db.create_project", return_value=_PROJECT_DICT)
 @patch("main.framework_db.clone_process", return_value=99)
 @patch("main.framework_db.get_template_process", return_value=_TEMPLATE)
-def test_create_project_clones_template_for_admin(mock_template, mock_clone, mock_create):
+def test_create_project_clones_template_for_admin(mock_template, mock_clone, mock_create, mock_get_user):
     main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
     try:
         response = client.post("/api/projects", json=_CREATE_PAYLOAD)
@@ -64,10 +69,11 @@ def test_create_project_clones_template_for_admin(mock_template, mock_clone, moc
         main.app.dependency_overrides.clear()
 
 
+@patch("main.users_db.get_user_by_id", return_value=_CONSULTANT_USER)
 @patch("main.projects_db.create_project", side_effect=ValueError("Invalid process_id or consultant_user_id: no such user"))
 @patch("main.framework_db.clone_process", return_value=99)
 @patch("main.framework_db.get_template_process", return_value=_TEMPLATE)
-def test_create_project_rejects_invalid_foreign_keys(mock_template, mock_clone, mock_create):
+def test_create_project_rejects_invalid_foreign_keys(mock_template, mock_clone, mock_create, mock_get_user):
     main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
     try:
         response = client.post("/api/projects", json={**_CREATE_PAYLOAD, "consultant_user_id": 999})
@@ -76,9 +82,25 @@ def test_create_project_rejects_invalid_foreign_keys(mock_template, mock_clone, 
         main.app.dependency_overrides.clear()
 
 
+@patch("main.users_db.get_user_by_id", return_value=None)
+@patch("main.projects_db.create_project")
+@patch("main.framework_db.clone_process")
+@patch("main.framework_db.get_template_process", return_value=_TEMPLATE)
+def test_create_project_rejects_missing_consultant(mock_template, mock_clone, mock_create, mock_get_user):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
+    try:
+        response = client.post("/api/projects", json={**_CREATE_PAYLOAD, "consultant_user_id": 999})
+        assert response.status_code == 400
+        mock_clone.assert_not_called()
+        mock_create.assert_not_called()
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.users_db.get_user_by_id", return_value=_CONSULTANT_USER)
 @patch("main.projects_db.create_project")
 @patch("main.framework_db.get_template_process", return_value=None)
-def test_create_project_returns_500_when_no_template(mock_template, mock_create):
+def test_create_project_returns_500_when_no_template(mock_template, mock_create, mock_get_user):
     main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
     try:
         response = client.post("/api/projects", json=_CREATE_PAYLOAD)

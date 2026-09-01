@@ -20,7 +20,7 @@ _USER = {"id": 1, "email": "a@x.com", "full_name": "Alice", "is_active": True, "
 _PROJECT = {"id": 1, "name": "X", "customer_name": "Y", "description": None, "industry_context": None, "status": "Draft", "process_id": 7, "created_by": 1, "created_at": "2026-08-28T09:00:00"}
 _PROCESS_DETAIL = {"id": 7, "name": "X Framework", "description": None, "created_at": "2026-08-28T09:00:00", "stages": []}
 _STAGE = {"id": 20, "name": "Aim & SWOT", "sequence_order": 1}
-_QUESTION = {"id": 30, "stage_id": 20, "level": "L1", "text": "t", "search_query": None, "owner_role": "CMO", "reviewer_role": None, "sequence_order": 1}
+_QUESTION = {"id": 30, "stage_id": 20, "level": "L1", "text": "t", "search_query": None, "owner_role": "CMO", "reviewer_role": None, "sequence_order": 1, "guidance": []}
 
 
 def _as_consultant():
@@ -77,6 +77,19 @@ def test_add_stage_creates_stage(mock_get_member, mock_project, mock_add):
         assert response.status_code == 200
         assert response.json() == _STAGE
         mock_add.assert_called_once_with(7, "Aim & SWOT")
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.framework_db.add_stage")
+@patch("main.projects_db.get_project_by_id", return_value=_PROJECT)
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_add_stage_rejects_blank_name(mock_get_member, mock_project, mock_add):
+    _as_consultant()
+    try:
+        response = client.post("/api/projects/1/framework/stages", json={"name": "   "})
+        assert response.status_code == 400
+        mock_add.assert_not_called()
     finally:
         main.app.dependency_overrides.clear()
 
@@ -145,6 +158,24 @@ def test_add_question_creates_question(mock_get_member, mock_project, mock_add):
         assert response.status_code == 200
         assert response.json() == _QUESTION
         mock_add.assert_called_once_with(20, 7, "L1", "t", None, "CMO", None)
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.framework_db.add_question")
+@patch("main.projects_db.get_project_by_id", return_value=_PROJECT)
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_add_question_rejects_blank_fields(mock_get_member, mock_project, mock_add):
+    _as_consultant()
+    try:
+        for body in (
+            {"level": " ", "text": "t", "owner_role": "CMO"},
+            {"level": "L1", "text": "", "owner_role": "CMO"},
+            {"level": "L1", "text": "t", "owner_role": "  "},
+        ):
+            response = client.post("/api/projects/1/framework/stages/20/questions", json=body)
+            assert response.status_code == 400
+        mock_add.assert_not_called()
     finally:
         main.app.dependency_overrides.clear()
 

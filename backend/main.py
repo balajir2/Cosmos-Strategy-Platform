@@ -194,6 +194,8 @@ def admin_reset_password(user_id: int, payload: AdminPasswordReset, admin: dict 
 
 @app.post("/api/projects")
 def create_project(payload: ProjectCreateRequest, admin: dict = Depends(require_admin)):
+    if users_db.get_user_by_id(payload.consultant_user_id) is None:
+        raise HTTPException(status_code=400, detail="consultant_user_id does not reference an existing user.")
     template = framework_db.get_template_process()
     if template is None:
         raise HTTPException(status_code=500, detail="No template process configured.")
@@ -364,6 +366,11 @@ def get_project_brief(
     return {"project_id": project_id, "markdown": markdown}
 
 
+def _reject_blank(value, field: str):
+    if value is not None and not value.strip():
+        raise HTTPException(status_code=400, detail=f"{field} must not be empty.")
+
+
 def _require_project_for_framework(project_id: int) -> dict:
     project = projects_db.get_project_by_id(project_id)
     if project is None:
@@ -379,6 +386,7 @@ def get_project_framework(project_id: int, member: dict = Depends(require_consul
 
 @app.post("/api/projects/{project_id}/framework/stages")
 def add_framework_stage(project_id: int, payload: FrameworkStageCreate, member: dict = Depends(require_consultant)):
+    _reject_blank(payload.name, "name")
     project = _require_project_for_framework(project_id)
     return framework_db.add_stage(project["process_id"], payload.name)
 
@@ -387,6 +395,7 @@ def add_framework_stage(project_id: int, payload: FrameworkStageCreate, member: 
 def update_framework_stage(project_id: int, stage_id: int, payload: FrameworkStageUpdate, member: dict = Depends(require_consultant)):
     if payload.action is not None and payload.action not in ("move_up", "move_down"):
         raise HTTPException(status_code=400, detail="action must be 'move_up' or 'move_down'.")
+    _reject_blank(payload.name, "name")
     project = _require_project_for_framework(project_id)
     updated = framework_db.update_stage(stage_id, project["process_id"], payload.name, payload.action)
     if updated is None:
@@ -404,6 +413,9 @@ def delete_framework_stage(project_id: int, stage_id: int, member: dict = Depend
 
 @app.post("/api/projects/{project_id}/framework/stages/{stage_id}/questions")
 def add_framework_question(project_id: int, stage_id: int, payload: FrameworkQuestionCreate, member: dict = Depends(require_consultant)):
+    _reject_blank(payload.level, "level")
+    _reject_blank(payload.text, "text")
+    _reject_blank(payload.owner_role, "owner_role")
     project = _require_project_for_framework(project_id)
     question = framework_db.add_question(
         stage_id, project["process_id"], payload.level, payload.text,
@@ -418,6 +430,10 @@ def add_framework_question(project_id: int, stage_id: int, payload: FrameworkQue
 def update_framework_question(project_id: int, question_id: int, payload: FrameworkQuestionUpdate, member: dict = Depends(require_consultant)):
     if payload.action is not None and payload.action not in ("move_up", "move_down"):
         raise HTTPException(status_code=400, detail="action must be 'move_up' or 'move_down'.")
+    _reject_blank(payload.level, "level")
+    _reject_blank(payload.text, "text")
+    _reject_blank(payload.owner_role, "owner_role")
+    _reject_blank(payload.reviewer_role, "reviewer_role")
     project = _require_project_for_framework(project_id)
     updated = framework_db.update_question(
         question_id, project["process_id"], payload.level, payload.text, payload.search_query,
