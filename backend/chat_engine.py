@@ -60,6 +60,23 @@ def _ask_calibration_prompt(session_id: int, concept: dict, concept_index: int) 
     return add_message(session_id, "assistant", content, "calibration_prompt", concept_index)
 
 
+def _generate_calibration_feedback(concept: dict, submitted_definition: str) -> str:
+    try:
+        system_prompt = (
+            f"You are Cosmos AI. This organization defines '{concept['concept_name']}' as: "
+            f"{concept['org_definition']}\n\n"
+            "The user just gave their own definition of this term. Compare it constructively to "
+            "this organization's definition - this is NOT a right/wrong grading exercise. If their "
+            "understanding is close, say so warmly. If it diverges, gently note the gap without "
+            "declaring them wrong. Keep it to 2-3 sentences."
+        )
+        provider = get_provider_adapter(platform_settings.get_active_provider())
+        return provider.complete(system_prompt, [{"role": "user", "content": submitted_definition}])
+    except Exception as e:
+        print(f"Error generating calibration feedback for concept '{concept['concept_name']}': {e}")
+        return f"Thanks for sharing your take on '{concept['concept_name']}'. We'll build on this as we go."
+
+
 def _context_str(rag, search_query: str) -> str:
     hits = rag.search(search_query, top_k=3)
     return "\n\n".join(
@@ -209,6 +226,25 @@ def advance_session(rag, session_id: int, user_content: str, self_evaluation_sta
     level_index = session["current_level_index"]
     case_id = session.get("case_id")
     project_id = session.get("project_id")
+
+    if phase == "calibration_awaiting_answer":
+        add_message(session_id, "user", user_content, "chat", level_index)
+        concepts = _get_calibration_concepts(project_id)
+        concept = concepts[level_index]
+        feedback_text = _generate_calibration_feedback(concept, user_content)
+        calibration_db.save_response(project_id, concept["id"], submitted_definition=user_content, feedback_text=feedback_text)
+        feedback_msg = add_message(session_id, "assistant", feedback_text, "calibration_feedback", level_index)
+
+        next_index = level_index + 1
+        if next_index < len(concepts):
+            prompt_msg = _ask_calibration_prompt(session_id, concepts[next_index], next_index)
+            update_session(session_id, next_index, "calibration_awaiting_answer")
+            return {"phase": "calibration_awaiting_answer", "current_level_index": next_index, "messages": [feedback_msg, prompt_msg]}
+
+        question_msg = _ask_question(session_id, case_id, project_id, 0)
+        update_session(session_id, 0, "awaiting_answer")
+        return {"phase": "awaiting_answer", "current_level_index": 0, "messages": [feedback_msg, question_msg]}
+
     questions = _get_questions(case_id, project_id)
 
     if phase == "awaiting_answer":

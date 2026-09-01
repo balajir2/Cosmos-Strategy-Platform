@@ -586,3 +586,92 @@ def test_start_session_case_based_never_enters_calibration(
     result = chat_engine.start_session(_fake_rag(), case_id=FAKE_CASE_ID)
 
     assert result["phase"] == "awaiting_answer"
+
+
+@patch("chat_engine.calibration_db.save_response")
+@patch("chat_engine.calibration_db.list_concepts", return_value=FAKE_CONCEPTS)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.update_session")
+@patch("chat_engine.get_session")
+@patch("chat_engine.get_provider_adapter")
+@patch("chat_engine.platform_settings.get_active_provider", return_value="anthropic")
+def test_advance_session_calibration_moves_to_next_concept(
+    mock_get_active, mock_get_adapter, mock_get_session, mock_update_session,
+    mock_add_message, mock_get_project, mock_list_concepts, mock_save_response,
+):
+    mock_get_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "calibration_awaiting_answer"}
+    fake_provider = MagicMock()
+    fake_provider.complete.return_value = "Your understanding is already close to how we define it here."
+    mock_get_adapter.return_value = fake_provider
+    mock_add_message.side_effect = [
+        {"id": 20, "role": "user", "content": "my definition", "message_type": "chat", "level_index": 0, "created_at": "t"},
+        {"id": 21, "role": "assistant", "content": "Your understanding is already close to how we define it here.", "message_type": "calibration_feedback", "level_index": 0, "created_at": "t"},
+        {"id": 22, "role": "assistant", "content": "What does 'brand' mean to you?", "message_type": "calibration_prompt", "level_index": 1, "created_at": "t"},
+    ]
+
+    result = chat_engine.advance_session(_fake_rag(), 1, "my definition")
+
+    assert result["phase"] == "calibration_awaiting_answer"
+    assert result["current_level_index"] == 1
+    assert [m["message_type"] for m in result["messages"]] == ["calibration_feedback", "calibration_prompt"]
+    mock_update_session.assert_called_once_with(1, 1, "calibration_awaiting_answer")
+    mock_save_response.assert_called_once_with(FAKE_PROJECT_ID, 10, submitted_definition="my definition", feedback_text="Your understanding is already close to how we define it here.")
+    fake_provider.complete.assert_called_once()
+
+
+@patch("chat_engine.calibration_db.save_response")
+@patch("chat_engine.calibration_db.list_concepts", return_value=[FAKE_CONCEPTS[1]])
+@patch("chat_engine.process_db.get_process_detail", return_value=FAKE_PROCESS_DETAIL)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.update_session")
+@patch("chat_engine.get_session")
+@patch("chat_engine.get_provider_adapter")
+@patch("chat_engine.platform_settings.get_active_provider", return_value="anthropic")
+def test_advance_session_calibration_falls_through_to_first_question_after_last_concept(
+    mock_get_active, mock_get_adapter, mock_get_session, mock_update_session,
+    mock_add_message, mock_get_project, mock_get_process, mock_list_concepts, mock_save_response,
+):
+    mock_get_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "calibration_awaiting_answer"}
+    fake_provider = MagicMock()
+    fake_provider.complete.return_value = "Solid grasp of the concept."
+    mock_get_adapter.return_value = fake_provider
+    mock_add_message.side_effect = [
+        {"id": 20, "role": "user", "content": "my definition", "message_type": "chat", "level_index": 0, "created_at": "t"},
+        {"id": 21, "role": "assistant", "content": "Solid grasp of the concept.", "message_type": "calibration_feedback", "level_index": 0, "created_at": "t"},
+        {"id": 22, "role": "assistant", "content": "Project question one?", "message_type": "question", "level_index": 0, "created_at": "t"},
+    ]
+
+    result = chat_engine.advance_session(_fake_rag(), 1, "my definition")
+
+    assert result["phase"] == "awaiting_answer"
+    assert result["current_level_index"] == 0
+    assert [m["message_type"] for m in result["messages"]] == ["calibration_feedback", "question"]
+    mock_update_session.assert_called_once_with(1, 0, "awaiting_answer")
+
+
+@patch("chat_engine.calibration_db.save_response")
+@patch("chat_engine.calibration_db.list_concepts", return_value=FAKE_CONCEPTS)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.update_session")
+@patch("chat_engine.get_session")
+@patch("chat_engine.get_provider_adapter", side_effect=RuntimeError("provider down"))
+@patch("chat_engine.platform_settings.get_active_provider", return_value="anthropic")
+def test_advance_session_calibration_falls_back_on_llm_failure(
+    mock_get_active, mock_get_adapter, mock_get_session, mock_update_session,
+    mock_add_message, mock_get_project, mock_list_concepts, mock_save_response,
+):
+    mock_get_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "calibration_awaiting_answer"}
+    mock_add_message.side_effect = [
+        {"id": 20, "role": "user", "content": "my definition", "message_type": "chat", "level_index": 0, "created_at": "t"},
+        {"id": 21, "role": "assistant", "content": "Thanks for sharing your take on 'insight'. We'll build on this as we go.", "message_type": "calibration_feedback", "level_index": 0, "created_at": "t"},
+        {"id": 22, "role": "assistant", "content": "What does 'brand' mean to you?", "message_type": "calibration_prompt", "level_index": 1, "created_at": "t"},
+    ]
+
+    result = chat_engine.advance_session(_fake_rag(), 1, "my definition")
+
+    assert result["phase"] == "calibration_awaiting_answer"
+    assert "Thanks for sharing your take" in result["messages"][0]["content"]
+    mock_save_response.assert_called_once_with(FAKE_PROJECT_ID, 10, submitted_definition="my definition", feedback_text="Thanks for sharing your take on 'insight'. We'll build on this as we go.")
