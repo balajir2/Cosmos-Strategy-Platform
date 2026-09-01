@@ -123,7 +123,7 @@ export interface CreateProjectPayload {
   customer_name: string;
   description?: string;
   industry_context?: string;
-  process_id: number;
+  process_id?: number;
   consultant_user_id: number;
 }
 
@@ -369,6 +369,104 @@ export async function getProcess(processId: number): Promise<ProcessDetail> {
   const res = await authFetch(`/api/process/${processId}`);
   if (!res.ok) throw new Error(`Failed to load process: ${res.status}`);
   return res.json();
+}
+
+// --- Framework authoring (per-project) ---------------------------------------
+
+export interface FrameworkStage {
+  id: number;
+  name: string;
+  sequence_order: number;
+}
+
+export interface FrameworkQuestion {
+  id: number;
+  stage_id: number;
+  level: string;
+  text: string;
+  search_query: string | null;
+  owner_role: string;
+  reviewer_role: string | null;
+  sequence_order: number;
+}
+
+export interface FrameworkStageUpdate {
+  name?: string;
+  action?: "move_up" | "move_down";
+}
+
+export interface FrameworkQuestionCreate {
+  level: string;
+  text: string;
+  search_query?: string;
+  owner_role: string;
+  reviewer_role?: string;
+}
+
+export interface FrameworkQuestionUpdate {
+  level?: string;
+  text?: string;
+  search_query?: string;
+  owner_role?: string;
+  reviewer_role?: string;
+  guidance?: string;
+  action?: "move_up" | "move_down";
+}
+
+export async function getFramework(projectId: number): Promise<ProcessDetail> {
+  const res = await authFetch(`/api/projects/${projectId}/framework`);
+  if (!res.ok) throw new Error(`Failed to load framework: ${res.status}`);
+  return res.json();
+}
+
+export async function createFrameworkStage(projectId: number, name: string): Promise<FrameworkStage> {
+  const res = await authFetch(`/api/projects/${projectId}/framework/stages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to add stage: ${res.status}`));
+  return res.json();
+}
+
+export async function updateFrameworkStage(projectId: number, stageId: number, payload: FrameworkStageUpdate): Promise<FrameworkStage> {
+  const res = await authFetch(`/api/projects/${projectId}/framework/stages/${stageId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to update stage: ${res.status}`));
+  return res.json();
+}
+
+export async function deleteFrameworkStage(projectId: number, stageId: number): Promise<void> {
+  const res = await authFetch(`/api/projects/${projectId}/framework/stages/${stageId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to delete stage: ${res.status}`));
+}
+
+export async function createFrameworkQuestion(projectId: number, stageId: number, payload: FrameworkQuestionCreate): Promise<FrameworkQuestion> {
+  const res = await authFetch(`/api/projects/${projectId}/framework/stages/${stageId}/questions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to add question: ${res.status}`));
+  return res.json();
+}
+
+export async function updateFrameworkQuestion(projectId: number, questionId: number, payload: FrameworkQuestionUpdate): Promise<FrameworkQuestion> {
+  const res = await authFetch(`/api/projects/${projectId}/framework/questions/${questionId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to update question: ${res.status}`));
+  return res.json();
+}
+
+export async function deleteFrameworkQuestion(projectId: number, questionId: number): Promise<void> {
+  const res = await authFetch(`/api/projects/${projectId}/framework/questions/${questionId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to delete question: ${res.status}`));
 }
 
 // --- Evaluation, responses, brief ---------------------------------------------
