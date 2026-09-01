@@ -87,7 +87,7 @@ The Users/Projects/Engagement Knowledge Base spec carries its own verification p
 ## Beyond the POC (not yet scoped)
 
 The BRD frames this POC as validation before a full multi-tenant build. Not yet designed:
-- Framework Authoring Mode (admin/consultant interface to define new processes, stages, and questions beyond the seeded Brand Compass configuration). **Note (2026-08-26 meeting)**: whatever this authors must be treated as fixed Consultant IP going forward — the master/anchor question text itself should never be regenerated or reworded by the AI at runtime; only follow-up drill-down questions are AI-generated. See the Guided Learning Flow checklist above.
+- Framework Authoring Mode (admin/consultant interface to define new processes, stages, and questions beyond the seeded Brand Compass configuration). **Done 2026-09-01** — see `docs/superpowers/specs/2026-09-01-framework-authoring-mode-design.md` and `docs/superpowers/plans/2026-09-01-framework-authoring-mode.md`. **Note (2026-08-26 meeting)**: whatever this authors must be treated as fixed Consultant IP going forward — the master/anchor question text itself should never be regenerated or reworded by the AI at runtime; only follow-up drill-down questions are AI-generated. See the Guided Learning Flow checklist above.
 - `Owner`/`Reviewer`/`Peer` client-side role distinctions (deferred in favor of a single `ClientUser` role — see the Users/Projects/Engagement KB spec's Revision section).
 - Automatic mapping of a `questions.owner_role` string (e.g. "CMO") to a specific project member — for now, any `ClientUser` can answer any question.
 - SSO / enterprise identity (Azure AD, Cognito, etc.) — the near-term auth design (Phase A above) is deliberately simple, built-in email/password.
