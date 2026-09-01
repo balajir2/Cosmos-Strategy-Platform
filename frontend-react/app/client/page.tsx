@@ -11,7 +11,7 @@ export default function ClientProjectList() {
 
   useEffect(() => {
     listProjects()
-      .then(setProjects)
+      .then((all) => setProjects(all.filter((p) => p.role === "ClientUser")))
       .catch(() => setError("Could not load your engagements. Are you logged in, and is the backend running?"))
       .finally(() => setLoading(false));
   }, []);

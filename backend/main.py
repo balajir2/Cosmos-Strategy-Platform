@@ -230,7 +230,7 @@ def get_project(
     member: dict = Depends(require_project_member),
     project: dict = Depends(require_active_project),
 ):
-    return project
+    return {**project, "role": member["role"]}
 
 @app.patch("/api/projects/{project_id}")
 def update_project(project_id: int, payload: ProjectUpdateRequest, member: dict = Depends(require_consultant)):

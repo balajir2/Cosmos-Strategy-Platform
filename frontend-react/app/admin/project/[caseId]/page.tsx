@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   getProject, updateProject, activateProject, listArtifacts, uploadArtifact, deleteArtifact,
   addProjectMember, Project, ProjectArtifact,
@@ -20,6 +20,7 @@ const PURPOSE_OPTIONS = Object.keys(PURPOSE_LABELS);
 
 export default function ProjectSetupPage() {
   const params = useParams();
+  const router = useRouter();
   const projectId = Number(params.caseId);
 
   const [project, setProject] = useState<Project | null>(null);
@@ -42,7 +43,14 @@ export default function ProjectSetupPage() {
 
   useEffect(() => {
     getProject(projectId)
-      .then((p) => { setProject(p); setIndustryContext(p.industry_context || ""); })
+      .then((p) => {
+        if (p.role === "ClientUser") {
+          router.replace(`/client/case/${projectId}`);
+          return;
+        }
+        setProject(p);
+        setIndustryContext(p.industry_context || "");
+      })
       .catch(() => setError("Could not load this project. Are you a Consultant on it, and is the backend running?"))
       .finally(() => setLoading(false));
     reloadArtifacts();

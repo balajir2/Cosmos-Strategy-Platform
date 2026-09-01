@@ -84,9 +84,8 @@ export default function FrameworkEditor({ projectId }: { projectId: number }) {
             const guidance = q.guidance?.[0]?.content ?? "";
             return (
               <div className="framework-question" key={q.id}>
-                <div className="framework-question-text">
-                  <span className="status-pill">{q.level}</span> {q.text}
-                </div>
+                <div className="framework-question-level">{q.level}</div>
+                <div className="framework-question-text">{q.text}</div>
                 <div className="framework-question-meta">
                   <span className="dropzone-hint">Owner: {q.owner_role}{q.reviewer_role ? ` · Reviewer: ${q.reviewer_role}` : ""}</span>
                 </div>

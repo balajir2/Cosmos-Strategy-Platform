@@ -82,12 +82,12 @@ def test_list_projects_for_user_returns_empty_list_when_no_membership(mock_get_c
 
 @patch("projects_db.get_db_connection")
 def test_list_projects_for_user_returns_dict_list(mock_get_conn):
-    conn, _ = _fake_conn(fetchall_result=[_PROJECT_ROW])
+    conn, _ = _fake_conn(fetchall_result=[_PROJECT_ROW + ("Consultant",)])
     mock_get_conn.return_value = conn
 
     result = projects_db.list_projects_for_user(1)
 
-    assert result == [_PROJECT_DICT]
+    assert result == [{**_PROJECT_DICT, "role": "Consultant"}]
 
 
 _MEMBER_ROW = (1, 1, 5, "Consultant", "CMO", datetime.datetime(2026, 8, 28, 9, 0, 0))

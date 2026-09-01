@@ -165,7 +165,7 @@ def test_get_project_allows_consultant_on_draft_project(mock_get_member, mock_ge
     try:
         response = client.get("/api/projects/1")
         assert response.status_code == 200
-        assert response.json() == {"id": 1, "name": "X", "status": "Draft"}
+        assert response.json() == {"id": 1, "name": "X", "status": "Draft", "role": "Consultant"}
     finally:
         main.app.dependency_overrides.clear()
 
@@ -180,7 +180,7 @@ def test_get_project_allows_client_user_on_active_project(mock_get_member, mock_
     try:
         response = client.get("/api/projects/1")
         assert response.status_code == 200
-        assert response.json() == {"id": 1, "name": "X", "status": "Active"}
+        assert response.json() == {"id": 1, "name": "X", "status": "Active", "role": "ClientUser"}
     finally:
         main.app.dependency_overrides.clear()
 

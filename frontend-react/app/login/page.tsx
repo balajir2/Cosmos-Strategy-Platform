@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { login } from "@/lib/api-client";
+import { login, getMe, listProjects } from "@/lib/api-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,7 +18,9 @@ export default function LoginPage() {
     setError(null);
     try {
       await login({ email, password });
-      router.push("/");
+      const [me, projects] = await Promise.all([getMe(), listProjects()]);
+      const hasConsultantWork = me.is_admin || projects.some((p) => p.role === "Consultant");
+      router.push(hasConsultantWork ? "/" : "/client");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed.");
       setSubmitting(false);

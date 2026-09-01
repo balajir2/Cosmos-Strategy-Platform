@@ -25,6 +25,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Database platform migration (Phase 0): `backend/database.py` and `backend/rag_engine.py` moved off SQLite + a flat-file vector JSON onto a single Neon Postgres database with the `pgvector` extension — covers the `processes`/`stages`/`questions`/`guidance` tables and the Framework Knowledge Base (`framework_kb_chunks`). The legacy SQLite `responses` table was dropped, not migrated (superseded by Phase B's `project_id`-based redesign — see `documentation/product/roadmap.md`). Design spec: `docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md`.
 - `LLMProvider.complete()` now accepts a multi-turn message history instead of a single user prompt (all three adapters updated).
 
+### Fixed
+- A ClientUser landed on the Consultant/Admin project setup UI instead of the client chat flow: `GET /api/projects` and `GET /api/projects/{id}` now include the caller's own membership `role` (missing from both responses since Phase B), and the frontend uses it to route/filter correctly — login redirects to `/client` instead of `/` when the user has no Consultant work, the `/` project list only shows projects where the caller is Consultant, `/client` only shows ones where they're a ClientUser, and the admin project-setup page redirects a ClientUser away if they land on it directly.
+
 ### Removed
 - AWS Bedrock (`boto3`) dependency from `backend/rag_engine.py`.
 - The old vanilla HTML/CSS/JS frontend (`frontend/index.html`, `app.js`, `style.css`) and its static-file mount in `backend/main.py`, superseded by `frontend-react/`.

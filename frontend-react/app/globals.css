@@ -1391,6 +1391,8 @@ body {
 .framework-stage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .framework-stage-name { font-weight: 600; }
 .framework-stage-actions, .framework-question-actions { display: flex; gap: 6px; }
-.framework-question { padding: 10px 0; border-top: 1px solid var(--border-card); }
+.framework-question { padding: 14px 0 14px 14px; border-top: 1px solid var(--border-card); border-left: 2px solid var(--accent-blue); margin-top: 4px; }
+.framework-question-level { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-blue); margin-bottom: 6px; }
+.framework-question-text { font-weight: 500; }
 .framework-question-meta { margin: 4px 0; }
 .framework-guidance { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }

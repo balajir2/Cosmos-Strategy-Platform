@@ -70,7 +70,7 @@ def list_projects_for_user(user_id: int) -> list:
             cursor.execute(
                 """
                 SELECT p.id, p.name, p.customer_name, p.description, p.industry_context,
-                       p.status, p.process_id, p.created_by, p.created_at
+                       p.status, p.process_id, p.created_by, p.created_at, pm.role
                 FROM projects p
                 JOIN project_members pm ON pm.project_id = p.id
                 WHERE pm.user_id = %s
@@ -79,7 +79,7 @@ def list_projects_for_user(user_id: int) -> list:
                 (user_id,),
             )
             rows = cursor.fetchall()
-    return [_project_dict(row) for row in rows]
+    return [{**_project_dict(row), "role": row[9]} for row in rows]
 
 
 def list_all_projects() -> list:

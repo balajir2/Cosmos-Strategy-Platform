@@ -107,6 +107,10 @@ export interface Project {
   process_id: number;
   created_by: number;
   created_at: string;
+  /** The calling user's own membership role on this project. Present on
+   * GET /api/projects and GET /api/projects/{id}; absent from admin-only
+   * endpoints like GET /api/admin/projects. */
+  role?: "Consultant" | "ClientUser";
 }
 
 export interface ProjectMember {

@@ -15,7 +15,7 @@ export default function AdminProjectList() {
   function reload() {
     setLoading(true);
     listProjects()
-      .then(setProjects)
+      .then((all) => setProjects(all.filter((p) => p.role === "Consultant")))
       .catch(() => setError("Could not load projects. Are you logged in, and is the backend running?"))
       .finally(() => setLoading(false));
   }
