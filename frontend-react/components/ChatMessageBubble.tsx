@@ -39,6 +39,26 @@ export default function ChatMessageBubble({ message }: { message: ChatMessage })
     );
   }
 
+  if (message.message_type === "calibration_prompt") {
+    return (
+      <div className="glass-card question-card animate-slide-up">
+        <div className="card-badge">Baseline Calibration</div>
+        <h2 className="restless-question">{message.content}</h2>
+      </div>
+    );
+  }
+
+  if (message.message_type === "calibration_feedback") {
+    return (
+      <div className="glass-card recommendations-card animate-slide-up">
+        <h3>
+          <i className="fa-solid fa-compass"></i> Calibration Feedback
+        </h3>
+        <p className="recommendations-text">{message.content}</p>
+      </div>
+    );
+  }
+
   if (message.message_type === "benchmark") {
     const payload = parseBenchmarkPayload(message.content);
 
