@@ -176,3 +176,100 @@ def test_delete_stage_returns_true_when_deleted(mock_get_conn):
     sql, params = cursor.execute.call_args[0]
     assert "DELETE FROM stages" in sql
     assert params == (20, 1)
+
+
+@patch("framework_db.get_db_connection")
+def test_add_question_returns_none_when_stage_not_in_process(mock_get_conn):
+    conn, _ = _fake_conn(fetchone_results=[None])
+    mock_get_conn.return_value = conn
+
+    assert framework_db.add_question(999, 1, "L1", "text", "sq", "CMO", "CEO") is None
+
+
+@patch("framework_db.get_db_connection")
+def test_add_question_appends_and_creates_guidance(mock_get_conn):
+    conn, cursor = _fake_conn(fetchone_results=[(20,), (2,), (30,)])
+    mock_get_conn.return_value = conn
+
+    result = framework_db.add_question(20, 1, "L1", "text", "sq", "CMO", "CEO")
+
+    assert result == {
+        "id": 30, "stage_id": 20, "level": "L1", "text": "text",
+        "search_query": "sq", "owner_role": "CMO", "reviewer_role": "CEO",
+        "sequence_order": 3,
+    }
+    guidance_inserts = [c[0][0] for c in cursor.execute.call_args_list if "INSERT INTO guidance" in c[0][0]]
+    assert len(guidance_inserts) == 1
+    assert guidance_inserts[0] and "'Framework'" in guidance_inserts[0]
+
+
+@patch("framework_db.get_db_connection")
+def test_update_question_returns_none_when_not_in_process(mock_get_conn):
+    conn, _ = _fake_conn(fetchone_results=[None])
+    mock_get_conn.return_value = conn
+
+    assert framework_db.update_question(999, 1, text="new") is None
+
+
+@patch("framework_db.get_db_connection")
+def test_update_question_edits_fields_and_upserts_guidance(mock_get_conn):
+    conn, cursor = _fake_conn(fetchone_results=[(30, 20, "L1", "old", "sq", "CMO", "CEO", 1)])
+    cursor.rowcount = 1
+    mock_get_conn.return_value = conn
+
+    result = framework_db.update_question(30, 1, text="new text", guidance="New guidance")
+
+    assert result["text"] == "new text"
+    assert result["sequence_order"] == 1
+    update_q = [c for c in cursor.execute.call_args_list if "UPDATE questions" in c[0][0]][0]
+    assert update_q[0][1] == ("L1", "new text", "sq", "CMO", "CEO", 1, 30)
+    update_g = [c for c in cursor.execute.call_args_list if "UPDATE guidance" in c[0][0]][0]
+    assert update_g[0][1] == ("New guidance", 30)
+
+
+@patch("framework_db.get_db_connection")
+def test_update_question_inserts_guidance_when_missing(mock_get_conn):
+    conn, cursor = _fake_conn(fetchone_results=[(30, 20, "L1", "old", "sq", "CMO", "CEO", 1)])
+    cursor.rowcount = 0
+    mock_get_conn.return_value = conn
+
+    framework_db.update_question(30, 1, guidance="New guidance")
+
+    insert_g = [c for c in cursor.execute.call_args_list if "INSERT INTO guidance" in c[0][0]]
+    assert len(insert_g) == 1
+    assert insert_g[0][0][1] == (30, "New guidance")
+
+
+@patch("framework_db.get_db_connection")
+def test_update_question_move_down_swaps_sequence(mock_get_conn):
+    conn, cursor = _fake_conn(
+        fetchone_results=[(30, 20, "L1", "t", "sq", "CMO", "CEO", 1)],
+        fetchall_results=[[(30, 1), (31, 2)]],
+    )
+    mock_get_conn.return_value = conn
+
+    result = framework_db.update_question(30, 1, action="move_down")
+
+    assert result["sequence_order"] == 2
+    move_calls = [c for c in cursor.execute.call_args_list if "UPDATE questions SET sequence_order" in c[0][0]]
+    assert move_calls[0][0][1] == (2, 30)
+    assert move_calls[1][0][1] == (1, 31)
+
+
+@patch("framework_db.get_db_connection")
+def test_delete_question_returns_false_when_not_in_process(mock_get_conn):
+    conn, cursor = _fake_conn(rowcount=0)
+    mock_get_conn.return_value = conn
+
+    assert framework_db.delete_question(999, 1) is False
+
+
+@patch("framework_db.get_db_connection")
+def test_delete_question_returns_true_when_deleted(mock_get_conn):
+    conn, cursor = _fake_conn(rowcount=1)
+    mock_get_conn.return_value = conn
+
+    assert framework_db.delete_question(30, 1) is True
+    sql, params = cursor.execute.call_args[0]
+    assert "DELETE FROM questions" in sql
+    assert params == (30, 1)

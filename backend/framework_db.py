@@ -172,3 +172,96 @@ def delete_stage(stage_id: int, process_id: int) -> bool:
             )
         conn.commit()
         return cursor.rowcount > 0
+
+
+def add_question(stage_id: int, process_id: int, level: str, text: str, search_query, owner_role: str, reviewer_role):
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM stages WHERE id = %s AND process_id = %s;",
+                (stage_id, process_id),
+            )
+            if cursor.fetchone() is None:
+                return None
+
+            cursor.execute(
+                "SELECT COALESCE(MAX(sequence_order), 0) FROM questions WHERE stage_id = %s;",
+                (stage_id,),
+            )
+            next_seq = cursor.fetchone()[0] + 1
+
+            cursor.execute(
+                "INSERT INTO questions (stage_id, level, text, search_query, owner_role, reviewer_role, sequence_order) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id;",
+                (stage_id, level, text, search_query, owner_role, reviewer_role, next_seq),
+            )
+            new_q_id = cursor.fetchone()[0]
+            cursor.execute(
+                "INSERT INTO guidance (question_id, type, content) VALUES (%s, 'Framework', %s);",
+                (new_q_id, ""),
+            )
+        conn.commit()
+    return {
+        "id": new_q_id, "stage_id": stage_id, "level": level, "text": text,
+        "search_query": search_query, "owner_role": owner_role, "reviewer_role": reviewer_role,
+        "sequence_order": next_seq,
+    }
+
+
+def update_question(question_id: int, process_id: int, level=None, text=None, search_query=None,
+                    owner_role=None, reviewer_role=None, guidance=None, action=None):
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT q.id, q.stage_id, q.level, q.text, q.search_query, q.owner_role, q.reviewer_role, q.sequence_order "
+                "FROM questions q JOIN stages s ON s.id = q.stage_id "
+                "WHERE q.id = %s AND s.process_id = %s;",
+                (question_id, process_id),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            q_id, stage_id, cur_level, cur_text, cur_search, cur_owner, cur_reviewer, cur_seq = row
+
+            new_level = level if level is not None else cur_level
+            new_text = text if text is not None else cur_text
+            new_search = search_query if search_query is not None else cur_search
+            new_owner = owner_role if owner_role is not None else cur_owner
+            new_reviewer = reviewer_role if reviewer_role is not None else cur_reviewer
+            new_seq = cur_seq
+            if action in ("move_up", "move_down"):
+                new_seq = _move_sibling(cursor, "questions", "id", "stage_id", stage_id, q_id, cur_seq, action)
+
+            cursor.execute(
+                "UPDATE questions SET level = %s, text = %s, search_query = %s, owner_role = %s, reviewer_role = %s, sequence_order = %s "
+                "WHERE id = %s;",
+                (new_level, new_text, new_search, new_owner, new_reviewer, new_seq, q_id),
+            )
+
+            if guidance is not None:
+                cursor.execute(
+                    "UPDATE guidance SET content = %s WHERE question_id = %s AND type = 'Framework';",
+                    (guidance, q_id),
+                )
+                if cursor.rowcount == 0:
+                    cursor.execute(
+                        "INSERT INTO guidance (question_id, type, content) VALUES (%s, 'Framework', %s);",
+                        (q_id, guidance),
+                    )
+        conn.commit()
+    return {
+        "id": q_id, "stage_id": stage_id, "level": new_level, "text": new_text,
+        "search_query": new_search, "owner_role": new_owner, "reviewer_role": new_reviewer,
+        "sequence_order": new_seq,
+    }
+
+
+def delete_question(question_id: int, process_id: int) -> bool:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM questions WHERE id = %s AND stage_id IN (SELECT id FROM stages WHERE process_id = %s);",
+                (question_id, process_id),
+            )
+        conn.commit()
+        return cursor.rowcount > 0
