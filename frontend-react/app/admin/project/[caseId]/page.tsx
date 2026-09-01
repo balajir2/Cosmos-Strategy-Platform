@@ -6,6 +6,7 @@ import {
   getProject, updateProject, activateProject, listArtifacts, uploadArtifact, deleteArtifact,
   addProjectMember, Project, ProjectArtifact,
 } from "@/lib/api-client";
+import FrameworkEditor from "@/components/FrameworkEditor";
 
 const PURPOSE_LABELS: Record<string, string> = {
   reference: "Reference",
@@ -220,6 +221,8 @@ export default function ProjectSetupPage() {
           </div>
         </div>
       </div>
+
+      <FrameworkEditor projectId={projectId} />
 
       <div className="project-actions-row">
         <span className="activate-hint">

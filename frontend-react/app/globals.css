@@ -1384,3 +1384,13 @@ body {
     font-size: 0.9rem;
     cursor: pointer;
 }
+
+/* Framework editor (project setup page) */
+.framework-card { margin-top: 20px; }
+.framework-stage { border: 1px solid var(--border-card); border-radius: 12px; padding: 14px; margin-top: 14px; }
+.framework-stage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.framework-stage-name { font-weight: 600; }
+.framework-stage-actions, .framework-question-actions { display: flex; gap: 6px; }
+.framework-question { padding: 10px 0; border-top: 1px solid var(--border-card); }
+.framework-question-meta { margin: 4px 0; }
+.framework-guidance { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }

@@ -3,10 +3,6 @@
 import { useEffect, useState } from "react";
 import { createProject, adminListUsers, User } from "@/lib/api-client";
 
-// Only one process is currently seeded ("Aditya Birla Brand Compass V2", id 1) -
-// per the spec's scope boundary, this stays a fixed value rather than a picker.
-const DEFAULT_PROCESS_ID = 1;
-
 export default function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -33,7 +29,6 @@ export default function NewProjectModal({ onClose, onCreated }: { onClose: () =>
       await createProject({
         name,
         customer_name: customerName,
-        process_id: DEFAULT_PROCESS_ID,
         consultant_user_id: parseInt(consultantUserId, 10),
       });
       onCreated();
