@@ -317,6 +317,7 @@ FAKE_PROCESS_DETAIL = {
 FAKE_PROJECT = {"id": FAKE_PROJECT_ID, "process_id": 5, "status": "Active"}
 
 
+@patch("chat_engine.calibration_db.list_concepts", return_value=[])
 @patch("chat_engine.process_db.get_process_detail", return_value=FAKE_PROCESS_DETAIL)
 @patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
 @patch("chat_engine.add_message")
@@ -324,7 +325,7 @@ FAKE_PROJECT = {"id": FAKE_PROJECT_ID, "process_id": 5, "status": "Active"}
 @patch("chat_engine.create_session")
 @patch("chat_engine.get_provider_adapter")
 def test_start_session_with_project_id_asks_first_question_from_process(
-    mock_get_adapter, mock_create_session, mock_update_session, mock_add_message, mock_get_project, mock_get_process
+    mock_get_adapter, mock_create_session, mock_update_session, mock_add_message, mock_get_project, mock_get_process, mock_list_concepts
 ):
     mock_create_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "asking"}
     mock_add_message.return_value = {
@@ -488,3 +489,100 @@ def test_advance_session_case_based_ignores_self_evaluation_status(
 
     assert result["phase"] == "complete"
     mock_save_response.assert_not_called()
+
+
+FAKE_CONCEPTS = [
+    {"id": 10, "concept_name": "insight", "org_definition": "org def one", "sequence_order": 1},
+    {"id": 11, "concept_name": "brand", "org_definition": "org def two", "sequence_order": 2},
+]
+
+
+@patch("chat_engine.calibration_db.get_responses_for_project", return_value=[])
+@patch("chat_engine.calibration_db.list_concepts", return_value=FAKE_CONCEPTS)
+@patch("chat_engine.process_db.get_process_detail", return_value=FAKE_PROCESS_DETAIL)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.update_session")
+@patch("chat_engine.create_session")
+def test_start_session_begins_calibration_when_concepts_configured(
+    mock_create_session, mock_update_session, mock_add_message,
+    mock_get_project, mock_get_process, mock_list_concepts, mock_get_responses,
+):
+    mock_create_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "asking"}
+    mock_add_message.return_value = {
+        "id": 10, "role": "assistant", "content": "What does 'insight' mean to you?",
+        "message_type": "calibration_prompt", "level_index": 0, "created_at": "t",
+    }
+
+    result = chat_engine.start_session(_fake_rag(), project_id=FAKE_PROJECT_ID)
+
+    assert result["phase"] == "calibration_awaiting_answer"
+    assert result["current_level_index"] == 0
+    assert result["messages"] == [mock_add_message.return_value]
+    mock_add_message.assert_called_once_with(1, "assistant", "What does 'insight' mean to you?", "calibration_prompt", 0)
+    mock_update_session.assert_called_once_with(1, 0, "calibration_awaiting_answer")
+
+
+@patch("chat_engine.calibration_db.list_concepts", return_value=[])
+@patch("chat_engine.process_db.get_process_detail", return_value=FAKE_PROCESS_DETAIL)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.update_session")
+@patch("chat_engine.create_session")
+def test_start_session_skips_calibration_when_no_concepts_configured(
+    mock_create_session, mock_update_session, mock_add_message,
+    mock_get_project, mock_get_process, mock_list_concepts,
+):
+    mock_create_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "asking"}
+    mock_add_message.return_value = {
+        "id": 10, "role": "assistant", "content": "Project question one?",
+        "message_type": "question", "level_index": 0, "created_at": "t",
+    }
+
+    result = chat_engine.start_session(_fake_rag(), project_id=FAKE_PROJECT_ID)
+
+    assert result["phase"] == "awaiting_answer"
+    mock_add_message.assert_called_once_with(1, "assistant", "Project question one?", "question", 0)
+
+
+@patch("chat_engine.calibration_db.get_responses_for_project", return_value=[{"id": 1, "concept_id": 10, "project_id": FAKE_PROJECT_ID, "submitted_definition": "x", "feedback_text": "y", "updated_at": "t"}])
+@patch("chat_engine.calibration_db.list_concepts", return_value=FAKE_CONCEPTS)
+@patch("chat_engine.process_db.get_process_detail", return_value=FAKE_PROCESS_DETAIL)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.update_session")
+@patch("chat_engine.create_session")
+def test_start_session_skips_calibration_when_project_already_has_responses(
+    mock_create_session, mock_update_session, mock_add_message,
+    mock_get_project, mock_get_process, mock_list_concepts, mock_get_responses,
+):
+    mock_create_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "asking"}
+    mock_add_message.return_value = {
+        "id": 10, "role": "assistant", "content": "Project question one?",
+        "message_type": "question", "level_index": 0, "created_at": "t",
+    }
+
+    result = chat_engine.start_session(_fake_rag(), project_id=FAKE_PROJECT_ID)
+
+    assert result["phase"] == "awaiting_answer"
+
+
+@patch("chat_engine.CASES_DATA", {FAKE_CASE_ID: {"id": FAKE_CASE_ID, "questions": FAKE_QUESTIONS}})
+@patch("chat_engine.add_message")
+@patch("chat_engine.update_session")
+@patch("chat_engine.create_session")
+def test_start_session_case_based_never_enters_calibration(
+    mock_create_session, mock_update_session, mock_add_message,
+):
+    """case_id sessions have no project, so _get_calibration_concepts short-circuits
+    to [] without touching calibration_db at all - covered implicitly since no
+    calibration_db patches are supplied here and the test still passes."""
+    mock_create_session.return_value = {"id": 1, "case_id": FAKE_CASE_ID, "project_id": None, "current_level_index": 0, "phase": "asking"}
+    mock_add_message.return_value = {
+        "id": 10, "role": "assistant", "content": "Question one?",
+        "message_type": "question", "level_index": 0, "created_at": "t",
+    }
+
+    result = chat_engine.start_session(_fake_rag(), case_id=FAKE_CASE_ID)
+
+    assert result["phase"] == "awaiting_answer"

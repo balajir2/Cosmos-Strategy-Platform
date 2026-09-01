@@ -3,6 +3,7 @@ import json
 from cases_data import CASES_DATA
 from chat_sessions import add_message, create_session, get_level_messages, get_messages, get_session, update_session
 from llm_providers import get_provider_adapter
+import calibration_db
 import process_db
 import projects_db
 import responses_db
@@ -40,6 +41,23 @@ def _get_questions(case_id, project_id) -> list:
     if project_id is not None:
         return _get_project_questions(project_id)
     return _get_case_questions(case_id)
+
+
+def _get_calibration_concepts(project_id) -> list:
+    if project_id is None:
+        return []
+    project = projects_db.get_project_by_id(project_id)
+    if project is None:
+        return []
+    return calibration_db.list_concepts(project["process_id"])
+
+
+def _ask_calibration_prompt(session_id: int, concept: dict, concept_index: int) -> dict:
+    """Posts a fixed, templated prompt for one calibration concept - not an LLM
+    call, consistent with master questions being fixed content rather than
+    AI-generated (see _ask_question)."""
+    content = f"What does '{concept['concept_name']}' mean to you?"
+    return add_message(session_id, "assistant", content, "calibration_prompt", concept_index)
 
 
 def _context_str(rag, search_query: str) -> str:
@@ -168,7 +186,15 @@ def start_session(rag, case_id: str = None, project_id: int = None) -> dict:
     if (case_id is None) == (project_id is None):
         raise ValueError("Exactly one of case_id or project_id must be provided.")
     _get_questions(case_id, project_id)  # raises ValueError early if case_id/project_id is unknown
+
     session = create_session(case_id=case_id, project_id=project_id)
+
+    concepts = _get_calibration_concepts(project_id)
+    if concepts and not calibration_db.get_responses_for_project(project_id):
+        prompt_msg = _ask_calibration_prompt(session["id"], concepts[0], 0)
+        update_session(session["id"], 0, "calibration_awaiting_answer")
+        return {"id": session["id"], "phase": "calibration_awaiting_answer", "current_level_index": 0, "messages": [prompt_msg]}
+
     question_msg = _ask_question(session["id"], case_id, project_id, 0)
     update_session(session["id"], 0, "awaiting_answer")
     return {"id": session["id"], "phase": "awaiting_answer", "current_level_index": 0, "messages": [question_msg]}
