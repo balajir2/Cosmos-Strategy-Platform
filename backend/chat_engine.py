@@ -230,6 +230,15 @@ def advance_session(rag, session_id: int, user_content: str, self_evaluation_sta
     if phase == "calibration_awaiting_answer":
         add_message(session_id, "user", user_content, "chat", level_index)
         concepts = _get_calibration_concepts(project_id)
+        if level_index >= len(concepts):
+            # A Consultant deleted a concept (or all of them) while a ClientUser was
+            # mid-calibration - level_index was written on a previous turn and can
+            # now be out of range. Calibration is informational only and must never
+            # block progression, so fall through to the real question flow exactly
+            # like the natural end-of-concepts case below.
+            question_msg = _ask_question(session_id, case_id, project_id, 0)
+            update_session(session_id, 0, "awaiting_answer")
+            return {"phase": "awaiting_answer", "current_level_index": 0, "messages": [question_msg]}
         concept = concepts[level_index]
         feedback_text = _generate_calibration_feedback(concept, user_content)
         calibration_db.save_response(project_id, concept["id"], submitted_definition=user_content, feedback_text=feedback_text)

@@ -240,7 +240,8 @@ def init_db():
         project_id BIGINT REFERENCES projects(id) ON DELETE CASCADE,
         current_level_index INTEGER NOT NULL DEFAULT 0,
         phase TEXT NOT NULL DEFAULT 'asking'
-            CHECK (phase IN ('asking', 'awaiting_answer', 'benchmarking', 'awaiting_self_rating', 'complete')),
+            CHECK (phase IN ('asking', 'awaiting_answer', 'benchmarking', 'awaiting_self_rating', 'complete',
+                              'calibration_awaiting_answer')),
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         CONSTRAINT chat_sessions_exactly_one_of_case_or_project CHECK (
@@ -278,10 +279,30 @@ def init_db():
         role TEXT NOT NULL CHECK (role IN ('assistant', 'user')),
         content TEXT NOT NULL,
         message_type TEXT NOT NULL DEFAULT 'chat'
-            CHECK (message_type IN ('question', 'benchmark', 'self_rating_prompt', 'chat', 'level_transition')),
+            CHECK (message_type IN ('question', 'benchmark', 'self_rating_prompt', 'chat', 'level_transition',
+                                     'calibration_prompt', 'calibration_feedback')),
         level_index INTEGER,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    """)
+
+    # Migration for chat_sessions/chat_messages tables that already exist from
+    # before Baseline Calibration - the CREATE TABLE IF NOT EXISTS blocks above
+    # are no-ops against existing tables, so widen their CHECK constraints
+    # explicitly and idempotently to allow the new phase/message_type values
+    # (Postgres auto-names an inline CHECK after its column, so these names are
+    # predictable without an information_schema lookup).
+    cursor.execute("ALTER TABLE chat_sessions DROP CONSTRAINT IF EXISTS chat_sessions_phase_check;")
+    cursor.execute("""
+        ALTER TABLE chat_sessions ADD CONSTRAINT chat_sessions_phase_check
+        CHECK (phase IN ('asking', 'awaiting_answer', 'benchmarking', 'awaiting_self_rating',
+                          'complete', 'calibration_awaiting_answer'));
+    """)
+    cursor.execute("ALTER TABLE chat_messages DROP CONSTRAINT IF EXISTS chat_messages_message_type_check;")
+    cursor.execute("""
+        ALTER TABLE chat_messages ADD CONSTRAINT chat_messages_message_type_check
+        CHECK (message_type IN ('question', 'benchmark', 'self_rating_prompt', 'chat', 'level_transition',
+                                 'calibration_prompt', 'calibration_feedback'));
     """)
 
     conn.commit()

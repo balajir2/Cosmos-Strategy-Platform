@@ -675,3 +675,37 @@ def test_advance_session_calibration_falls_back_on_llm_failure(
     assert result["phase"] == "calibration_awaiting_answer"
     assert "Thanks for sharing your take" in result["messages"][0]["content"]
     mock_save_response.assert_called_once_with(FAKE_PROJECT_ID, 10, submitted_definition="my definition", feedback_text="Thanks for sharing your take on 'insight'. We'll build on this as we go.")
+
+
+@patch("chat_engine.calibration_db.save_response")
+@patch("chat_engine.calibration_db.list_concepts", return_value=[FAKE_CONCEPTS[0]])
+@patch("chat_engine.process_db.get_process_detail", return_value=FAKE_PROCESS_DETAIL)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.update_session")
+@patch("chat_engine.get_session")
+@patch("chat_engine.get_provider_adapter")
+@patch("chat_engine.platform_settings.get_active_provider", return_value="anthropic")
+def test_advance_session_calibration_falls_through_when_level_index_exceeds_concepts(
+    mock_get_active, mock_get_adapter, mock_get_session, mock_update_session,
+    mock_add_message, mock_get_project, mock_get_process, mock_list_concepts, mock_save_response,
+):
+    # A Consultant deleted concepts mid-session: the session's current_level_index
+    # (2) was written on a previous turn, but list_concepts now returns only 1
+    # concept - concepts[level_index] would raise IndexError. Calibration must
+    # never block progression, so this should fall through to the first real
+    # question exactly like the natural-end-of-concepts case does.
+    mock_get_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 2, "phase": "calibration_awaiting_answer"}
+    mock_add_message.side_effect = [
+        {"id": 20, "role": "user", "content": "my definition", "message_type": "chat", "level_index": 2, "created_at": "t"},
+        {"id": 22, "role": "assistant", "content": "Project question one?", "message_type": "question", "level_index": 0, "created_at": "t"},
+    ]
+
+    result = chat_engine.advance_session(_fake_rag(), 1, "my definition")
+
+    assert result["phase"] == "awaiting_answer"
+    assert result["current_level_index"] == 0
+    assert [m["message_type"] for m in result["messages"]] == ["question"]
+    mock_update_session.assert_called_once_with(1, 0, "awaiting_answer")
+    mock_get_adapter.assert_not_called()
+    mock_save_response.assert_not_called()
