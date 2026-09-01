@@ -18,6 +18,7 @@ import project_artifacts_db
 import project_knowledge_base
 import process_db
 import framework_db
+import calibration_db
 import responses_db
 import brief
 from auth import (
@@ -111,6 +112,15 @@ class FrameworkQuestionUpdate(BaseModel):
     owner_role: Optional[str] = None
     reviewer_role: Optional[str] = None
     guidance: Optional[str] = None
+    action: Optional[str] = None
+
+class CalibrationConceptCreate(BaseModel):
+    concept_name: str
+    org_definition: str
+
+class CalibrationConceptUpdate(BaseModel):
+    concept_name: Optional[str] = None
+    org_definition: Optional[str] = None
     action: Optional[str] = None
 
 class ProjectEvaluationRequest(BaseModel):
@@ -449,6 +459,41 @@ def delete_framework_question(project_id: int, question_id: int, member: dict = 
     project = _require_project_for_framework(project_id)
     if not framework_db.delete_question(question_id, project["process_id"]):
         raise HTTPException(status_code=404, detail="Question not found.")
+    return {"deleted": True}
+
+
+@app.get("/api/projects/{project_id}/framework/calibration")
+def get_calibration_concepts(project_id: int, member: dict = Depends(require_consultant)):
+    project = _require_project_for_framework(project_id)
+    return calibration_db.list_concepts(project["process_id"])
+
+
+@app.post("/api/projects/{project_id}/framework/calibration")
+def add_calibration_concept(project_id: int, payload: CalibrationConceptCreate, member: dict = Depends(require_consultant)):
+    _reject_blank(payload.concept_name, "concept_name")
+    _reject_blank(payload.org_definition, "org_definition")
+    project = _require_project_for_framework(project_id)
+    return calibration_db.add_concept(project["process_id"], payload.concept_name, payload.org_definition)
+
+
+@app.patch("/api/projects/{project_id}/framework/calibration/{concept_id}")
+def update_calibration_concept(project_id: int, concept_id: int, payload: CalibrationConceptUpdate, member: dict = Depends(require_consultant)):
+    if payload.action is not None and payload.action not in ("move_up", "move_down"):
+        raise HTTPException(status_code=400, detail="action must be 'move_up' or 'move_down'.")
+    _reject_blank(payload.concept_name, "concept_name")
+    _reject_blank(payload.org_definition, "org_definition")
+    project = _require_project_for_framework(project_id)
+    updated = calibration_db.update_concept(concept_id, project["process_id"], payload.concept_name, payload.org_definition, payload.action)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Calibration concept not found.")
+    return updated
+
+
+@app.delete("/api/projects/{project_id}/framework/calibration/{concept_id}")
+def delete_calibration_concept(project_id: int, concept_id: int, member: dict = Depends(require_consultant)):
+    project = _require_project_for_framework(project_id)
+    if not calibration_db.delete_concept(concept_id, project["process_id"]):
+        raise HTTPException(status_code=404, detail="Calibration concept not found.")
     return {"deleted": True}
 
 @app.get("/api/admin/settings")
