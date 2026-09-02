@@ -420,7 +420,13 @@ def test_extract_text_from_xlsx_renders_rows_as_column_value_pairs():
 
 
 def test_extract_text_from_xlsx_never_splits_a_row_across_chunks():
-    long_value = "x" * 300  # Smaller than 500-char cell cap to avoid truncation
+    # Use a value close to 500-char cap (495 chars) so it is NOT truncated by
+    # per-cell cap, but two such rows (495+1+495 = 991 chars, still fits) plus
+    # the newline before next row (992 + 1 = 993) plus start of 3rd row still
+    # fits. But 3 rows would be (495+1)*3 = 1488 chars, exceeding budget, so
+    # they must split into 3 separate packs. This proves the multi-row packing
+    # logic works correctly without interference from cell-value truncation.
+    long_value = "x" * 495  # Just under 500-char cell cap, not truncated
     file_bytes = _xlsx_bytes({
         "Sheet1": [
             ["Col"],
@@ -433,15 +439,14 @@ def test_extract_text_from_xlsx_never_splits_a_row_across_chunks():
     text = pkb.extract_text_from_xlsx(file_bytes)
     chunks = pkb.chunk_text(text)
 
-    # Each rendered row is ~317 chars. Three rows: 317*3 + 2 newlines = 953 chars.
-    # This should pack into a single chunk, proving rows don't split mid-row.
-    # If the packing algorithm works correctly, all three rows should be in
-    # exactly one chunk (assuming they fit under the 1000-char pack budget).
-    assert len(chunks) >= 1
+    # Each rendered row is "Col: row{i}-" (12 chars) + 495 x's = 507 chars.
+    # Two rows + newline: 507 + 1 + 507 = 1015 chars (exceeds 1000 budget).
+    # So 3 such rows must land in 3 separate packs/chunks.
+    assert len(chunks) == 3, f"Expected 3 chunks (one per row), got {len(chunks)}"
     for i in range(1, 4):
-        row_text_prefix = f"Col: row{i}-"
-        matching_chunks = [c for c in chunks if row_text_prefix in c]
-        assert len(matching_chunks) >= 1, f"row {i} should appear intact in at least one chunk"
+        row_text = f"Col: row{i}-{long_value}"
+        matching_chunks = [c for c in chunks if row_text in c]
+        assert len(matching_chunks) == 1, f"row {i} should appear intact in exactly one chunk"
 
 
 def test_extract_text_from_xlsx_skips_empty_sheets_and_rows():
@@ -485,3 +490,42 @@ def test_extract_text_from_xlsx_caps_oversized_cell_values():
     # Verify the capped value is actually ~500 chars, not the full 1200
     assert "y" * 500 in chunks[0]  # The capped portion is there
     assert "y" * 1200 not in chunks[0]  # The full uncapped value is not
+
+
+def test_extract_text_from_xlsx_clamps_multi_column_overflow():
+    # Regression test: multiple columns each individually under the 500-char
+    # per-cell cap, but whose assembled row string (with all the "Col: " prefixes
+    # and ", " separators) exceeds 1000 chars total. E.g. 3 columns of ~400 chars
+    # each render to roughly "Col1: "+400 + ", Col2: "+400 + ", Col3: "+400 ≈ 1230+
+    # chars — no single cell hits the 500-char cap, so nothing gets truncated by
+    # per-cell logic, but the row-level clamp should kick in to prevent the
+    # assembled row from exceeding max_chunk_chars (1000).
+    col1_val = "a" * 380  # Under 500-char cap, not truncated by per-cell logic
+    col2_val = "b" * 380
+    col3_val = "c" * 380
+    # Assembled row: "Col1: " (6) + 380 + ", Col2: " (8) + 380 + ", Col3: " (8) + 380
+    # = 6 + 380 + 8 + 380 + 8 + 380 = 1162 chars (exceeds 1000-char pack budget)
+    file_bytes = _xlsx_bytes({
+        "Sheet1": [
+            ["Col1", "Col2", "Col3"],
+            [col1_val, col2_val, col3_val],
+        ],
+    })
+
+    text = pkb.extract_text_from_xlsx(file_bytes)
+    chunks = pkb.chunk_text(text)
+
+    # The multi-column row should be clamped to 1000 chars (plus "..." marker),
+    # producing exactly one pack/chunk (single row), never split mid-row.
+    assert len(chunks) == 1, f"Expected 1 chunk, got {len(chunks)}"
+    # Verify the row-level clamp was applied: the chunk should be close to
+    # max_chunk_chars (1000), not the full 1162 chars.
+    chunk_len = len(chunks[0])
+    assert chunk_len <= 1000 + 3, f"Chunk should be clamped to ~1000 chars, got {chunk_len}"
+    # Verify truncation marker is present
+    assert "..." in chunks[0], "Row-level clamp should include truncation marker"
+    # Verify beginning of row is present (truncation only affects the end)
+    assert "Col1: a" in chunks[0]
+    assert "Col2: b" in chunks[0]
+    # Verify the full unclamped row is NOT present (it would be 1162 chars)
+    assert col1_val + col2_val + col3_val not in chunks[0]
