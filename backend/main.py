@@ -5,6 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from typing import List, Dict, Optional
+# google.cloud.exceptions.NotFound IS google.api_core.exceptions.NotFound
+# (same class object) - what blob.delete() raises for a missing object.
+from google.api_core.exceptions import NotFound
 
 # Import RAG Engine
 from rag_engine import RagEngine
@@ -296,6 +299,12 @@ def delete_project_artifact(project_id: int, artifact_id: int, member: dict = De
     if artifact["gcs_object_path"]:
         try:
             gcs_artifact_storage.delete_object(artifact["gcs_object_path"])
+        except NotFound:
+            # The object is already gone (e.g. the processor moved it but
+            # crashed before recording the new path). There's nothing to
+            # delete, so this must not block deleting the DB row - otherwise
+            # the artifact would be undeletable forever.
+            pass
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Could not delete the stored file: {e}")
 

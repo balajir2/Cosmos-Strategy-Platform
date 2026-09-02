@@ -1,6 +1,8 @@
 import os
 from unittest.mock import patch
 
+from google.api_core.exceptions import NotFound
+
 os.environ.setdefault("DATABASE_URL", "postgresql://test/test")
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret")
 
@@ -262,6 +264,23 @@ def test_delete_artifact_returns_500_when_gcs_delete_fails(mock_get_member, mock
         response = client.delete("/api/projects/1/artifacts/1")
         assert response.status_code == 500
         mock_delete.assert_not_called()
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.project_artifacts_db.delete_artifact", return_value=True)
+@patch("main.gcs_artifact_storage.delete_object", side_effect=NotFound("No such object"))
+@patch("main.project_artifacts_db.get_artifact_by_id", return_value={**_ARTIFACT_DICT, "gcs_object_path": "raw/1/1/notes.txt"})
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_delete_artifact_succeeds_when_gcs_object_already_gone(mock_get_member, mock_get_artifact, mock_gcs_delete, mock_delete):
+    # A missing object must not permanently block deleting the row - e.g. the
+    # processor moved it to failed/ but crashed before recording the new path.
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.delete("/api/projects/1/artifacts/1")
+        assert response.status_code == 200
+        assert response.json() == {"deleted": True}
+        mock_delete.assert_called_once_with(1, 1)
     finally:
         main.app.dependency_overrides.clear()
 
