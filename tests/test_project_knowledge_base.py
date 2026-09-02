@@ -5,6 +5,7 @@ import pytest
 from docx import Document
 from pptx import Presentation
 from pptx.util import Inches
+from openpyxl import Workbook
 
 import project_knowledge_base as pkb
 
@@ -27,6 +28,19 @@ def _pptx_bytes(slide_texts):
         box.text_frame.text = text
     buf = io.BytesIO()
     prs.save(buf)
+    return buf.getvalue()
+
+
+def _xlsx_bytes(sheet_rows: dict):
+    """sheet_rows: {sheet_name: [[header, ...], [row1_val, ...], ...]}"""
+    wb = Workbook()
+    wb.remove(wb.active)
+    for sheet_name, rows in sheet_rows.items():
+        ws = wb.create_sheet(sheet_name)
+        for row in rows:
+            ws.append(row)
+    buf = io.BytesIO()
+    wb.save(buf)
     return buf.getvalue()
 
 
@@ -388,3 +402,59 @@ def test_ingest_artifact_raises_value_error_for_unknown_artifact():
     with patch("project_knowledge_base.project_artifacts_db.get_artifact_by_id", return_value=None):
         with pytest.raises(ValueError, match="999"):
             pkb.ingest_artifact(_fake_rag(), 999, b"bytes")
+
+
+def test_extract_text_from_xlsx_renders_rows_as_column_value_pairs():
+    file_bytes = _xlsx_bytes({
+        "Sheet1": [
+            ["Name", "Revenue"],
+            ["Acme Corp", 1000],
+            ["Globex", 2000],
+        ],
+    })
+
+    result = pkb.extract_text_from_xlsx(file_bytes)
+
+    assert "Name: Acme Corp, Revenue: 1000" in result
+    assert "Name: Globex, Revenue: 2000" in result
+
+
+def test_extract_text_from_xlsx_never_splits_a_row_across_chunks():
+    long_value = "x" * 600
+    file_bytes = _xlsx_bytes({
+        "Sheet1": [
+            ["Col"],
+            [f"row1-{long_value}"],
+            [f"row2-{long_value}"],
+            [f"row3-{long_value}"],
+        ],
+    })
+
+    text = pkb.extract_text_from_xlsx(file_bytes)
+    chunks = pkb.chunk_text(text)
+
+    # Each rendered row is ~611 chars; two together exceed the 1000-char pack
+    # budget, so each row must land in its own pack/chunk - this proves rows
+    # aren't split mid-row across a chunk boundary rather than just asserting
+    # the substring exists somewhere in the joined text.
+    assert len(chunks) == 3
+    for i in range(1, 4):
+        row_text = f"Col: row{i}-{long_value}"
+        matching_chunks = [c for c in chunks if row_text in c]
+        assert len(matching_chunks) == 1, f"row {i} should appear intact in exactly one chunk"
+
+
+def test_extract_text_from_xlsx_skips_empty_sheets_and_rows():
+    file_bytes = _xlsx_bytes({
+        "Empty": [],
+        "Sheet1": [["Col"], [], ["value"]],
+    })
+
+    result = pkb.extract_text_from_xlsx(file_bytes)
+
+    assert "Col: value" in result
+    assert result.strip() != ""
+
+
+def test_infer_source_format_maps_excel_extension():
+    assert pkb.infer_source_format("figures.xlsx") == "xlsx"

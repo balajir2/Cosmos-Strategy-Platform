@@ -10,6 +10,7 @@ from google.cloud import speech, storage
 from docx import Document
 from pptx import Presentation
 from pypdf import PdfReader
+from openpyxl import load_workbook
 
 from database import get_db_connection
 import project_artifacts_db
@@ -44,12 +45,48 @@ def extract_text_from_txt(file_bytes: bytes) -> str:
     return file_bytes.decode("utf-8").strip()
 
 
+def extract_text_from_xlsx(file_bytes: bytes, max_chunk_chars: int = 1000) -> str:
+    """Renders each row as 'Col: val, Col: val, ...' and packs consecutive
+    rows into ~max_chunk_chars-sized paragraphs (each paragraph becomes one
+    chunk_text() chunk), never splitting a single row across two chunks -
+    cheaper on both embedding compute and Neon storage than one chunk per
+    row, and more retrieval-precise than one chunk per sheet."""
+    workbook = load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+    packs = []
+    for sheet in workbook.worksheets:
+        rows = list(sheet.iter_rows(values_only=True))
+        if not rows:
+            continue
+        header = [str(c).strip() if c is not None else "" for c in rows[0]]
+        current_pack = []
+        current_len = 0
+        for data_row in rows[1:]:
+            if all(cell is None for cell in data_row):
+                continue
+            rendered = ", ".join(
+                f"{header[i]}: {cell}"
+                for i, cell in enumerate(data_row)
+                if i < len(header) and cell is not None
+            )
+            if not rendered:
+                continue
+            if current_pack and current_len + len(rendered) + 1 > max_chunk_chars:
+                packs.append("\n".join(current_pack))
+                current_pack, current_len = [], 0
+            current_pack.append(rendered)
+            current_len += len(rendered) + 1
+        if current_pack:
+            packs.append("\n".join(current_pack))
+    return "\n\n".join(packs)
+
+
 _EXTRACTORS = {
     "pdf": extract_text_from_pdf,
     "docx": extract_text_from_docx,
     "pptx": extract_text_from_pptx,
     "txt": extract_text_from_txt,
     "md": extract_text_from_txt,
+    "xlsx": extract_text_from_xlsx,
 }
 
 
@@ -77,7 +114,7 @@ def chunk_text(text: str, max_chunk_chars: int = 1000) -> list:
     return chunks
 
 
-_DOCUMENT_EXTENSIONS = {"pdf": "pdf", "docx": "docx", "pptx": "pptx", "txt": "txt", "md": "md"}
+_DOCUMENT_EXTENSIONS = {"pdf": "pdf", "docx": "docx", "pptx": "pptx", "txt": "txt", "md": "md", "xlsx": "xlsx"}
 _AUDIO_EXTENSIONS = {"mp3", "wav", "m4a", "flac", "ogg"}
 
 
