@@ -50,7 +50,8 @@ def test_upload_artifact_rejects_non_consultant(mock_get_member):
 @patch("main.project_artifacts_db.get_artifact_by_id", return_value={**_ARTIFACT_DICT, "status": "Indexed"})
 @patch("main.project_artifacts_db.create_artifact", return_value=_ARTIFACT_DICT)
 @patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
-def test_upload_artifact_creates_and_ingests_for_consultant(mock_get_member, mock_create, mock_get_artifact, mock_ingest):
+def test_upload_artifact_creates_and_ingests_for_consultant(mock_get_member, mock_create, mock_get_artifact, mock_ingest, monkeypatch):
+    monkeypatch.delenv("GCS_ARTIFACTS_BUCKET", raising=False)
     main.app.dependency_overrides[main.get_current_user] = lambda: _USER
     try:
         response = client.post(
