@@ -289,6 +289,16 @@ def list_project_artifacts(project_id: int, member: dict = Depends(require_proje
 
 @app.delete("/api/projects/{project_id}/artifacts/{artifact_id}")
 def delete_project_artifact(project_id: int, artifact_id: int, member: dict = Depends(require_consultant)):
+    artifact = project_artifacts_db.get_artifact_by_id(artifact_id)
+    if artifact is None or artifact["project_id"] != project_id:
+        raise HTTPException(status_code=404, detail="Artifact not found.")
+
+    if artifact["gcs_object_path"]:
+        try:
+            gcs_artifact_storage.delete_object(artifact["gcs_object_path"])
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Could not delete the stored file: {e}")
+
     deleted = project_artifacts_db.delete_artifact(project_id, artifact_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Artifact not found.")

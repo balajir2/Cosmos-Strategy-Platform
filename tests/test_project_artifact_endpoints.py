@@ -197,8 +197,9 @@ def test_delete_artifact_rejects_non_consultant(mock_get_member):
 
 
 @patch("main.project_artifacts_db.delete_artifact", return_value=True)
+@patch("main.project_artifacts_db.get_artifact_by_id", return_value={**_ARTIFACT_DICT, "gcs_object_path": None})
 @patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
-def test_delete_artifact_deletes_for_consultant(mock_get_member, mock_delete):
+def test_delete_artifact_deletes_for_consultant(mock_get_member, mock_get_artifact, mock_delete):
     main.app.dependency_overrides[main.get_current_user] = lambda: _USER
     try:
         response = client.delete("/api/projects/1/artifacts/1")
@@ -210,8 +211,63 @@ def test_delete_artifact_deletes_for_consultant(mock_get_member, mock_delete):
 
 
 @patch("main.project_artifacts_db.delete_artifact", return_value=False)
+@patch("main.project_artifacts_db.get_artifact_by_id", return_value={**_ARTIFACT_DICT, "gcs_object_path": None})
 @patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
-def test_delete_artifact_returns_404_when_missing(mock_get_member, mock_delete):
+def test_delete_artifact_returns_404_when_missing(mock_get_member, mock_get_artifact, mock_delete):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.delete("/api/projects/1/artifacts/999")
+        assert response.status_code == 404
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.project_artifacts_db.delete_artifact", return_value=True)
+@patch("main.gcs_artifact_storage.delete_object")
+@patch("main.project_artifacts_db.get_artifact_by_id", return_value={**_ARTIFACT_DICT, "gcs_object_path": "processed/1/1/notes.txt"})
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_delete_artifact_deletes_gcs_object_when_present(mock_get_member, mock_get_artifact, mock_gcs_delete, mock_delete):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.delete("/api/projects/1/artifacts/1")
+        assert response.status_code == 200
+        mock_gcs_delete.assert_called_once_with("processed/1/1/notes.txt")
+        mock_delete.assert_called_once_with(1, 1)
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.project_artifacts_db.delete_artifact", return_value=True)
+@patch("main.gcs_artifact_storage.delete_object")
+@patch("main.project_artifacts_db.get_artifact_by_id", return_value={**_ARTIFACT_DICT, "gcs_object_path": None})
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_delete_artifact_skips_gcs_when_no_path(mock_get_member, mock_get_artifact, mock_gcs_delete, mock_delete):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.delete("/api/projects/1/artifacts/1")
+        assert response.status_code == 200
+        mock_gcs_delete.assert_not_called()
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.project_artifacts_db.delete_artifact")
+@patch("main.gcs_artifact_storage.delete_object", side_effect=RuntimeError("network blip"))
+@patch("main.project_artifacts_db.get_artifact_by_id", return_value={**_ARTIFACT_DICT, "gcs_object_path": "processed/1/1/notes.txt"})
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_delete_artifact_returns_500_when_gcs_delete_fails(mock_get_member, mock_get_artifact, mock_gcs_delete, mock_delete):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.delete("/api/projects/1/artifacts/1")
+        assert response.status_code == 500
+        mock_delete.assert_not_called()
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.project_artifacts_db.get_artifact_by_id", return_value=None)
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_delete_artifact_returns_404_when_artifact_missing_before_gcs_check(mock_get_member, mock_get_artifact):
     main.app.dependency_overrides[main.get_current_user] = lambda: _USER
     try:
         response = client.delete("/api/projects/1/artifacts/999")
