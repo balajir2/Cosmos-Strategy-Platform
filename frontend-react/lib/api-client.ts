@@ -310,7 +310,7 @@ export interface ProjectArtifact {
   artifact_type: "document" | "audio";
   source_format: "pdf" | "docx" | "pptx" | "txt" | "audio";
   purpose: "reference" | "case_study_external" | "case_study_internal" | "case_study_resolution";
-  status: "Uploaded" | "Processing" | "Indexed" | "Failed" | "Transcript Needed";
+  status: "Uploaded" | "Queued" | "Processing" | "Indexed" | "Failed" | "Transcript Needed";
   transcript_text: string | null;
   uploaded_by: number;
   uploaded_at: string;

@@ -57,6 +57,14 @@ export default function ProjectSetupPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
+  useEffect(() => {
+    const hasPendingArtifact = artifacts.some((a) => a.status === "Queued" || a.status === "Processing");
+    if (!hasPendingArtifact) return;
+    const intervalId = setInterval(reloadArtifacts, 3000);
+    return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artifacts]);
+
   async function handleContextBlur() {
     if (!project) return;
     try {
@@ -213,7 +221,11 @@ export default function ProjectSetupPage() {
           <div className="artifact-list">
             {artifacts.map((a) => {
               const statusClass =
-                a.status === "Indexed" ? "indexed" : a.status === "Processing" ? "processing" : a.status === "Transcript Needed" ? "transcript-needed" : "";
+                a.status === "Indexed" ? "indexed"
+                : a.status === "Processing" ? "processing"
+                : a.status === "Queued" ? "queued"
+                : a.status === "Transcript Needed" ? "transcript-needed"
+                : "";
               return (
                 <div className="artifact-item" key={a.id}>
                   <i className={`artifact-icon fa-solid ${a.source_format === "audio" ? "fa-microphone" : "fa-file-lines"}`}></i>
