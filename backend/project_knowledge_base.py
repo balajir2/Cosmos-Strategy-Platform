@@ -49,6 +49,7 @@ _EXTRACTORS = {
     "docx": extract_text_from_docx,
     "pptx": extract_text_from_pptx,
     "txt": extract_text_from_txt,
+    "md": extract_text_from_txt,
 }
 
 
@@ -76,7 +77,7 @@ def chunk_text(text: str, max_chunk_chars: int = 1000) -> list:
     return chunks
 
 
-_DOCUMENT_EXTENSIONS = {"pdf": "pdf", "docx": "docx", "pptx": "pptx", "txt": "txt"}
+_DOCUMENT_EXTENSIONS = {"pdf": "pdf", "docx": "docx", "pptx": "pptx", "txt": "txt", "md": "md"}
 _AUDIO_EXTENSIONS = {"mp3", "wav", "m4a", "flac", "ogg"}
 
 

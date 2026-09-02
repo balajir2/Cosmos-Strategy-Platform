@@ -97,6 +97,15 @@ def test_infer_source_format_maps_known_document_extensions():
     assert pkb.infer_source_format("transcript.txt") == "txt"
 
 
+def test_infer_source_format_maps_markdown_extension():
+    assert pkb.infer_source_format("readme.md") == "md"
+
+
+def test_extract_text_dispatches_markdown_to_txt_extractor():
+    result = pkb.extract_text("# Heading\n\nBody text.".encode("utf-8"), "md")
+    assert result == "# Heading\n\nBody text."
+
+
 def test_infer_source_format_maps_audio_extensions():
     assert pkb.infer_source_format("meeting.mp3") == "audio"
     assert pkb.infer_source_format("call.wav") == "audio"
