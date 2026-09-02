@@ -67,6 +67,22 @@ resource "google_storage_bucket_iam_member" "processor_full_access" {
   member = "serviceAccount:${google_service_account.processor.email}"
 }
 
+resource "google_project_iam_member" "processor_eventarc_receiver" {
+  project = var.project_id
+  role    = "roles/eventarc.eventReceiver"
+  member  = "serviceAccount:${google_service_account.processor.email}"
+}
+
+data "google_storage_project_service_account" "gcs_service_account" {
+  project = var.project_id
+}
+
+resource "google_project_iam_member" "gcs_publishes_to_pubsub" {
+  project = var.project_id
+  role    = "roles/pubsub.publisher"
+  member  = "serviceAccount:${data.google_storage_project_service_account.gcs_service_account.email_address}"
+}
+
 resource "google_secret_manager_secret_iam_member" "processor_reads_database_url" {
   secret_id = var.database_url_secret_id
   role      = "roles/secretmanager.secretAccessor"
