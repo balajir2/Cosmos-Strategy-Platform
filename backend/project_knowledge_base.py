@@ -45,12 +45,15 @@ def extract_text_from_txt(file_bytes: bytes) -> str:
     return file_bytes.decode("utf-8").strip()
 
 
-def extract_text_from_xlsx(file_bytes: bytes, max_chunk_chars: int = 1000) -> str:
+def extract_text_from_xlsx(file_bytes: bytes, max_chunk_chars: int = 1000, max_cell_chars: int = 500) -> str:
     """Renders each row as 'Col: val, Col: val, ...' and packs consecutive
     rows into ~max_chunk_chars-sized paragraphs (each paragraph becomes one
     chunk_text() chunk), never splitting a single row across two chunks -
     cheaper on both embedding compute and Neon storage than one chunk per
-    row, and more retrieval-precise than one chunk per sheet."""
+    row, and more retrieval-precise than one chunk per sheet. Individual cell
+    values are capped at max_cell_chars to prevent a single oversized cell
+    from exceeding the pack budget and triggering mid-row splitting in
+    chunk_text() downstream."""
     workbook = load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
     packs = []
     for sheet in workbook.worksheets:
@@ -64,7 +67,7 @@ def extract_text_from_xlsx(file_bytes: bytes, max_chunk_chars: int = 1000) -> st
             if all(cell is None for cell in data_row):
                 continue
             rendered = ", ".join(
-                f"{header[i]}: {cell}"
+                f"{header[i]}: {str(cell)[:max_cell_chars]}{'...' if len(str(cell)) > max_cell_chars else ''}"
                 for i, cell in enumerate(data_row)
                 if i < len(header) and cell is not None
             )
