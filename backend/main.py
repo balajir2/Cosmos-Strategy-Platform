@@ -16,6 +16,7 @@ import projects_db
 import users_db
 import project_artifacts_db
 import project_knowledge_base
+import gcs_artifact_storage
 import process_db
 import framework_db
 import calibration_db
@@ -272,7 +273,14 @@ async def upload_project_artifact(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    await run_in_threadpool(project_knowledge_base.ingest_artifact, rag, artifact["id"], file_bytes)
+    if os.environ.get("GCS_ARTIFACTS_BUCKET"):
+        gcs_path = await run_in_threadpool(
+            gcs_artifact_storage.upload_to_raw, project_id, artifact["id"], file.filename, file_bytes,
+        )
+        project_artifacts_db.update_artifact_status(artifact["id"], "Queued", gcs_object_path=gcs_path)
+    else:
+        await run_in_threadpool(project_knowledge_base.ingest_artifact, rag, artifact["id"], file_bytes)
+
     return project_artifacts_db.get_artifact_by_id(artifact["id"])
 
 @app.get("/api/projects/{project_id}/artifacts")

@@ -66,6 +66,55 @@ def test_upload_artifact_creates_and_ingests_for_consultant(mock_get_member, moc
         main.app.dependency_overrides.clear()
 
 
+@patch("main.gcs_artifact_storage.upload_to_raw", return_value="raw/1/1/notes.txt")
+@patch("main.project_artifacts_db.get_artifact_by_id", return_value={**_ARTIFACT_DICT, "status": "Queued", "gcs_object_path": "raw/1/1/notes.txt"})
+@patch("main.project_artifacts_db.update_artifact_status", return_value={**_ARTIFACT_DICT, "status": "Queued", "gcs_object_path": "raw/1/1/notes.txt"})
+@patch("main.project_artifacts_db.create_artifact", return_value=_ARTIFACT_DICT)
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_upload_artifact_streams_to_raw_when_bucket_configured(
+    mock_get_member, mock_create, mock_update_status, mock_get_artifact, mock_upload, monkeypatch,
+):
+    monkeypatch.setenv("GCS_ARTIFACTS_BUCKET", "cosmos-artifacts-test")
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.post(
+            "/api/projects/1/artifacts",
+            files={"file": ("notes.txt", b"hello world", "text/plain")},
+            data={"purpose": "reference"},
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "Queued"
+        mock_upload.assert_called_once_with(1, 1, "notes.txt", b"hello world")
+        mock_update_status.assert_called_once_with(1, "Queued", gcs_object_path="raw/1/1/notes.txt")
+    finally:
+        main.app.dependency_overrides.clear()
+        monkeypatch.delenv("GCS_ARTIFACTS_BUCKET", raising=False)
+
+
+@patch("main.gcs_artifact_storage.upload_to_raw")
+@patch("main.project_knowledge_base.ingest_artifact", return_value={**_ARTIFACT_DICT, "status": "Indexed"})
+@patch("main.project_artifacts_db.get_artifact_by_id", return_value={**_ARTIFACT_DICT, "status": "Indexed"})
+@patch("main.project_artifacts_db.create_artifact", return_value=_ARTIFACT_DICT)
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_upload_artifact_ingests_inline_when_bucket_unconfigured(
+    mock_get_member, mock_create, mock_get_artifact, mock_ingest, mock_upload, monkeypatch,
+):
+    monkeypatch.delenv("GCS_ARTIFACTS_BUCKET", raising=False)
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.post(
+            "/api/projects/1/artifacts",
+            files={"file": ("notes.txt", b"hello world", "text/plain")},
+            data={"purpose": "reference"},
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "Indexed"
+        mock_ingest.assert_called_once_with(main.rag, 1, b"hello world")
+        mock_upload.assert_not_called()
+    finally:
+        main.app.dependency_overrides.clear()
+
+
 @patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
 def test_upload_artifact_rejects_unsupported_extension(mock_get_member):
     main.app.dependency_overrides[main.get_current_user] = lambda: _USER
