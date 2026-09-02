@@ -17,11 +17,11 @@ def _fake_conn(fetchone_result=None, fetchall_result=None):
     return conn, cursor
 
 
-_ARTIFACT_ROW = (1, 10, "notes.txt", "document", "txt", "reference", "Uploaded", None, 5, datetime.datetime(2026, 8, 28, 9, 0, 0))
+_ARTIFACT_ROW = (1, 10, "notes.txt", "document", "txt", "reference", "Uploaded", None, None, 5, datetime.datetime(2026, 8, 28, 9, 0, 0))
 _ARTIFACT_DICT = {
     "id": 1, "project_id": 10, "filename": "notes.txt", "artifact_type": "document",
     "source_format": "txt", "purpose": "reference", "status": "Uploaded",
-    "transcript_text": None, "uploaded_by": 5, "uploaded_at": "2026-08-28T09:00:00",
+    "transcript_text": None, "gcs_object_path": None, "uploaded_by": 5, "uploaded_at": "2026-08-28T09:00:00",
 }
 
 
@@ -98,7 +98,7 @@ def test_list_artifacts_for_project_returns_dict_list(mock_get_conn):
 
 @patch("project_artifacts_db.get_db_connection")
 def test_update_artifact_status_updates_and_returns_row(mock_get_conn):
-    updated_row = (1, 10, "notes.txt", "document", "txt", "reference", "Indexed", None, 5, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    updated_row = (1, 10, "notes.txt", "document", "txt", "reference", "Indexed", None, None, 5, datetime.datetime(2026, 8, 28, 9, 0, 0))
     conn, cursor = _fake_conn(fetchone_result=updated_row)
     mock_get_conn.return_value = conn
 
@@ -107,13 +107,13 @@ def test_update_artifact_status_updates_and_returns_row(mock_get_conn):
     assert result["status"] == "Indexed"
     sql, params = cursor.execute.call_args[0]
     assert "UPDATE project_artifacts" in sql
-    assert params == ("Indexed", None, 1)
+    assert params == ("Indexed", None, None, 1)
     conn.commit.assert_called_once()
 
 
 @patch("project_artifacts_db.get_db_connection")
 def test_update_artifact_status_sets_transcript_text_when_given(mock_get_conn):
-    updated_row = (2, 10, "meeting.mp3", "audio", "audio", "reference", "Indexed", "hello from the meeting", 5, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    updated_row = (2, 10, "meeting.mp3", "audio", "audio", "reference", "Indexed", "hello from the meeting", None, 5, datetime.datetime(2026, 8, 28, 9, 0, 0))
     conn, cursor = _fake_conn(fetchone_result=updated_row)
     mock_get_conn.return_value = conn
 
@@ -121,7 +121,7 @@ def test_update_artifact_status_sets_transcript_text_when_given(mock_get_conn):
 
     assert result["transcript_text"] == "hello from the meeting"
     _, params = cursor.execute.call_args[0]
-    assert params == ("Indexed", "hello from the meeting", 2)
+    assert params == ("Indexed", "hello from the meeting", None, 2)
 
 
 @patch("project_artifacts_db.get_db_connection")
@@ -154,3 +154,16 @@ def test_delete_artifact_returns_false_when_not_found_or_wrong_project(mock_get_
     mock_get_conn.return_value = conn
 
     assert project_artifacts_db.delete_artifact(10, 999) is False
+
+
+@patch("project_artifacts_db.get_db_connection")
+def test_update_artifact_status_sets_gcs_object_path(mock_get_conn):
+    updated_row = (1, 10, "notes.txt", "document", "txt", "reference", "Indexed", None, "processed/10/1/notes.txt", 5, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    conn, cursor = _fake_conn(fetchone_result=updated_row)
+    mock_get_conn.return_value = conn
+
+    result = project_artifacts_db.update_artifact_status(1, "Indexed", gcs_object_path="processed/10/1/notes.txt")
+
+    assert result["gcs_object_path"] == "processed/10/1/notes.txt"
+    args = cursor.execute.call_args[0][1]
+    assert args == ("Indexed", None, "processed/10/1/notes.txt", 1)

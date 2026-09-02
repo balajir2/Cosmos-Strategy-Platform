@@ -174,15 +174,35 @@ def init_db():
         artifact_type TEXT NOT NULL
             CHECK (artifact_type IN ('document', 'audio')),
         source_format TEXT NOT NULL
-            CHECK (source_format IN ('pdf', 'docx', 'pptx', 'txt', 'audio')),
+            CHECK (source_format IN ('pdf', 'docx', 'pptx', 'txt', 'md', 'xlsx', 'audio')),
         purpose TEXT NOT NULL DEFAULT 'reference'
             CHECK (purpose IN ('reference', 'case_study_external', 'case_study_internal', 'case_study_resolution')),
         status TEXT NOT NULL DEFAULT 'Uploaded'
-            CHECK (status IN ('Uploaded', 'Processing', 'Indexed', 'Failed', 'Transcript Needed')),
+            CHECK (status IN ('Uploaded', 'Queued', 'Processing', 'Indexed', 'Failed', 'Transcript Needed')),
         transcript_text TEXT,
+        gcs_object_path TEXT,
         uploaded_by BIGINT NOT NULL REFERENCES users(id),
         uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    """)
+
+    # Migration for a project_artifacts table that already exists from before
+    # the async ingestion pipeline - the CREATE TABLE IF NOT EXISTS above is a
+    # no-op against an existing table, so widen its CHECK constraints and add
+    # the new column explicitly and idempotently (Postgres auto-names an
+    # inline CHECK after its column, so these names are predictable without
+    # an information_schema lookup - same pattern as the chat_sessions/
+    # chat_messages migration above).
+    cursor.execute("ALTER TABLE project_artifacts ADD COLUMN IF NOT EXISTS gcs_object_path TEXT;")
+    cursor.execute("ALTER TABLE project_artifacts DROP CONSTRAINT IF EXISTS project_artifacts_source_format_check;")
+    cursor.execute("""
+        ALTER TABLE project_artifacts ADD CONSTRAINT project_artifacts_source_format_check
+        CHECK (source_format IN ('pdf', 'docx', 'pptx', 'txt', 'md', 'xlsx', 'audio'));
+    """)
+    cursor.execute("ALTER TABLE project_artifacts DROP CONSTRAINT IF EXISTS project_artifacts_status_check;")
+    cursor.execute("""
+        ALTER TABLE project_artifacts ADD CONSTRAINT project_artifacts_status_check
+        CHECK (status IN ('Uploaded', 'Queued', 'Processing', 'Indexed', 'Failed', 'Transcript Needed'));
     """)
 
     cursor.execute("""

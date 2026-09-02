@@ -9,8 +9,14 @@ def _artifact_dict(row: tuple) -> dict:
     return {
         "id": row[0], "project_id": row[1], "filename": row[2], "artifact_type": row[3],
         "source_format": row[4], "purpose": row[5], "status": row[6], "transcript_text": row[7],
-        "uploaded_by": row[8], "uploaded_at": row[9].isoformat(),
+        "gcs_object_path": row[8], "uploaded_by": row[9], "uploaded_at": row[10].isoformat(),
     }
+
+
+_SELECT_COLUMNS = (
+    "id, project_id, filename, artifact_type, source_format, purpose, status, "
+    "transcript_text, gcs_object_path, uploaded_by, uploaded_at"
+)
 
 
 def create_artifact(
@@ -25,10 +31,10 @@ def create_artifact(
         with conn.cursor() as cursor:
             try:
                 cursor.execute(
-                    """
+                    f"""
                     INSERT INTO project_artifacts (project_id, filename, artifact_type, source_format, purpose, uploaded_by)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                    RETURNING id, project_id, filename, artifact_type, source_format, purpose, status, transcript_text, uploaded_by, uploaded_at;
+                    RETURNING {_SELECT_COLUMNS};
                     """,
                     (project_id, filename, artifact_type, source_format, purpose, uploaded_by),
                 )
@@ -44,10 +50,7 @@ def get_artifact_by_id(artifact_id: int):
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                """
-                SELECT id, project_id, filename, artifact_type, source_format, purpose, status, transcript_text, uploaded_by, uploaded_at
-                FROM project_artifacts WHERE id = %s;
-                """,
+                f"SELECT {_SELECT_COLUMNS} FROM project_artifacts WHERE id = %s;",
                 (artifact_id,),
             )
             row = cursor.fetchone()
@@ -60,28 +63,26 @@ def list_artifacts_for_project(project_id: int) -> list:
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                """
-                SELECT id, project_id, filename, artifact_type, source_format, purpose, status, transcript_text, uploaded_by, uploaded_at
-                FROM project_artifacts WHERE project_id = %s ORDER BY uploaded_at DESC;
-                """,
+                f"SELECT {_SELECT_COLUMNS} FROM project_artifacts WHERE project_id = %s ORDER BY uploaded_at DESC;",
                 (project_id,),
             )
             rows = cursor.fetchall()
     return [_artifact_dict(row) for row in rows]
 
 
-def update_artifact_status(artifact_id: int, status: str, transcript_text: str = None):
+def update_artifact_status(artifact_id: int, status: str, transcript_text: str = None, gcs_object_path: str = None):
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                 UPDATE project_artifacts
                 SET status = %s,
-                    transcript_text = COALESCE(%s, transcript_text)
+                    transcript_text = COALESCE(%s, transcript_text),
+                    gcs_object_path = COALESCE(%s, gcs_object_path)
                 WHERE id = %s
-                RETURNING id, project_id, filename, artifact_type, source_format, purpose, status, transcript_text, uploaded_by, uploaded_at;
+                RETURNING {_SELECT_COLUMNS};
                 """,
-                (status, transcript_text, artifact_id),
+                (status, transcript_text, gcs_object_path, artifact_id),
             )
             row = cursor.fetchone()
         conn.commit()
