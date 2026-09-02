@@ -38,9 +38,13 @@ resource "google_service_account" "processor" {
   project      = var.project_id
 }
 
+# objectAdmin, not objectCreator: the backend's artifact-delete endpoint
+# deletes at whatever gcs_object_path currently holds, which is raw/... for
+# any artifact still Queued/Uploaded or stuck mid-processing. Create-only
+# would 403 there and leave stuck artifacts undeletable.
 resource "google_storage_bucket_iam_member" "backend_writes_raw" {
   bucket = google_storage_bucket.artifacts.name
-  role   = "roles/storage.objectCreator"
+  role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.backend.email}"
 
   condition {
@@ -63,6 +67,15 @@ resource "google_storage_bucket_iam_member" "backend_admins_processed_and_failed
 
 resource "google_storage_bucket_iam_member" "processor_full_access" {
   bucket = google_storage_bucket.artifacts.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.processor.email}"
+}
+
+# The audio-staging bucket for Speech-to-Text isn't owned by this module, so
+# bind against the bucket name rather than a bucket resource. The processor
+# both writes and cleans up the staged audio, hence objectAdmin.
+resource "google_storage_bucket_iam_member" "processor_admins_transcribe_bucket" {
+  bucket = var.transcribe_bucket_name
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.processor.email}"
 }
@@ -103,14 +116,31 @@ resource "google_cloud_run_v2_service" "processor" {
 
   template {
     service_account = google_service_account.processor.email
+    # Generous ceiling for transcribe_audio's ~5-minute Speech-to-Text polling
+    # plus parse/embed time; the default request timeout would cut audio off.
+    timeout = "900s"
+
     containers {
       image   = var.processor_image
       command = ["uvicorn"]
       args    = ["processor_main:app", "--host", "0.0.0.0", "--port", "8080"]
 
+      # The 512 MiB / 1 vCPU Cloud Run v2 default OOMs: processor_main loads a
+      # SentenceTransformer (model + torch) at import time.
+      resources {
+        limits = {
+          memory = "2Gi"
+          cpu    = "2"
+        }
+      }
+
       env {
         name  = "GCS_ARTIFACTS_BUCKET"
         value = local.bucket_name
+      }
+      env {
+        name  = "GCS_TRANSCRIBE_BUCKET"
+        value = var.transcribe_bucket_name
       }
       env {
         name = "DATABASE_URL"

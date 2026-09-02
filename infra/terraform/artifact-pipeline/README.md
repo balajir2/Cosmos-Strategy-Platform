@@ -24,14 +24,16 @@ once per environment before the first `terraform init`:
       -var="project_id=<project-id>" \
       -var="env=<env>" \
       -var="processor_image=<image-uri>" \
-      -var="database_url_secret_id=<secret-id>"
+      -var="database_url_secret_id=<secret-id>" \
+      -var="transcribe_bucket_name=<audio-staging-bucket>"
 
 Moving to a different GCP account is the same two commands against that
 account's `project_id`/state bucket - no manual console steps.
 
 ## Variables
 
-See `variables.tf`. `processor_image` and `database_url_secret_id` are
-expected to already exist (built/pushed by CI, and provisioned by the
-main app's own deployment work respectively) - this module does not
-create them.
+See `variables.tf`. `processor_image`, `database_url_secret_id` and
+`transcribe_bucket_name` are expected to already exist (built/pushed by
+CI, and provisioned by the main app's own deployment work respectively) -
+this module does not create them, it only grants the processor service
+account access to them.

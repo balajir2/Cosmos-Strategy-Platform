@@ -19,6 +19,11 @@ variable "processor_image" {
   type        = string
 }
 
+variable "transcribe_bucket_name" {
+  description = "GCS bucket used to stage audio for Google Speech-to-Text (GCS_TRANSCRIBE_BUCKET), already provisioned outside this module. Without it every audio artifact degrades to 'Transcript Needed'."
+  type        = string
+}
+
 variable "database_url_secret_id" {
   description = "Secret Manager secret ID holding the Neon DATABASE_URL, already provisioned outside this module."
   type        = string
