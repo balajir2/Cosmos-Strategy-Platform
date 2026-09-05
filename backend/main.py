@@ -84,6 +84,7 @@ class ProjectUpdateRequest(BaseModel):
     customer_name: Optional[str] = None
     description: Optional[str] = None
     industry_context: Optional[str] = None
+    delivery_mode: Optional[str] = None
 
 class AdminProjectStatusUpdate(BaseModel):
     status: str
@@ -238,9 +239,13 @@ def get_project(
 
 @app.patch("/api/projects/{project_id}")
 def update_project(project_id: int, payload: ProjectUpdateRequest, member: dict = Depends(require_consultant)):
-    updated = projects_db.update_project(
-        project_id, payload.name, payload.customer_name, payload.description, payload.industry_context,
-    )
+    try:
+        updated = projects_db.update_project(
+            project_id, payload.name, payload.customer_name, payload.description,
+            payload.industry_context, payload.delivery_mode,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     if updated is None:
         raise HTTPException(status_code=404, detail="Project not found.")
     return updated
@@ -542,7 +547,13 @@ def admin_list_projects(admin: dict = Depends(require_admin)):
 
 @app.patch("/api/admin/projects/{project_id}")
 def admin_update_project(project_id: int, payload: ProjectUpdateRequest, admin: dict = Depends(require_admin)):
-    updated = projects_db.update_project(project_id, payload.name, payload.customer_name, payload.description, payload.industry_context)
+    try:
+        updated = projects_db.update_project(
+            project_id, payload.name, payload.customer_name, payload.description,
+            payload.industry_context, payload.delivery_mode,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     if updated is None:
         raise HTTPException(status_code=404, detail="Project not found.")
     return updated

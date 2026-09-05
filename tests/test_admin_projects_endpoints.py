@@ -43,7 +43,7 @@ def test_update_project_updates_for_admin(mock_update):
         response = client.patch("/api/admin/projects/1", json={"industry_context": "B2B"})
         assert response.status_code == 200
         assert response.json()["industry_context"] == "B2B"
-        mock_update.assert_called_once_with(1, None, None, None, "B2B")
+        mock_update.assert_called_once_with(1, None, None, None, "B2B", None)
     finally:
         main.app.dependency_overrides.clear()
 

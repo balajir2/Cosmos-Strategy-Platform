@@ -211,7 +211,37 @@ def test_update_project_updates_for_consultant(mock_get_member, mock_update):
         response = client.patch("/api/projects/1", json={"industry_context": "B2B"})
         assert response.status_code == 200
         assert response.json()["industry_context"] == "B2B"
-        mock_update.assert_called_once_with(1, None, None, None, "B2B")
+        mock_update.assert_called_once_with(1, None, None, None, "B2B", None)
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.update_project", return_value={**_PROJECT_DICT, "delivery_mode": "live_online"})
+@patch("auth.get_project_member", return_value={
+    "id": 1, "project_id": 1, "user_id": 1, "role": "Consultant",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_update_project_updates_delivery_mode_for_consultant(mock_get_member, mock_update):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
+    try:
+        response = client.patch("/api/projects/1", json={"delivery_mode": "live_online"})
+        assert response.status_code == 200
+        assert response.json()["delivery_mode"] == "live_online"
+        mock_update.assert_called_once_with(1, None, None, None, None, "live_online")
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.update_project", side_effect=ValueError("Invalid delivery_mode: violates check constraint"))
+@patch("auth.get_project_member", return_value={
+    "id": 1, "project_id": 1, "user_id": 1, "role": "Consultant",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_update_project_rejects_invalid_delivery_mode(mock_get_member, mock_update):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
+    try:
+        response = client.patch("/api/projects/1", json={"delivery_mode": "not_a_real_mode"})
+        assert response.status_code == 400
     finally:
         main.app.dependency_overrides.clear()
 

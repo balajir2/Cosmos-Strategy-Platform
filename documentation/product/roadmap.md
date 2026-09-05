@@ -1,6 +1,6 @@
 # Product Roadmap — Cosmos Strategic Capability Platform
 
-**Last Updated:** 2026-09-02
+**Last Updated:** 2026-09-05
 
 This is the living status document for the project: what's been decided, what's built, and what's next. It replaces the one-time `plan/task.md` checklist and the forward-looking sections of `plan/implementation_plan.md`.
 
@@ -31,7 +31,9 @@ Roles are `SystemAdmin` (global — creates projects, assigns the leading Consul
 
 ## Guided Learning Flow (new — from the Aug 24 stakeholder meeting)
 
-Full design: [Functional Spec §2.3](functional-spec.md#23-guided-learning-flow-clientuser). Builds on Phase C above (case studies are Engagement KB artifacts). Not yet scoped into a phase/build order — listed here so it isn't lost, tracked as its own checklist:
+Full design: [Functional Spec §2.3](functional-spec.md#23-guided-learning-flow-clientuser). Builds on Phase C above (case studies are Engagement KB artifacts). Not yet scoped into a phase/build order — listed here so it isn't lost, tracked as its own checklist.
+
+**Before building further on this checklist**: a 2026-09-02 stakeholder call raised open questions that may reshape it — baseline calibration's position in the flow (pre-question, as built, vs. post-question vs. a two-point before/after design), the scope of "remove document upload" against the Engagement Knowledge Base this whole flow depends on, and whether the Insights POC targets the standalone product, the consulting-aid tool, or both. See [Stakeholder Clarifications](stakeholder-clarifications-2026-09.md), written up ahead of a 2026-09-09 planning session. Nothing below has changed as a result yet — this is a pending checkpoint, not a resolved decision.
 
 - [x] Baseline concept calibration step (scored against the org's own definitions, not generic correctness). **Done 2026-09-01** — see `docs/superpowers/specs/2026-09-01-baseline-calibration-design.md` and `docs/superpowers/plans/2026-09-01-baseline-calibration.md`. Consultant-authored concepts (`calibration_concepts`, process-scoped) with org definitions; a fresh `project_id` chat session runs through them (informational only, never blocking) before the first real question.
 - [ ] Per-question theory + externally-deducible examples + serious/fun exercise pair.
@@ -113,6 +115,32 @@ Landed the same day as the Frontend GUI Overhaul cutover above, closing two gaps
 
 The Users/Projects/Engagement Knowledge Base spec carries its own verification plan (auth, role enforcement, project scoping, source-tagged retrieval) — see the spec linked above rather than duplicating it here.
 
+## Engagement Delivery Modes (new — 2026-09-05)
+
+**The three-way split below is designed, and a `delivery_mode` placeholder field is now built (see "Minimum placeholder" below) — modes (a) and (c) themselves are still not designed or built.**
+
+Every project built so far assumes one specific way of running an engagement: a Consultant preps it, activates it, and a ClientUser works through it asynchronously — nobody's suggesting that's wrong, but it's not the only mode the original vision described, and conflating "the Insights module" with "the one way we deliver it" risks baking assumptions into the schema that don't hold once the other two modes get designed. Three modes, all under the same underlying process/question engine:
+
+**a. Fully DIY / self-serve** — no Cosmos human involved at all, including project setup. This is the same concept already listed under "Beyond the POC" below as one of the five original conceptual levels (Julian Daly's "a product's value is in asking the question, not providing the answer" insight from the 19 Aug call) — restated here with a concrete placeholder rather than left as a vague future-module bullet. Requires: self-service signup/project creation (today, only a `SystemAdmin` can create a project — see `POST /api/projects` in `CLAUDE.md` Part 4), and a way to seed a baseline Engagement Knowledge Base without a Consultant curating it (this is also literally the open question in [Stakeholder Clarifications](stakeholder-clarifications-2026-09.md)'s Tier 1 Q2/Q3 — the 2026-09-02 call's "should the system pull public data instead of relying on consultant uploads" discussion was, in effect, arguing about how to build *this* mode). Not designed.
+
+**b. Consultant-guided, asynchronous** — **this is the only mode built today.** A Consultant preps the engagement (industry context, artifacts, case studies, framework authoring), activates it, and the ClientUser works through the chat interview alone, with an optional ~20-minute live escalation call by exception (Guided Learning Flow item (i) above, also not yet built). Everything described in this roadmap's Foundational Work and Guided Learning Flow sections is this mode.
+
+**c. Online, both live** — Consultant and ClientUser are online *simultaneously*, in a real-time session, with the AI surfacing insights to the **Consultant's own view only** (not the client's) during the live conversation — closer to a co-pilot for the human than a replacement of one. Architecturally distinct from (b): needs a live transport (WebSocket or equivalent, not request/response chat turns), a dual-view UI (the Consultant sees AI-flagged moments and a running transcript; the ClientUser sees a plain conversation), and a periodic analysis loop (e.g. every 20-30 seconds) rather than one benchmark generation per submitted answer. **Not designed at all yet — this is new scope as of this entry, not previously discussed with Ashutosh/Shiv.**
+
+**Reference implementation to study, not copy wholesale**: `D:\GitHub\Mental Health App` (the "CBT Companion" project, a separate, mature, deployed sibling app) already solves the live/dual-view problem for a structurally similar use case — a counselor-facing AI co-pilot running alongside a live therapy session. Concretely relevant patterns (see its `docs/PRODUCT_OVERVIEW.md` and `docs/ARCHITECTURE.md`):
+- A browser companion that runs *alongside* the live call rather than being the call itself (there, alongside Zoom/Meet/Teams; here, presumably alongside whatever video tool a consulting engagement already uses) — avoids having to build video calling.
+- WebSocket audio streaming → buffered batch transcription (their ADR-005: Lambda's event model doesn't support persistent streaming connections, so they buffer ~8s and batch-transcribe, landing at ~18s end-to-end latency) — a real, working trade-off already validated in production, not a hypothetical.
+- A periodic AI analysis loop (their Bedrock Agent runs every 30 seconds) surfacing insights to one role's view only — directly the shape needed for the Consultant-only insight panel described above.
+- Role-based dual/multi-view (their Counselor/Supervisor/Admin RBAC, with Supervisors reviewing session transcripts+AI analysis after the fact) — a plausible model for how a Cosmos Consultant's live-session view should differ from what's shown to the ClientUser, and for how session review/supervision might work later.
+- Safety-alert-style hard-to-dismiss flags — analogous to whatever "this conversation needs redirecting" signal a live Cosmos session might need.
+
+None of this should be copied as-is (different domain, different compliance requirements, different AWS-vs-GCP stack) — it's cited because it's a real, working answer to "how do you build a live AI co-pilot for a human-led conversation," which mode (c) will need to answer from scratch otherwise.
+
+**Minimum placeholder — done 2026-09-05**: `projects.delivery_mode` (`consultant_guided_async` default / `diy_self_serve` / `live_online`, `CHECK`-constrained, idempotent migration in `database.init_db`), editable Consultant-only via `PATCH /api/projects/{id}` (`400` on an invalid value), with a dropdown on the Consultant's project setup page (`frontend-react/app/admin/project/[caseId]/page.tsx`) labeling the two unbuilt options "not yet available." See `CLAUDE.md` Part 4 for the endpoint contract.
+
+- **Deviates from the original placeholder proposal in one way**: editable any time via the existing `PATCH /api/projects/{id}` pattern (same as `industry_context`), not fixed at `POST /api/projects` creation time as first proposed — this fits the app's existing "project setup" UI/terminology better and avoids touching the separate New Project creation flow. Nothing currently prevents changing it after activation; that may need revisiting once (a) or (c) have real behavior behind them, since switching mode mid-engagement could be meaningless or actively harmful depending on what each mode ends up requiring.
+- `consultant_guided_async` is still the only value with real behavior behind it — selecting the other two just persists the choice, nothing downstream reacts to it yet.
+
 ## Beyond the POC
 
 The BRD frames this POC as validation before a full multi-tenant build. Originally "not yet scoped" items — one has since landed, the rest remain not yet designed:
@@ -121,5 +149,5 @@ The BRD frames this POC as validation before a full multi-tenant build. Original
 - Automatic mapping of a `questions.owner_role` string (e.g. "CMO") to a specific project member — for now, any `ClientUser` can answer any question.
 - SSO / enterprise identity (Azure AD, Cognito, etc.) — the near-term auth design (Phase A above) is deliberately simple, built-in email/password.
 - Multi-**firm** isolation (multiple consulting firms sharing one deployment). Note this is narrower than it used to be: per-*project* isolation (one customer engagement's data kept separate from another's) is now addressed by the Foundational Work above, once built, via `pgvector` row-level `project_id` scoping — what remains open is isolating separate consulting *firms* from each other on a shared instance.
-- **Four additional product modules** beyond Insights/Capability Building — management process building, organization transparency building, performance & potential evaluation, and DIY consulting — sharing the same underlying corpus but with dramatically different user experiences per the Aug 24 meeting. A follow-up stakeholder call is scheduled to go deeper into these; see `documentation/product/functional-spec.md` §5 for the framing captured so far.
+- **Four additional product modules** beyond Insights/Capability Building — management process building, organization transparency building, performance & potential evaluation, and DIY consulting — sharing the same underlying corpus but with dramatically different user experiences per the Aug 24 meeting. A follow-up stakeholder call is scheduled to go deeper into these; see `documentation/product/functional-spec.md` §5 for the framing captured so far. **DIY consulting specifically is now also tracked as delivery mode (a) above** — same idea, two entries because one is "what domain" (this bullet) and the other is "how it's delivered" (the section above); don't design them independently of each other.
 - Neon Object Storage / Functions / AI Gateway — explicitly out of scope per the Neon spec; original uploaded file storage (as opposed to their vector embeddings) is still an open question, not decided.

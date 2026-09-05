@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   getProject, updateProject, activateProject, listArtifacts, uploadArtifact, deleteArtifact,
-  addProjectMember, Project, ProjectArtifact,
+  addProjectMember, Project, ProjectArtifact, DeliveryMode,
 } from "@/lib/api-client";
 import FrameworkEditor from "@/components/FrameworkEditor";
 import CalibrationEditor from "@/components/CalibrationEditor";
@@ -18,6 +18,18 @@ const PURPOSE_LABELS: Record<string, string> = {
 
 const PURPOSE_OPTIONS = Object.keys(PURPOSE_LABELS);
 
+// Only "consultant_guided_async" has real behavior behind it today - the
+// other two are captured now so this doesn't need a second redesign once
+// they're built. See documentation/product/roadmap.md's "Engagement
+// Delivery Modes" section.
+const DELIVERY_MODE_LABELS: Record<DeliveryMode, string> = {
+  consultant_guided_async: "Consultant-Guided (Async)",
+  diy_self_serve: "Fully DIY (Self-Serve) — not yet available",
+  live_online: "Live Online Consulting — not yet available",
+};
+
+const DELIVERY_MODE_OPTIONS = Object.keys(DELIVERY_MODE_LABELS) as DeliveryMode[];
+
 export default function ProjectSetupPage() {
   const params = useParams();
   const router = useRouter();
@@ -25,6 +37,7 @@ export default function ProjectSetupPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [industryContext, setIndustryContext] = useState("");
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("consultant_guided_async");
   const [artifacts, setArtifactsState] = useState<ProjectArtifact[]>([]);
   const [uploadPurpose, setUploadPurpose] = useState("reference");
   const [activating, setActivating] = useState(false);
@@ -50,6 +63,7 @@ export default function ProjectSetupPage() {
         }
         setProject(p);
         setIndustryContext(p.industry_context || "");
+        setDeliveryMode(p.delivery_mode || "consultant_guided_async");
       })
       .catch(() => setError("Could not load this project. Are you a Consultant on it, and is the backend running?"))
       .finally(() => setLoading(false));
@@ -72,6 +86,19 @@ export default function ProjectSetupPage() {
       setProject(updated);
     } catch {
       setError("Could not save the industry context.");
+    }
+  }
+
+  async function handleDeliveryModeChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const value = e.target.value as DeliveryMode;
+    const previous = deliveryMode;
+    setDeliveryMode(value);
+    try {
+      const updated = await updateProject(projectId, { delivery_mode: value });
+      setProject(updated);
+    } catch {
+      setDeliveryMode(previous);
+      setError("Could not save the engagement delivery mode.");
     }
   }
 
@@ -165,6 +192,16 @@ export default function ProjectSetupPage() {
               onChange={(e) => setIndustryContext(e.target.value)}
               onBlur={handleContextBlur}
             />
+          </div>
+
+          <div className="answer-wrapper">
+            <label htmlFor="delivery-mode-select">Engagement Delivery Mode</label>
+            <select id="delivery-mode-select" value={deliveryMode} onChange={handleDeliveryModeChange}>
+              {DELIVERY_MODE_OPTIONS.map((mode) => (
+                <option key={mode} value={mode}>{DELIVERY_MODE_LABELS[mode]}</option>
+              ))}
+            </select>
+            <span className="dropzone-hint">Only Consultant-Guided is functional today — the other two are recorded for future development.</span>
           </div>
 
           <div className="answer-wrapper">

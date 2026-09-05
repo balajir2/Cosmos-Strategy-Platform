@@ -1,10 +1,10 @@
 # Functional Specification — Cosmos Strategic Capability Platform
 
-**Last Updated:** 2026-08-26 (§2.3(c) sharpened with a follow-up meeting's detail; the 2026-08-24 entry below describes the prior major revision)
+**Last Updated:** 2026-09-05 (status corrections only — §2.3 content unchanged since 2026-08-26)
 
 ---
 
-**Provenance note**: the learning-flow detail in section 2.3 below comes directly from a stakeholder review meeting (transcript: `archives/Meeting transcript 24Aug.txt`) walking through the Insights module's intended experience in depth. It is materially more detailed than the version of this document that existed before 2026-08-24 — this is a rewrite, not an incremental edit. Full technical design: [Users/Projects/Engagement KB Spec](../../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md) (roles, project lifecycle) and [Neon Postgres + pgvector Spec](../../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md) (storage). None of this is built yet — see `documentation/product/roadmap.md`.
+**Provenance note**: the learning-flow detail in section 2.3 below comes directly from a stakeholder review meeting (transcript: `archives/Meeting transcript 24Aug.txt`) walking through the Insights module's intended experience in depth. It is materially more detailed than the version of this document that existed before 2026-08-24 — this is a rewrite, not an incremental edit. Full technical design: [Users/Projects/Engagement KB Spec](../../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md) (roles, project lifecycle) and [Neon Postgres + pgvector Spec](../../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md) (storage). **Status**: sections 2.3(a) (baseline calibration) and 2.3(c) (adaptive question difficulty) are built; the rest of 2.3 (2.3d–i) is not — see `documentation/product/roadmap.md`'s Guided Learning Flow checklist. A 2026-09-02 follow-up call raised open questions that may change 2.3(a)'s design (calibration's position in the flow) and 2.2's document-upload assumptions before further work proceeds — see `documentation/product/stakeholder-clarifications-2026-09.md`, pending a 2026-09-09 planning session.
 
 ---
 
@@ -39,13 +39,14 @@ Three roles, one of them global and two per-project:
 
 - Creates a project: name, customer name, which process/module it runs (e.g. Insights), and who leads it.
 - Assigns a `Consultant` to the project. A project starts in `Draft` status — invisible and inaccessible to any `ClientUser` until the Consultant activates it.
+- **Engagement delivery mode** (added 2026-09-05): every project has a `delivery_mode` — `consultant_guided_async` (default, the only one with real behavior behind it), `diy_self_serve`, or `live_online` — editable by the Consultant on the project setup page. The other two modes are undesigned; selecting them today just records the intent. See `documentation/product/roadmap.md`'s "Engagement Delivery Modes" section.
 
 ### 2.2 Engagement Preparation (Consultant)
 
 Everything the Consultant does *before* a workshop starts — matches the meeting's clear distinction between prep work and the live/async learning experience.
 
 - **Industry context**: records notes on the client's industry and B2B vs. B2C positioning. This calibrates question language and example selection — per the meeting, this divergence has only actually been observed in the Sales/Business Development module, not in Brand, Innovation, or Communication. **Deliberately not** deep company research: "all the information that is relevant should always be salient in the people's minds" — the system doesn't try to pre-load company-specific knowledge beyond what the client team itself brings.
-- **Document upload**: uploads the client's own artifacts (prior strategy decks, financials, interview notes, meeting audio) into the project's Engagement Knowledge Base — see the Users/Projects/Engagement KB Spec.
+- **Document upload**: uploads the client's own artifacts (prior strategy decks, financials, interview notes, meeting audio) into the project's Engagement Knowledge Base — see the Users/Projects/Engagement KB Spec. **Open question (2026-09-02 call)**: whether this stays consultant-upload-driven for company-background material, or shifts toward publicly-available-information research instead — see `documentation/product/stakeholder-clarifications-2026-09.md`. Case study authoring below is not in question either way.
 - **Case study authoring** — two case studies per module, both prepared by the Consultant, not left to individual ClientUsers to invent:
   - **External case study**: a hypothetical, "off-category" scenario unrelated to the client's actual business — no intimacy, provided data only, so the ClientUser reasons from what's given rather than personal familiarity.
   - **Internal case study**: the client's real, current, unsolved business problem — supplied by the organization (not each individual user), since a workshop can't rely on many separate users each proposing their own case.
@@ -73,7 +74,7 @@ For each restlessness-arousing question:
 
 If a user pushes back that a question is "too easy" or "we've heard this a hundred times," the system probes with a concrete prompt (e.g. "what would the answer be for your brand?"). If that probe answer is genuinely sophisticated, the question can evolve to arouse more restlessness; if it comes back generic, the system holds firm that the original question is still apt. Guardrails apply — this isn't unlimited escalation.
 
-**Sharpened in the 2026-08-26 review meeting** (transcript: `archives/Meeting Min 26Aug.txt`): the **master/anchor question for each level is fixed, human-authored content — Consultant IP, never reworded by the AI**. Only the follow-up drill-down that happens *after* the user's initial answer is AI-generated: if the answer doesn't yet show sufficient depth, the system keeps probing with further AI-formulated follow-ups — "it will not move till you have done justice to the work" — rather than accepting a shallow first pass and moving on. This is a real gap against the current implementation: `backend/chat_engine.py`'s `_ask_question` currently instructs the LLM to *rephrase* the canonical question conversationally ("ask it in your own words... do not just restate it verbatim"), which blurs exactly the IP boundary this principle depends on. Needs correcting before this flow is built out further — see `documentation/product/roadmap.md`'s Guided Learning Flow checklist.
+**Sharpened in the 2026-08-26 review meeting** (transcript: `archives/Meeting Min 26Aug.txt`): the **master/anchor question for each level is fixed, human-authored content — Consultant IP, never reworded by the AI**. Only the follow-up drill-down that happens *after* the user's initial answer is AI-generated: if the answer doesn't yet show sufficient depth, the system keeps probing with further AI-formulated follow-ups — "it will not move till you have done justice to the work" — rather than accepting a shallow first pass and moving on. **Built** — verbatim master questions plus a probe-then-escalate follow-up loop landed the same day (commit `50a9280`); `backend/chat_engine.py` presents the canonical question text as-is rather than having the LLM rephrase it.
 
 **d. Actionability check**
 
@@ -112,6 +113,8 @@ An optional, extra-cost path to a short (~20 minute) live discussion with a huma
 
 ### 3.1 Guided Self-Evaluation Workflow
 
+**Note on the diagram below**: it's conceptually accurate but predates the actual endpoint names — the live flow runs through the project-scoped chat interview (`POST /api/chat/sessions`, `POST /api/chat/sessions/{id}/messages`), not a single-shot `POST /api/evaluate`/`POST /api/response/save` pair. The comparative-benchmark generation and merged retrieval those calls invoke internally (`RagEngine.search_merged`, `RagEngine.generate_comparative_benchmarks`) match what's described here; self-evaluation is persisted via `POST /api/projects/{id}/responses`. See `CLAUDE.md` Part 4 for the current, authoritative endpoint list. The corpus-relative depth signal at the end is still not built — see the Guided Learning Flow checklist.
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -121,18 +124,18 @@ sequenceDiagram
     participant DB as Neon Postgres
     participant RAG as pgvector Retrieval (Framework + Engagement KB)
 
-    User->>Sys: Enters strategic answer & clicks "Request Evaluation"
-    Sys->>BE: POST /api/evaluate {project_id, question_id, user_answer} (authenticated, project must be Active)
+    User->>Sys: Enters strategic answer in the chat interview
+    Sys->>BE: POST /api/chat/sessions/{id}/messages {content} (authenticated, project must be Active)
     BE->>RAG: Retrieve context chunks from both knowledge bases (excludes case_study_resolution artifacts)
     RAG-->>BE: Return tagged chunks (source: framework | customer_document)
-    BE->>BE: Run LLM comparative benchmark analysis (Level 1/2/3), keyword-agnostic mapping of the user's own answer
+    BE->>BE: Run LLM comparative benchmark analysis (Level 1/2/3)
     BE-->>Sys: Return tagged citations & benchmark answers
     Sys->>User: Displays user answer side-by-side with benchmarks, sources labeled
     User->>Sys: Reviews benchmarks, writes self-evaluation notes & selects status
     User->>Sys: Clicks "Save Self-Evaluation"
-    Sys->>BE: POST /api/response/save {project_id, self_evaluation_notes, self_evaluation_status}
+    Sys->>BE: POST /api/projects/{id}/responses {self_evaluation_notes, self_evaluation_status}
     BE->>DB: Upsert Response Record
-    BE-->>Sys: Confirmation, corpus-relative depth signal, & updated Dashboard Status
+    BE-->>Sys: Confirmation & updated Dashboard Status (corpus-relative depth signal not yet built)
 ```
 
 ### 3.2 Engagement Preparation Workflow (new)

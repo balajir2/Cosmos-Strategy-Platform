@@ -17,11 +17,11 @@ def _fake_conn(fetchone_result=None, fetchall_result=None):
     return conn, cursor
 
 
-_PROJECT_ROW = (1, "Blazar India Entry", "Blazar", "Market entry", "B2C, personal care", "Draft", 1, 1, datetime.datetime(2026, 8, 28, 9, 0, 0))
+_PROJECT_ROW = (1, "Blazar India Entry", "Blazar", "Market entry", "B2C, personal care", "consultant_guided_async", "Draft", 1, 1, datetime.datetime(2026, 8, 28, 9, 0, 0))
 _PROJECT_DICT = {
     "id": 1, "name": "Blazar India Entry", "customer_name": "Blazar", "description": "Market entry",
-    "industry_context": "B2C, personal care", "status": "Draft", "process_id": 1, "created_by": 1,
-    "created_at": "2026-08-28T09:00:00",
+    "industry_context": "B2C, personal care", "delivery_mode": "consultant_guided_async", "status": "Draft",
+    "process_id": 1, "created_by": 1, "created_at": "2026-08-28T09:00:00",
 }
 
 
@@ -107,7 +107,7 @@ def test_update_project_returns_none_when_missing(mock_get_conn):
 
 @patch("projects_db.get_db_connection")
 def test_update_project_updates_and_returns_row(mock_get_conn):
-    updated_row = (1, "Blazar India Entry", "Blazar", "Market entry", "B2B now", "Draft", 1, 1, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    updated_row = (1, "Blazar India Entry", "Blazar", "Market entry", "B2B now", "consultant_guided_async", "Draft", 1, 1, datetime.datetime(2026, 8, 28, 9, 0, 0))
     conn, cursor = _fake_conn(fetchone_result=updated_row)
     mock_get_conn.return_value = conn
 
@@ -116,13 +116,39 @@ def test_update_project_updates_and_returns_row(mock_get_conn):
     assert result["industry_context"] == "B2B now"
     sql, params = cursor.execute.call_args[0]
     assert "UPDATE projects" in sql
-    assert params == (None, None, None, "B2B now", 1)
+    assert params == (None, None, None, "B2B now", None, 1)
     conn.commit.assert_called_once()
 
 
 @patch("projects_db.get_db_connection")
+def test_update_project_updates_delivery_mode(mock_get_conn):
+    updated_row = (1, "Blazar India Entry", "Blazar", "Market entry", "B2C, personal care", "live_online", "Draft", 1, 1, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    conn, cursor = _fake_conn(fetchone_result=updated_row)
+    mock_get_conn.return_value = conn
+
+    result = projects_db.update_project(1, delivery_mode="live_online")
+
+    assert result["delivery_mode"] == "live_online"
+    sql, params = cursor.execute.call_args[0]
+    assert params == (None, None, None, None, "live_online", 1)
+    conn.commit.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
+def test_update_project_raises_value_error_on_invalid_delivery_mode(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.execute.side_effect = psycopg2.errors.CheckViolation("violates check constraint")
+    mock_get_conn.return_value = conn
+
+    with pytest.raises(ValueError):
+        projects_db.update_project(1, delivery_mode="not_a_real_mode")
+
+    conn.rollback.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
 def test_activate_project_transitions_draft_to_active(mock_get_conn):
-    active_row = (1, "Blazar India Entry", "Blazar", "Market entry", "B2C, personal care", "Active", 1, 1, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    active_row = (1, "Blazar India Entry", "Blazar", "Market entry", "B2C, personal care", "consultant_guided_async", "Active", 1, 1, datetime.datetime(2026, 8, 28, 9, 0, 0))
     conn, cursor = _fake_conn(fetchone_result=active_row)
     mock_get_conn.return_value = conn
 
@@ -233,7 +259,7 @@ def test_set_project_status_returns_none_when_missing(mock_get_conn):
 
 @patch("projects_db.get_db_connection")
 def test_set_project_status_updates_and_returns_row(mock_get_conn):
-    active_row = (1, "Blazar India Entry", "Blazar", "Market entry", "B2C, personal care", "Draft", 1, 1, datetime.datetime(2026, 8, 28, 9, 0, 0))
+    active_row = (1, "Blazar India Entry", "Blazar", "Market entry", "B2C, personal care", "consultant_guided_async", "Draft", 1, 1, datetime.datetime(2026, 8, 28, 9, 0, 0))
     conn, cursor = _fake_conn(fetchone_result=active_row)
     mock_get_conn.return_value = conn
 

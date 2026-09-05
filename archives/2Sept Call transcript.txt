@@ -1,0 +1,726 @@
+Capability Product Meeting Demo - September 02
+VIEW RECORDING - 68 mins (No highlights): 
+
+---
+
+0:00 - Balaji Rajan
+  So the problem statement that we are solving is training does not stick, there is a stature asymmetry, and there isn't compliance that beats thinking.  So we are trying to solve it. And the core loop is guided self-evaluation. The user actually answers a baseline calibration step first.  And for each restlessness arousing question, there is a user gets a theory, real-world examples, and then they start answering, and then they do a self-eval.  The self-eval is against three benchmarks. So superficial, need-based, and insight-driven. And the user only answers this side-by-side. So everything is in front of the user when he is doing it.  And I'll show the application and then take your feedback. How is the knowledge base coming? Knowledge base comes from all the documents that you upload and our framework, the framework knowledge base.  So framework knowledge base, you know, this is the deck that we had. I extracted out the work that we had done for Aditya Birla, you know, Compass.  And that is our framework knowledge base. So... So the conceptual knowledge base has been taken there, the questions have not been taken.  Can you explain that?
+
+1:08 - Ashutosh Tiwari (cosmostrategy)
+  conceptual knowledge base has been taken, the questions have not been taken?
+
+1:13 - Balaji Rajan
+  So Aditya Birla's questions may be very Aditya Birla's specific questions. They are context driven. But then the line of questioning that has been taken and what is the intent that has been extracted out.  So you will see that in the way questions are getting put for a new assignment, which is non-Aditya Birla.
+
+1:32 - Ashutosh Tiwari (cosmostrategy)
+  Okay, so the questions were not Aditya Birla's context is specific, but that's a different point. Let's move it. No problem.
+
+1:39 - Balaji Rajan
+  The knowledge base is like per project. So for example, if you are doing for DRL and we are doing, let us say, for revitalize, then, you know, the knowledge base on which, you know, the evaluation is done or the baseline calibration is done is only from that knowledge.  It does not take anything from any other engagement, even if for the DRL you are doing another project, the knowledge base has a strict boundary.  So it is per engagement boundary. We can revisit all that. For now, this is a structure. There are three kinds of users in the application.  There is a system admin. System admin sets the project, and he is the guy who sets the user also.  The users can be a consultant. When I say consultant, consultant is a Cosmos consultant. So Ash, you will be a consultant, Shiv, you will be a consultant, Balaji will be a consultant.  Client user is a client user, so for whom you are administering this. So system admin can only set up the project.  The project cannot be set up by the project definition. But what goes into the project, the questions that have to be articulated, the framework that has to be made is done by the consultant.  So once the project is done, the consultant actually, you know, arranges the format of the, you know. So... ...  ... The that needs to be made. The consultant also uploads the baseline definitions. So I will show all of that.  And the business values are around management process redesign, ownership and hierarchy mapping, matrix organization simplification, structured visibility and culture, HR performance evaluation.  Now, there are like, you know, sorry, explain this part, this part I didn't understand. So the business value that it, you know, this whole exercise tries to extract out is on these five pillars of business value.  So management process redesign, so augments existing client process by overlying riskless questions, rather than simply, you know, replacing systems outright.  So this is the intent of the application. Ownership and hierarchies assigns ownership of specific strategic questions to distinct roles.  So for example, know, CEO has a different set of questions that you will ask. The CMO will have a different set of questions, which reinforces the clear.  So there are two things here.
+
+4:11 - Ashutosh Tiwari (cosmostrategy)
+  Sorry, I understood this. think there are two things here, which are important, is that, you know, Ash, what I would suggest is, you know, hold on to your options, right?
+
+4:22 - Balaji Rajan
+  Let us see that.
+
+4:24 - Ashutosh Tiwari (cosmostrategy)
+  No, no, no, I've understood this. I'm just giving a little bit of a thought process to this and we can discuss it later.  See, management process design sits, is a little bit analogous to also ownership and hierarchy mapping. So any management process only survives along with ownership and hierarchy.
+
+4:49 - Balaji Rajan
+  Similarly, matrix and structured visibility and culture are very close to each other in that sense, right?
+
+4:55 - Ashutosh Tiwari (cosmostrategy)
+  The two things which are not here, which is more important. At the first, even before management process redesign, in a way, is capability building itself, right?
+
+5:06 - Balaji Rajan
+  Exposure and capability building as a business value on one side.
+
+5:10 - Ashutosh Tiwari (cosmostrategy)
+  And on the other side, above HR performance evaluation is DIY consulting, do it yourself kind of a thing. those are the two values that are missing out here, that's all.
+
+5:21 - Balaji Rajan
+  So apologies, since it's been interrupted anyway, let me also add my two bits. But we are recording it, Ash?  Yeah, we are recording it.
+
+5:29 - Shiv Subramaniam
+  So the only thing that I had in mind was, in addition to this, one is a, you know, for people to start getting maximum value out of this, one is actually an understanding of the company's business itself in great depth.  So what is going to be the awareness of the company and the brands and the various ways in which this is actually interacting with the customer, I think is a very important piece that because a lot of it is going to be dependent, I think a lot of their learning.
+
+6:00 - Balaji Rajan
+  So is going to be dependent on how aware they are of their current, right?
+
+6:04 - Shiv Subramaniam
+  So there is a, there is a, there is a step called calibration.
+
+6:07 - Balaji Rajan
+  So I will take you through that calibration, which is where this comes in on how aware are they about their own, uh, you know, their own environment.
+
+6:15 - Shiv Subramaniam
+  Yeah. So this is not about generic knowledge that you bring from the outside. It is about internal knowledge.
+
+6:21 - Balaji Rajan
+  How much have you absorbed that this is supposed to achieve. Correct. Correct.
+
+6:27 - Shiv Subramaniam
+  As a pillar also is important to bring in.
+
+6:30 - Balaji Rajan
+  Correct. So, uh, uh, absolutely. And Shiv, when I take you through the, uh, application, you will see that already, you know, that, that has been recorded.
+
+6:39 - Shiv Subramaniam
+  Okay. Uh, right now, you know, the application is built.
+
+6:42 - Balaji Rajan
+  So, you know, we will not spend time on the project status. Let me take you to the project directly.  Uh, questions. So, uh, when I log in, right. So, you know, uh, I Right. Right. So I'm going to log in and there are two profiles that I have.  There is an admin profile and there is a non-admin. So right now I'm going to log in as an admin to show what admin can do because it's all running off my laptop.  So if you look at the admin, admin can set up projects and admin can set up users. These are the two things that you can set up.  So right now there are two users who are there. There is Balaji Rajan and Balaji.Rajan. So Balaji.Rajan is a consultant.  Balaji.Rajan is an admin as well as a consultant. Balaji.Rajan is a user. Now, if you look at the projects, right now, have set up DRL as a project, just to show.  DRL Energize is a project. This is the admin who will set up this project. So he set up DRL Energize and then gave some context of what is the industry and all.  That is all he does. He doesn't do anything else. When Balaji has Cosmos, he logs in, he sees this project, gets assigned to him.  So he sees this project and he sets up the engagement. So this is Cosmos setting up the engagement. So if you want to set up a new project, you'll go through the same process.  So essentially, Shiv or Ash, you are setting up this project right now. Yeah. So I will, I will give that industry context that, you know, came in from there.  Right. And then any document. So for example, you know, if you remember, we made that hydration market research, right?  Just for the heck of it, I uploaded. Okay. I uploaded. So all the context of that is coming from.  So you will have your PPTs, pre-engagement documents, pre-engagement conversations, pre-engagement audio. So you will keep adding all of that.  So this forms the entire collective wisdom of the application. And then you start making the framework. These are like, it starts with giving you a set, but you don't have to use it.  You can actually delete all of that and you can create your own framework. This is like, it sets you up for the first level of framework.  For example, in AIM and SWOT, it gave what is the core brand attribute as your organization command? And in which specific market context does the attribute transition from strength to a vulnerability?  So that's a question that you are like going to administer. So, you know, usually it will be like, you it is suggesting you administer this to a brand manager or a CMO.  Opportunity expansion. Now, for example, which adjacent category opportunities lie closest to your core capability? And all these are, you can delete it, you can add your own, right?  All of that is like, You know, inside spiral, competitive positioning, visual architecture, et cetera.
+
+10:06 - Ashutosh Tiwari (cosmostrategy)
+  Who can add or modify? You're talking about the user or you're talking about that? You.
+
+10:11 - Balaji Rajan
+  No, no, you can. You are the consultant. This is your project. You can add. So there are three roles.  One role is admin, which is a system guy. He just creates projects and gives it to you. Then you start adding, you know, how you want to run this DIY workshop, right?  So in DIY, the questions, the framework, et cetera, Ashutosh is like creating this before he gives it to DIY.
+
+10:39 - Ashutosh Tiwari (cosmostrategy)
+  But then as a product, we will have to create it for every user. Suppose there are 300 users.
+
+10:44 - Balaji Rajan
+  No, you can assign multiple users to the same thing. You can add as many users.
+
+10:48 - Ashutosh Tiwari (cosmostrategy)
+  can add, you know, you can. No, no, I didn't mean it that way. I think when we are talking about productizing, I'm saying obviously suppose something that is very successful, right?
+
+10:58 - Balaji Rajan
+  Right. 100 different companies. So I'm not reacting to the question.
+
+11:31 - Ashutosh Tiwari (cosmostrategy)
+  Some of the questions are pretty nice.
+
+11:34 - Balaji Rajan
+  So most important thing, what Shiv asked was, what is the baseline calibration? How do you understand your own company?  So for example, target customers. I actually, yesterday, I said, what is the target customer? So concept is target customer.  And I gave this definition. The target customer is not health conscious Indian broadly. The household purchase decided typically mother 28 to 45 buying.  For a child or a working adult motivated by functional reassurance rather than self-directed wellness. So this is like a pre-work that you have to do to define for that organization, for DRL, who are their competitive customers, what is their competitive set, right?  And you can keep adding more insight. You can give your own insight, right? Now, for example, I'm wanting to add something, right?  So I can say deep insight. If I add deep insight, then what does deep insight mean? You will give the definition of what is deep.  This is a pre-setup. At this moment, you are influencing how the knowledge base will be used because you are setting up the baseline calibration.  So I set up three questions. You can set up more. For example, right to win. What is right to win?  Formulation, credibility inherited from Dr. Reddy's pharma parentage, clinically informed, and the claim in trust, inefficiency, not taste, etc. So you can keep adding as many as you  Once this is done, you then, as a consultant, you attach this to your team, assign a team member, a client user.  This particular thing will be assigned to a client user. Now, what I'm going to do is, since I'm already logged in, what I'm going to do is, I'm going to open an incognition window, localhost, and I'm going to log in as a customer.
+
+13:35 - Ashutosh Tiwari (cosmostrategy)
+  So, my, sorry, before you go ahead, can I just give a thought out here? See, I'm not very sure of the baseline calibration even being needed at this stage.  In the sense, it's a very important thing to do, but it's a very important thing to do as you go through the course, as compared to you coming with preconceived notions about what your company...  Target customer is, what your company is incited, etc. Because typically what happens when they come into that with this, they tend to then throughout the workshop, they tend to then keep defending their positions because they have already committed psychologically to something that they wrote prior in that sense.  Yeah, yeah.
+
+14:15 - Balaji Rajan
+  Hold on to the thought. Ash, we can make changes. All of this is like making changes. The essential part is like the way I understood is like how well do you understand your company and how well you understand its processes.  You are like also trying to evaluate.
+
+14:30 - Ashutosh Tiwari (cosmostrategy)
+  And for that, I'm saying that's a beautiful thing. No, Balaji, I'm actually, I've got a suggestion. I'm saying it's a beautiful thing, but let that be part, let that be an exercise as you go through the deck as compared to having to fill it up prior to going through the thing.  So what happens is when you are giving this answer. So those questions themselves are the holding questions and you are being asked to answer the questions in the context of your company and the system push and your system pushes you or you self evaluate whether.  Your answer is measuring up, right, in that sense. So it doesn't become a fixed anchor.
+
+15:06 - Balaji Rajan
+  The questions, you know, and I'm not, all of them can be changed. The baseline calibration will be done by Ashutosh.  The answering of the questions will be done by an employee in DRL. So this baseline calibration is done by you.
+
+15:21 - Shiv Subramaniam
+  Oh, think, Balaji, I think that is, I fully observed that. I think what you have gone to the next level where you have also described the target consumer.  Part of the exercise for the user is actually to come up with that description, knowing fully well, what is the market?  What is the company's role in that market? How does this company do business? All of those kinds of aspects start to become more important than actually redefining a target consumer, him or her.  Correct. The right kind of inputs have gone into the user's mind. He or she is thinking about the target consumer itself.  But that work is theirs. But I think all of these things around target consumer, competitive set, right to win, all of this may also be informed by what is generally the company's position on all of this.  Correct. Correct. And these are coming from the documents and your pre-engagement interactions. Balaji, had a building on it.
+
+16:27 - Ashutosh Tiwari (cosmostrategy)
+  Sorry, just suggestions, right? And I'm thinking aloud. Shiv, if I were to just build upon this, and suppose this whole baseline calibration is not filled in by any consultant.
+
+16:40 - Shiv Subramaniam
+  Yeah.
+
+16:40 - Ashutosh Tiwari (cosmostrategy)
+  Not by me, not by Shiv, right? In that sense. And I understood this is to be done by a consultant.  But this is filled in by AI on the basis of all the stimulants or the stimuli that we load onto the thing, which could include...  Their advertising of the last five years, which could include their annual reports, which could include their website addresses, which could include everything.
+
+17:10 - Shiv Subramaniam
+  In fact, I would say just again, adding to that point, Ash, I'm saying what would help them therefore is also to say what is generally the company's approach towards these things historically in the past, right?  Because this is also evolving. It's not as if what was done by the company 10 years ago is exactly the same way that they will do even today.  So AI's job is also to track the evolution and then say that historically, this is what has happened. But now there is seems to be a shift towards this kind of like, for instance, when you say we've never been on social media, right?  And because we've taken a position on that saying that, look, this is not something that actually this is not for us.  We're a serious brand like us cannot really be engaging in this kind of thing. But over a period of time, we have moved towards that.  If you start. To also track the evolution, then I think it will be even more useful because no individual in a company can actually give all these information in a real-time basis, right?
+
+18:12 - Ashutosh Tiwari (cosmostrategy)
+  I think what also works in that sense is, so I'm just thinking out aloud, sorry Balaji, I know I'm interrupting the flow, but I think this is extremely exciting.  So that's why I think we are getting so drawn into it. So two things I would say. One is, now again I'm kind of revising my stance.  What I'm just thinking of is this baseline calibration is, suppose, AI generated and suppose, as what Shiv is saying, it not just generates what is the status, but also how it has evolved, right?  But it is what your brand and your company seem to appear from outside with all the inconsistencies. It doesn't matter what the  do you do inside, frankly, right?  So it all depends on how it seems.
+
+18:58 - Balaji Rajan
+  Yeah. You know, you get to. Just completing it.
+
+19:03 - Ashutosh Tiwari (cosmostrategy)
+  So this is more to do with what the company appears from outside, right? Or what the brand appears from outside, along with inconsistencies.  And this becomes background information, right? In that sense, that's, I think, point number one. I'll give you a real example also in a moment.  So this calibration can be a wonderful exercise. was actually thinking of Shiv to be done by the user. Before you start this course, you write down what are your answers to these kind of questions or these kind of tags or these kind of labels, right?  At the end of the capability building program, you write them again. And then you see how much of distance have you traveled as a consequence of it.  So this becomes a, because the sophistication of what the user writes in here as a calibration data, which might be completely , which might be completely awesome, which might be whatever, doesn't matter, becomes a baseline against which the user actually plots their...
+
+20:05 - Balaji Rajan
+  The only thing is, as a guide who is guiding the customer, I would like you, Ash, to give those concepts.  So for example, in a DRL kind of thing, there may be only three concepts, target, customer, competitive, set, right to win.  But then in some other context, there may be different concepts which define a baseline calibration. So I would want, for this project, because every project is going to be different, right?  For that project, a consultant who is owning the project should define what are the measures on which the entire project is going to be administered.
+
+20:44 - Ashutosh Tiwari (cosmostrategy)
+  So Balaji, I think there's a basic disconnect that is beginning to happen out here in the philosophy side. So let me just spell it out.  Not about what you are saying. What you are saying is absolutely right. But somewhere in your mind, Houston where so you.  You are more, you are imagining it more to be an aid to a consulting project.
+
+21:09 - Balaji Rajan
+  Correct. Right.
+
+21:11 - Ashutosh Tiwari (cosmostrategy)
+  Somewhere in at least my mind, the whole reason we have embarked on this is that an aid to a consulting project is a very nice build on to the consulting that we do.  But the real import of it, which is why we want to go to the market, is a standalone product of its own, having nothing to do with consulting.
+
+21:30 - Balaji Rajan
+  Okay.
+
+21:32 - Ashutosh Tiwari (cosmostrategy)
+  Okay. I think that's a, that's a, now, so I think those two utilities are dramatically different. Everything that you are saying thus far on the user journey marries the fact of aid to consulting.
+
+21:46 - Balaji Rajan
+  Correct.
+
+21:46 - Ashutosh Tiwari (cosmostrategy)
+  But if we are going to have raised money for this, if we are going to push it as a product out there, right, which could be preceded or succeeded by consulting, that's okay.  But that's not essential per se. It has to. It has to work.
+
+21:59 - Shiv Subramaniam
+  Okay. Okay. Okay. Thank
+
+22:00 - Ashutosh Tiwari (cosmostrategy)
+  It has to perform as a standalone product, right? In that sense, then the lesser the human intervention and more robust the questions, right?  Kind of a thing, it becomes more powerful. So for example, so I'll give you an example on even the questions.  For the user, you could have a 1 to 10 lever on creativity. All the questions that you are asked are very sharp, okay?  Which are all vetted by us now. And we can vetted according to sectors also. Suppose 20 sectors, we can create questions for 20 sectors.  That's not a big deal, right? That's not a big deal at all. But now what happens is, suppose Shiv is a user, and Shiv is pushing the bar of creativity right to the right.  Very hard. Shiv is a user?
+
+22:54 - Balaji Rajan
+  No, just explain. So Shiv is a customer or Shiv is a customer? Customer user, customer user.
+
+23:00 - Ashutosh Tiwari (cosmostrategy)
+  For example, as an organization or individual or whatever. Now Shiv pushes what kind of questions? Now suppose Shiv pushes the bar to high on the creativity versus low on the creativity.  Now suppose we are asking about the target consumer persona kind of a question that who is the individual person amongst the hundreds or millions of your consumers, Mr.  or Mrs. So-and-so who's most valuable for you and why?
+
+23:28 - Balaji Rajan
+  Suppose I'm asking this question.
+
+23:30 - Ashutosh Tiwari (cosmostrategy)
+  Now this is a very non-creative but very sharp way of asking a question. You cannot escape the question because I'm asking you to zero down on one by name.  On the other end, suppose Shiv pushes it to the high creativity side, then it becomes if all your customers were on an island and there was a tsunami that was on an island that is your brand and if a tsunami was hitting that island, who will be the last to jump into the sea and why?  Now what happens is the question is the same. There's nothing, the question is the same, but the rendering, the tonality of it can even be user dictated or need not be.  I'm just giving you examples of where the power of customization is either through whatever is the publicly available material on one side, or it could be even user mediated as to how serious versus how creative that the questions have to be equally sharp.  The import cannot change. The manner of saying so can change, right, in that sense. I thought I'll just mention this before you go further, because our aid to consulting is a slightly different kind of a thing, and it enables us to intervene far more as compared to a just-do-it-yourself kind of a product, is what I mean.  Okay.
+
+24:46 - Balaji Rajan
+  So, you know, explain, you know, let me do one thing. Let me finish whatever I have to show, and then, Ash, I will come to you on.  You if an assignment comes to you, you know, walk me through the entire, you know, flow setup, right? You know, that will give me an idea.  So for now, me, you know, it's an aid to a consultant, you know, it's a DIY because you are not there.  It's like you are setting it up and you have given it to somebody in DRL. So that is how it has been set up for now.  So let us say this project has been set up for now and just humor me, you know, by going with the process which is there right now.  So there were like multiple documents that were updated based on the document. The system actually gave some suggestions on, you know, what are the, you know, various, you know, angles in which questions will be asked.  You were okay with it. And then you activated the process and you gave it to Balaji, who is a DRL employee.  And let us say the CMO in DRL. So when I go there and I get the URL, et cetera, and I'll take care of the technology, et cetera, of it.  But, you know, for me, this is how the page will come when I log in as a client. So I'll begin the strategy workshop.  So when I, when I begin the strategy workshop, there are like certain things that I've already, yesterday night, I was testing it out.  So it will remember where I left and it will start. So it doesn't force you to sit through the entire thing.  You can take multiple sessions before you finish it. So for example, here it is your progress. So it takes you through seven stages.  So I am on the stage one. And obviously this will be way, way faster. This is like running off my laptop with 100 applications running in the background.  But once I put it on Google, it will become very fast. We don't know how to... This is very irritating actually, this floating thing.  Sorry.
+
+26:51 - Ashutosh Tiwari (cosmostrategy)
+  Till it comes on, I think the features that you showed us, the depth of discussions we are doing, what can happen, etc.  etc. I think it's quite powerful.
+
+27:00 - Shiv Subramaniam
+  Very much. No, also, I like the simplicity of it also. It sort of encourages you to focus on the content.  It doesn't distract you from that.
+
+27:10 - Balaji Rajan
+  So, for example, here it's asking what core brand attributes does your organization command and which specific market context does each attribute transition from a strength to vulnerability?  So my response is my core brand signifies, and we can also put a, you know, somebody can talk to it.  So it'll, you know, record. Okay. That's an easy thing. My, you know, my core brand signifies integrity. I see this of this being extremely bold.  I'm just making it up. So at this point of time, an AI is actually sitting behind. It is going to evaluate and it's going to.  So it has a baseline calibration for you because of the definitions that you have given. It is going to evaluate your concerns.  And if it feels that it needs to drill down, it has not got the insight that it was looking for.  It's going to come back and ask more questions on this same question. Till it, you know, it has reached the depth.  Now it can be an infinite depth. I stopped it at three levels. So three times it will, you know, in a question till it is satisfied.  It will keep drilling down on these three sets.
+
+28:51 - Ashutosh Tiwari (cosmostrategy)
+  So you were typing something. Sorry, maybe I don't know whether it came through or not. You were typing something and then it kind of, you know, again became blank.
+
+28:57 - Balaji Rajan
+  Nothing else came through. No, Right now it is. So Gemini is hosted in MyGCP. So it is making a contact to MyGCP and getting a response back.  So here it is. It evaluated your answers on three levels. At a superficial level, our brand attribute is commitment to premier craft mindset.  In a stable, high growth market, that's a clear strength. Level two on a need basis, our brand's core attribute is integrated all in one platform.  That's a strength we're targeting customers. All these are like, right now, we can control what is going to come.  It is also based on the documents that we had uploaded. I have only uploaded one document. Our core attribute is unquestionable, integrity, built on promise of radical transparency and ethical cutoff.  So, and then it sourced all this, it will tell you from where it has sourced, we can hide all of that.  This is like, no, right now, while we are building it, you know, so it is not hallucinating. It's actually picking things from some engagement.  Genuine source. So now that you have read this, superficial, need-based, insight-based, then it says where does your answer fail and why.  So your answer can be needs work. And then your response is my answer does not take care of the customer's perception of my brand.  And the need. I'm just making something up.
+
+30:39 - Shiv Subramaniam
+  Yeah.
+
+30:40 - Balaji Rajan
+  So, you know, so this is like, you know, it has stayed on that one question and it is saying that, you you have not fully answered, you know, so it is going to iterate through this forcing you to think your response.  Okay. So this is, you know. It will keep coming back and then it will move to the next question and the next question and the way you have designed your engagement.  So here I will stop. I will take all your feedbacks and then if it needs a rework, we will do that.
+
+31:15 - Ashutosh Tiwari (cosmostrategy)
+  Okay. So I think first of all, I think outstanding kind of work in terms of getting the logic and getting the flow kind of right.  And I think on this part, so on the previous parts, I've already said what I had to say. Can you just go up?  Yeah. So one thing that will be there is from a capability building point of view, right, it is much better if there are no compound questions.
+
+31:48 - Balaji Rajan
+  Okay.
+
+31:49 - Ashutosh Tiwari (cosmostrategy)
+  If the questions are broken down and sequential. So the first question that the person asks, what are the attributes that distinguish your organization or brand?  Yeah. And then Then say, in which context does each of these attributes become a strength versus a weakness? And which of these contexts, then say in which of these contexts, it is neither a strength or a weakness.  So what happens out there is that the question is like a step by step, are literally guiding the person, handholding that person through it, rather than getting them intimidated by a very complex question, which is a juxtaposition of three or four questions.
+
+32:26 - Balaji Rajan
+  That's point number one.
+
+32:26 - Ashutosh Tiwari (cosmostrategy)
+  Okay, second, second point would be, and it doesn't matter if that increases the number of questions. It doesn't matter.  Right? The number two thing is, and I was just thinking about it, suppose somebody asks me, so what is the defining attributes of, of Cosmos strategy, I'm just saying as an example, and I say, we are honest, or I say, whatever  I have to say, right?
+
+32:59 - Balaji Rajan
+  right.
+
+32:59 - Ashutosh Tiwari (cosmostrategy)
+  All Now the system should, and this is something that happens in a real workshop, and that's a good one that you put in out there because it just triggered in my head.  What the curator does is push back the participant on saying, A, how is it differentiating? B, what is the evidence for it being differentiated?  So what is the evidence for it being there? Now that's a very interesting thing, and that's not there in the deck at all.  That on any answer given by the person, not about a case study, but about your own organization, right? There is a pushback from the workshop moderator, which has to do with the fact, how do you know this?
+
+33:42 - Balaji Rajan
+  And where is the evidence?
+
+33:44 - Ashutosh Tiwari (cosmostrategy)
+  So that it doesn't become a  being given in response to a very sharp question.
+
+33:49 - Balaji Rajan
+  Because in a workshop setting, I can call out the .
+
+33:52 - Ashutosh Tiwari (cosmostrategy)
+  In a systemic setting, the system cannot call out the , but the system can force you to kind of think about,  Do you have any evidence or reasoning behind it in that sense? And is it really differentiating kind of a situation?  That was the number two thing. Number three thing for me was, because we are also looking at this user flow eventually for, as you rightly said, those business values, matrix organization, etc.  So depending upon what level that we are selling the product to, there can be an option out here. You wanting to send this answer out to somebody who needs to review.  That option need not be there in every build, right? But in the build where we are doing management process, the build where we are doing, you know, organization, transparency, visibility, culture change, right?  Kind of a thing. There can be a button for publishing the answer without inviting commentary, right? And there can be an option for sending the answer for review or you just move on.  You don't want to do it. If you are doing capability building alone, right? In that sense. So that could be another feature that we can put in out here, which can then simplify a lot of other values.  those are the three thoughts that came to mind.
+
+35:13 - Balaji Rajan
+  So now what I know from you, Ash.
+
+35:15 - Ashutosh Tiwari (cosmostrategy)
+  I'm sure Shiv has some thoughts.
+
+35:20 - Shiv Subramaniam
+  So I have additional thoughts. So firstly, let me tell you saying that I think this is actually looking very good.  And I actually like the way that it's forcing people to think. I think eventually, this is exactly what we had in mind when we started thinking about this, saying that it must push me to think harder.  It must really give me enough meat and material and provocation to be able to start to respond to it.  Because if I try to become the source of it, I will run out of steam pretty much in the first 10 minutes of the journey.  Right? So if I'm constantly pushed and provoked in a healthy way, where it is asking me questions that is forcing me...  to think and is not becoming like a stuck record, then, you know, I think that that, I think the architecture of that is very much in place.  And I can really see how this tool will actually be used. A couple of additional thoughts that I'm sensing is that, look, this, you know, in reality is never a individual exercise.  If you look at how we've all grown up in organizations, most times there is a meeting, we call for a conversation, we get people into a room, and then there is this conversation that actually happens.  And what emerges out of that usually becomes, you know, whether it is a strategy, whether it is a way forward, whether it's a decision, it's actually that.  I'm actually thinking whether there is an option here of replicating that kind of a situation, where pretty much this is, you know, where you can say one is, you are doing this as an individual exercise, in which case, feel free, you can take your time, you can write and all that stuff.  But in another case, even if it involves a disability, So once you're doing that, then the AI is also working at the back end to say, yeah, but so-and-so made this point, so-and-so made this point, how about this?  And literally start to simulate that on the platform, such that eventually when you come up, and you can also do that as, is this a one-on-one?  Is this actually just myself? Is this actually one-to-many? Is this at least six people in the room? You can make those choices and preset those things even before a discussion starts.  So it's almost like all of that gets captured in this and eventually then to say, okay, so my definition of a target consumer has agreed with six people of my peers or people with my bosses, anybody like that.  It starts to become a very integral participant in the discussion rather than only... You're a recipient of all the stuff that you key in.  So that was the part that actually struck me, saying, is that an addition that we can do? And I'm sure we can, but just to construct it this way, right?  So that even if it is a product, I'm saying at the end of the day, the product must allow for the discussion to happen and not just one-on-one input to happen.
+
+38:26 - Ashutosh Tiwari (cosmostrategy)
+  Sure, can do, you know, Shiv.
+
+38:28 - Balaji Rajan
+  In fact, I had done for one of my batch mates. So this was like a mental psychiatrist tool, right?  So there is a counselor who's talking and there is a patient. And during the conversation, if the patient is like, you know, talking something which is tending towards, you know, alarm, then the system actually tells the psychiatrist that, you know, give a helpline number or, you know, connect his parents, her parents, because it is like,  Picking up the verbal cues and evaluating, so it can be done. I can do that. What I want is two or three things.  It can be done. You can have this and do a virtual meeting where people are not talking. During the meeting, it is prompting a guided conversation and it is only prompting, let us say, Cosmos.  It's not prompting the customer. Customer is only responding to the questions, so it can be done. Essentially, the applications will have two views.  There is a view that Cosmos sees, then there is a view that a customer will see, although it is the same conversation, so it can be done.  What I want is a couple of things from you. This goes back to Ash, because I want you to formulate how you are visualizing this tool.  Suppose you are setting up a project, and as a plea to the project, will you get some artifacts, or you want publicly available information to be scrolled and the information to be, because that is a plea.  So that is one that I need. Second is, these questions, should the system generate and throws it out? Or would you, as Cosmos, want to see what questions are being asked so that you can make edits before the customer even sees them?  That's number two. Because then it changes a whole lot. And then the third is the baseline calibration that we spoke about.  So do you want a baseline calibration to be there or a baseline calibration to be discovered?
+
+40:37 - Ashutosh Tiwari (cosmostrategy)
+  Okay. So I think I'm just rolling back. I think as an answer to your question, I think eventually being used as a product where Cosmos has no intervention at all versus being used as a consulting aid are two completely different journeys.  And the answer is very different for both of them.
+
+40:58 - Balaji Rajan
+  Okay. Right. In that sense.
+
+41:00 - Ashutosh Tiwari (cosmostrategy)
+  Now, so let me first take from a product side. From a product side, the only information that can be ingested is publicly available information, which the system can crop.
+
+41:09 - Balaji Rajan
+  Okay. Right.
+
+41:10 - Ashutosh Tiwari (cosmostrategy)
+  In that sense. But there's an advantage also. The advantage is that most of the, so two advantages that happen.  Most of internal documents are a lot of statements of intent. They often have no correlation to how actually your stimuli is being received in the real world.  Right. So it's actually, you could argue, a more unprejudiced, unvarnished view. That's point number one. Point number two, what happens is most internal documents in any case are heavily insular in the sense they are more about the brand and the company and a little bit about the operating context.  Right. In that sense. Mostly they don't go deep into the sector, into other players, into what happens in the sector.  In other countries around the world, etc, etc, right? Kind of a thing, which is what a system is uniquely placed to pull in, right?  So while it seems like it's a constraint and reality and AI pulling in a lot of information from elsewhere is actually can be a positive also, right?  In that sense. So that's I think that's point number one on the product side, right? In that sense. Now in the product side, whether the questions have to be standard and by standard I mean, okay, suppose we have 20 versions of questions for 20 sectors, that's manageable, but we can't have 200 versions, right?  In that sense. Or we allow AI to generate that, I think we need to think a little bit about it.  I'm sorry, I'm not able to guide on that right away. But if we go back to AI generating it, then obviously, if you're putting it out as a product, then you have to be very sure that AI is not giving gibberish and on gibberish, it will never give, but it is not actually, you know, for example, we are rubbish.  We are saying that there are no  attributes in life that are strengths or weaknesses. It's only contexts which are strengths or weaknesses, in which the attributes play, right, in that sense.  And suppose the AI itself is kind of, you know, formulating a question which tends to suggest goes back to the same SWAT, then it becomes literally blasphemous.  It's not gibberish, but it is different from the philosophy that those questions actually embody, right? So I think partially the answer will also lie in your code as to can AI be, suppose there are a hundred iterations of question generation that we do with AI and the AI actually gets trained on how to generate the questions and how to develop that nuance, then I'm perfectly fine with AI generating the questions also without any intervention, right?  Otherwise, even if there's the slightest doubt, then I think we doing the hard work and the heavy lifting would be, you know, kind of useful.  I would love to have a situation where AI generates.
+
+44:00 - Balaji Rajan
+  Because then when we are starting this, we don't have that. So we will necessarily at least 5-10 engagements, we will need to eyeball what is getting generated.
+
+44:12 - Shiv Subramaniam
+  I think one of the things, again, both Ash and Balaji, I think one of the things to remember is that eventually there has to be a Cosmos stamp on it, which is essentially, this is our way of doing it, which is what makes it unique.  You're not leaving it with AI. So the fundamental primary questions have to be designed by us. What it builds on, what AI builds on, on top of that can always be intuned over a period of time.  But primary things will have to be from, the origin will have to be Cosmos.
+
+44:45 - Balaji Rajan
+  So that would be my second point.
+
+44:48 - Ashutosh Tiwari (cosmostrategy)
+  I agree with Shiv. That was the whole point about training. was not about saying garbage will not happen. It's more about the nuance, right?  Like I gave about strength and weakness. It will be there about a lot of things, right? So I think that is the other one.
+
+45:01 - Balaji Rajan
+  But if AI can do that with training and all the possibilities become enormous and outstanding, but you have to be very, very careful about it in that sense from a product side, from a consulting aid side, because let's stick with the product side, we'll finish the product side, right?
+
+45:18 - Ashutosh Tiwari (cosmostrategy)
+  Then the third thing is, the third question that you asked about is the entire calibration part, right? Kind of a thing.  I think there are a base calibration, which is bringing in the public data, but actually making this calibration and evolution and exercise for the user or the customer, right?  I think it's really powerful that if these are the questions, without I giving you any gyan, right? And these are the tags.  I'm not even giving you the questions because questions are also a value, right? These are the usual tags in which to answer people, right?  So write about your brand or business in question, and we are not evaluating it, we are not doing anything to it, that becomes a little bit of a benchmark, right?
+
+46:07 - Balaji Rajan
+  Sure.
+
+46:08 - Ashutosh Tiwari (cosmostrategy)
+  At different points, as you evolve in your understanding, how does that work and how do your answers and how does the depth of what you are thinking changing actually can be a very powerful mirror for the customer's own evolution in real time.
+
+46:25 - Balaji Rajan
+  Got it. Got it. So a couple of things that I am taking away, you know, and obviously, you know, I am looking at the next steps to this, right?
+  ACTION ITEM: Update app: remove doc upload; add public-data ingestion; move baseline post-questions; keep consultant edits - WATCH: https://fathom.video/calls/807688139?timestamp=2786.9999  So you have to pardon me because I'm not seeing the vision that you are seeing. So here I will take away this ability to upload documents, right?  Because now we are doing a public research, right? Now before an engagement, it goes to the internet, gets the information that is needed.  This is the framework that we have done. So this, at least in the product side, this particular thing will go away.  We will retain the ability to, you know, the questions will be generated, but we will retain the ability. For a consultant to edit it or add more.  So I'm going to return that. I'm going to remove the baseline calibration because we said baseline calibration will be evaluated post the questions, the insightful questions, and then the baseline calibrations will be done.  Now, my last question is, what is the output of this exercise? Let us say I minister this to the CMO, CEO, CFO, etc.  At the end, there has to be something, right? Is it a report that comes and the report says this is your baseline calibration or what comes out of this exercise?
+
+47:34 - Ashutosh Tiwari (cosmostrategy)
+  It depends upon the different business values that you showed right in the beginning, right?
+
+47:39 - Balaji Rajan
+  If the business value expected is capability development, right? Then whether it is for the customer or for the CEO of the company who commissioned this product, right?
+
+47:49 - Ashutosh Tiwari (cosmostrategy)
+  How has the capability gone up from X to Y?
+
+47:53 - Balaji Rajan
+  Okay.
+
+47:54 - Ashutosh Tiwari (cosmostrategy)
+  After having gone through this exercise becomes the report. If however, CMO is... the CMO is... CEO is also buying it or CMO is also buying it as a management process come visibility, that kind of a tool and not just a standalone capability building tool.  Then obviously, what you are looking out for is that how have people's answers about their own businesses evolved as a consequence of using this not just as a capability builder, but as a management process tool per se.  If the utility that the person is buying in from an HR point of view, then what you knew about the user, what HR knew about the user basis, the results and the balanced scorecard or whatever performance evaluation that used to happen versus the real performance evaluation that is happening as a consequence of the answer that the person is giving, how do they differ per se?  So, you know, Ash, how do you know the prior, you know, so for example, I am answering the question.
+
+48:59 - Balaji Rajan
+  question. So, So, yeah. And, you know, this is this product, which is, you know, allowing me to think deeply and not get away, right?  What, you know, how do you measure what I was pre versus what I am anti? So anti, I can measure because, you know, you are responding.  Pre, how will I measure? So again, the answer is different for all the different levels.
+
+49:18 - Ashutosh Tiwari (cosmostrategy)
+  let me, again, I'm thinking aloud, right, guys?
+
+49:20 - Balaji Rajan
+  Sorry. no, no.
+
+49:22 - Ashutosh Tiwari (cosmostrategy)
+  I'm also thinking aloud and on the spur of the moment, I think when it comes to capability building, the pre is this calibration to me, according to me, right?  If it is institutionalized, it's not about a person. I have bought this product for my entire team kind of a thing.  Then what happens is, I think there, I think it's an interesting one because one is, so there are two calibration points that are feasible.  Now I'm revising my stance. That's the problem when you respond spontaneously. What happens out there is, as a user, as a system, it will pull in a lot of publicly available data to see.  How do you actually come out? But as a user, I also have an option of uploading the documents, not to litigate over it, but actually establishing a baseline that this is where, and we can do a CMM, capability, that CMM matrix that we normally do, capability maturity model.  We can utilize all the documents they are giving, and the system can actually plot you on your CMM curve, right?  After this has been done, and after the people have gone through the exercise and resolved case studies, we can evaluate their answers on a CMM level and say, this is how the CMM score has shifted, for example, right?  That creates a kind of a baseline and a delta. Yes, good.
+
+50:51 - Balaji Rajan
+  So, you know, which means like now we need to know what kind of assignment it is, right? So because it depends on which assignment or which...  Capability we are doing this exercise for. Do you have the kind of assignments that we potentially will use this?  So just I'm leaving it with you.
+  ACTION ITEM: Send thematic assignment list to Balaji - WATCH: https://fathom.video/calls/807688139?timestamp=3078.9999
+
+51:10 - Ashutosh Tiwari (cosmostrategy)
+  We need to think, right? On the product side, Balaji, just answering. The assignments are not category-led. They are thematic-led.  Brand, innovation, strategic activation, communication, business opportunity analysis, sales and distribution, B2B business development, right?
+
+51:29 - Balaji Rajan
+  I'm just, I'm just, these are the ones that- You need to give me the list. Because then when you're setting up the project, you have to set up the project like that, Ashutosh?  So that list is there in the deck that I sent you, but I can give it to you again.  Okay. So that is one. Now that, you know, both of us have, all of us have seen what the product is capable of, right?  And it's a very malleable tool. If you tell me how to, you know, mold it, I will mold it.  So one assignment that I'm going to give to both of you is think about it on, you know, how, so for example, today, one thing came across.  This can also be used in a consulting, guided consulting, as well as an independent product. So there are two pathways that are emerging.  So think about it. And today is Wednesday. If Friday, if you guys are free, I will set up another one hour.  In that one hour, I'm not going to show anything to you. We are going to have a discussion on what is the outline of this product and how this product can move and what it means for anybody.  Because for me to build, I need to have some boundaries in which to work.
+
+52:31 - Shiv Subramaniam
+  Yeah, agreed. Sure.
+
+52:34 - Ashutosh Tiwari (cosmostrategy)
+  So I think we can do that. That's not a problem. But my one more thing that is there is, okay, I think the other thing, and that would be interesting to have a little bit of a window into your mind, right, as to how you are imagining it, is going to be what happens within the question.  So suppose the question is asked. Now we said, we'll give you theory, we'll give you frameworks, we'll give you examples.  How will those examples get pulled in? How will the case study get administered? How will the case study get resolved?  I think just taking one, any one of those questions, right, and actually blowing it up, or even if it is too much of effort to blow it up, just sharing what is there in your mind, in which case and in how, in which ways does it differ significantly from the, and builds upon significantly from a static PDF, right?
+
+53:24 - Balaji Rajan
+  It could be really, really useful, because eventually, questions are half the story.
+
+53:31 - Ashutosh Tiwari (cosmostrategy)
+  In a capability, knowledge management, or any kind of a program, right, the way the theory gets disseminated in a slightly more gamified manner, maybe, the way dynamic examples get pulled in, rather than the usual fossilized Nikon and Apple examples, right, kind of, I think that is where also the lot of AHA will be there for an eventual question.
+
+53:54 - Balaji Rajan
+  Sure, sure, sure, This is, this is very good. One thing, you know, I was just, you know, and I'm also,  evolving, right, with this conversation, right? Because when I started off, this was like, you know, very different. And, you know, you need to forgive me because for me, everything, you know, has been through an IT, let's say.  No, there is an as-is, there is a to-be, and there is a gap. Balaji, let me just say very profusely and very clearly.  Long time back, had told me, not long time back, just two weeks back, you had told me that this is not the job of, and don't look at it as an IT developer contractor relationship.
+
+54:31 - Ashutosh Tiwari (cosmostrategy)
+  And I said, of course, I'm not looking at it, right?
+
+54:33 - Balaji Rajan
+  In that sense, because I'm looking at you as a co-founder on this, right?
+
+54:37 - Ashutosh Tiwari (cosmostrategy)
+  CTO kind of a co-founder.
+
+54:38 - Shiv Subramaniam
+  If you looked at it like that, you never have been able to come up with this.
+
+54:41 - Ashutosh Tiwari (cosmostrategy)
+  Exactly. And this is a living proof of that thesis being correct. Because the depth, the speed with which you have understood are nebulous thoughts, right?  Never mind the changes that we are suggesting or not suggesting or debating at all. But the curve that you have come up on with,  And that's a fairly steep curve, is amazing here. But it's not possible for any vendor kind of a guide.
+
+55:07 - Shiv Subramaniam
+  No, and also don't forget, any changes that we are suggesting is not because we have a pre-set notion that the ideal destination is.
+
+55:16 - Balaji Rajan
+  Also, the learning is because of what we are seeing here as stimulus. Correct, correct, correct. Which is what is encouraging that thinking.
+
+55:23 - Shiv Subramaniam
+  And if this were a straightforward thing, somebody would have, you know, this is not done before, right? Which is why this is important.
+
+55:31 - Balaji Rajan
+  The one help I need is, you know, prior to the next call is the case studies. So do we have a baseline case studies that we have?  Is it already there in the deck, you know, should I take them or will you provide some case studies?
+
+55:47 - Ashutosh Tiwari (cosmostrategy)
+  Not really, because a lot of case studies that were getting resolved and all, they were never retained, right? As part of the thing, per se.
+
+55:55 - Balaji Rajan
+  But what we can do is something different.
+
+55:58 - Ashutosh Tiwari (cosmostrategy)
+  I was anywhere planning. to do that, right? We can create a dump of all the assignments and projects that we have done thus far.  Because they have also followed similar principles.
+
+56:10 - Shiv Subramaniam
+  it's not even a report. It may be a final presentation in the form of a deck that would have actually consolidated all of the various things that we would have done in between.
+
+56:19 - Ashutosh Tiwari (cosmostrategy)
+  So let us say, suppose we have worked with 40, 50 clients, whatever. So I can share with you a series of decks on that.  And AI can actually parse out. It will not be in the same format, questions and all, because those were consulting projects.
+
+56:32 - Balaji Rajan
+  They have nothing to do with capability building.
+
+56:34 - Ashutosh Tiwari (cosmostrategy)
+  But one can actually parse out the insights part, the organization self-awareness part, which attributes, which strengths, etc., etc. My suggestion would be just putting the ball back in your code.  If you tell me which you need case studies exemplifying which particular questions, right, then I will only choose those and send them to you.
+
+56:59 - Balaji Rajan
+  Okay. It also depends on, you know, first is like the project, the kind of project that we are doing.  And we said, you know, if you remember, we said we will do two case studies. One case study, which is like, you know, not part of the organization and another case study, which is part of the organization.  Right. So give me the list of case studies, which are like, you know, our standardized case studies that, you know, during the project setup, we can say that this case study I'm going to administer.
+
+57:25 - Ashutosh Tiwari (cosmostrategy)
+  Sure, no problem. So I think I'll then give you end to end.
+
+57:29 - Balaji Rajan
+  No problem.
+
+57:29 - Ashutosh Tiwari (cosmostrategy)
+  I'll try to give you a few, which go from right from the beginning to the end of the entire deck.
+
+57:36 - Shiv Subramaniam
+  Exactly what Ash, you know, one of the things that will help is actually the final proposal that we submitted and the final deck that we create.  Right. Those two things will actually give you two things. One is it will talk about the extent of the engagement and two, it will give Cosmos's approach through the proposal every single time.  And there is a lot of consistency in the proposal. So. So you will actually see in some cases where it is actually the, you know, right from basic to premier, if you were to look at that whole thing, there are different types of proposals, but the core of it will remain the same, irrespective of how commercially viable it was for us.
+
+58:20 - Ashutosh Tiwari (cosmostrategy)
+  Sure. No problem. Friday 11, you guys are free?
+
+58:26 - Balaji Rajan
+  same time, Friday?
+
+58:28 - Ashutosh Tiwari (cosmostrategy)
+  Friday is Janmash to me, but I can take time out.
+
+58:31 - Shiv Subramaniam
+  Friday, unfortunately I'm busy till at least, uh, three o'clock to be only after that.
+
+58:40 - Balaji Rajan
+  Let me see Friday. How am I looking like, uh, does, uh, three o'clock to four work on Friday, three to four, three to four is fine for me.
+
+58:50 - Shiv Subramaniam
+  Does it work for you?
+
+58:54 - Ashutosh Tiwari (cosmostrategy)
+  Yeah. The problem is Friday later in the day will be very, very tough because the point is that it's a.  And then you are visiting people and stuff. Monday? Monday, I'm mostly in Bangalore. Most 99%. I can meet you in Bangalore.  No, I'm watching you in the office.
+
+59:13 - Balaji Rajan
+  It depends on where you are and I can come and meet and come back. It depends on that. This is my office calendar, which I'm showing.
+
+59:24 - Ashutosh Tiwari (cosmostrategy)
+  You want to do it Saturday morning? I'm okay with Saturday morning.
+
+59:28 - Balaji Rajan
+  Say I'm not free.
+
+59:29 - Shiv Subramaniam
+  Saturday, I have to a lot Saturday, my first half is completely jacked on Saturday.
+  ACTION ITEM: Send calendar invite for Sep 9 11–12 planning w/ Ash + Shiv - WATCH: https://fathom.video/calls/807688139?timestamp=3574.9999
+
+59:35 - Balaji Rajan
+  So there's no way I can do it on Saturday.
+
+59:37 - Ashutosh Tiwari (cosmostrategy)
+  So Tuesday then?
+
+59:39 - Balaji Rajan
+  Tuesday, I go to office. I mean, Tuesday looks like this.
+
+59:44 - Ashutosh Tiwari (cosmostrategy)
+  So Wednesday?
+
+59:45 - Balaji Rajan
+  Wednesday. Okay, Wednesday, I'll set up 11 to 12.
+
+59:48 - Shiv Subramaniam
+  That anytime is fine.
+
+59:51 - Balaji Rajan
+  I will just block 11 to 12. Shiv, this reminds me, do you know this guy, Soch Apparels, personally?
+
+59:58 - Shiv Subramaniam
+  No, no, no, I don't. I don't care. don't care. I'm Thank I I don't know the CEO guy who I've messaged once and he's messaged back and it has not progressed from there.  But I can sort of resuscitate it if necessary. But he messaged you?
+
+1:00:12 - Ashutosh Tiwari (cosmostrategy)
+  Who's messaged who? Sorry, is that?
+
+1:00:14 - Shiv Subramaniam
+  That Vinay Chalani or somebody.
+
+1:00:17 - Ashutosh Tiwari (cosmostrategy)
+  Yeah, yeah. CEO.
+
+1:00:19 - Shiv Subramaniam
+  That guy. He messaged you?
+
+1:00:21 - Ashutosh Tiwari (cosmostrategy)
+  Yeah, yeah.
+
+1:00:21 - Shiv Subramaniam
+  He messaged me a long time, almost a year ago.
+
+1:00:26 - Ashutosh Tiwari (cosmostrategy)
+  Okay. No, then I don't think that it's good for me to involve you in that discussion at this stage.  Kind of a thing. Yeah. Then I'll ask Kasim to join in. On Monday, most probably, I'm having a meeting with him in Bangalore.
+
+1:00:39 - Shiv Subramaniam
+  Okay. At around 11.30 or 12.
+
+1:00:41 - Ashutosh Tiwari (cosmostrategy)
+  Some  like that.
+
+1:00:42 - Shiv Subramaniam
+  Okay.
+
+1:00:43 - Ashutosh Tiwari (cosmostrategy)
+  So I'll anyway come to Bangalore. How are you placed on Monday? Otherwise, to meet up?
+
+1:00:48 - Shiv Subramaniam
+  Monday, except 4 o'clock, I'm okay any other time. But it depends. If you can let me know where you are meeting, I'll try to accommodate.  So, then let's do one thing. You say what time you're... Meeting with these guys is, I will shift my 4 o'clock to that particular time.  And then after that, the rest of my time will be free.
+
+1:01:06 - Ashutosh Tiwari (cosmostrategy)
+  No, no, I'm meeting at around 11.30 to 12. So assume that I'm blocked from 11.30 to 3. Now what I can do, I can fly very early, meet up in the morning, or I can meet up after 3.  After, 4 o'clock is good.
+
+1:01:20 - Shiv Subramaniam
+  So you can do that. There's 4 p.m.
+
+1:01:24 - Balaji Rajan
+  You can meet in Balaji's office, right? Come on, come on. No, no, it all depends on Balaji's million-dollar question is, where is it located?  Where is it located? Correct. Because I have to do a lot of...
+
+1:01:38 - Ashutosh Tiwari (cosmostrategy)
+  I think right in the right, I'll just tell you. Just give me a moment.
+
+1:01:41 - Shiv Subramaniam
+  Not Soch. I'm talking about Balaji's office. I'm not... Balaji's office?
+
+1:01:45 - Ashutosh Tiwari (cosmostrategy)
+  Balaji, where are you located? Balandur, Balandur.
+
+1:01:49 - Shiv Subramaniam
+  Out of the question.
+
+1:01:52 - Balaji Rajan
+  You can only check out any time you want, but you can never leave. In fact, it will make much more sense to go.
+
+1:02:00 - Shiv Subramaniam
+  So online, then if your office is in Belandoor, then going to Belandoor.
+
+1:02:03 - Balaji Rajan
+  Correct. Belandoor is horrendous place. So if you are meeting in the central place somewhere, let me know. I'll adjust my meetings and I'll come out.
+
+1:02:16 - Shiv Subramaniam
+  So I think it's somewhere in Domalur or Indranagar.
+
+1:02:19 - Ashutosh Tiwari (cosmostrategy)
+  Yeah, it's in the center part of Bangalore only. So I think that's there because it follows that ship, which follows that cable car line that we were setting up.
+
+1:02:31 - Shiv Subramaniam
+  Yeah, correct.
+
+1:02:32 - Ashutosh Tiwari (cosmostrategy)
+  Yeah.
+
+1:02:33 - Balaji Rajan
+  All right.
+
+1:02:34 - Ashutosh Tiwari (cosmostrategy)
+  So I think, yeah, why don't we plan to meet up?
+
+1:02:36 - Shiv Subramaniam
+  Anyway, you finalize your specific slot, Ash, and then let us know, we'll figure out. My slot is finalized.
+
+1:02:43 - Ashutosh Tiwari (cosmostrategy)
+  I'll just tell you. You're saying 11.30 to 3. So just a moment. Yeah. So I think it's around, assume it to be 11.30.  Assume it's the only uncertainties, whether it is at 11.30 or 12, which is not too far up. So 12 to 3, basically.
+
+1:03:00 - Shiv Subramaniam
+  And so 12 to 8 hours and then you are meeting them probably a lunch together and so on.
+
+1:03:05 - Ashutosh Tiwari (cosmostrategy)
+  I should be free by around 2.15 to 20. Okay.
+
+1:03:08 - Shiv Subramaniam
+  So that's fine. I'm after three.
+
+1:03:12 - Ashutosh Tiwari (cosmostrategy)
+  So we are meeting at three?
+
+1:03:14 - Balaji Rajan
+  Then? Or 3.30? Or what time are we meeting?
+
+1:03:16 - Shiv Subramaniam
+  I'm okay. Three is also fine with me.
+
+1:03:19 - Ashutosh Tiwari (cosmostrategy)
+  Let's keep it to be safe at 3.30.
+
+1:03:22 - Balaji Rajan
+  3.30 somewhere in Indranagar.
+
+1:03:25 - Shiv Subramaniam
+  Soch Indranagar. Not Soch there. I'm saying we'll meet somewhere in some common place so that we can get out of there.  And then we can meet in some common place. I'll suggest a place in Indranagar.
+
+1:03:35 - Balaji Rajan
+  Sure.
+
+1:03:35 - Ashutosh Tiwari (cosmostrategy)
+  We can meet in the room that Shiv is sitting in right now. I've already met.
+
+1:03:40 - Shiv Subramaniam
+  You're the most welcome. Most welcome. In fact, it gives me the greatest joy of not having to step out of the door.
+
+1:03:46 - Balaji Rajan
+  out. Correct. And I'll give you outstanding coffee.
+
+1:03:51 - Shiv Subramaniam
+  That's for sure.
+
+1:03:53 - Balaji Rajan
+  Organize any kind of snack that you want.
+
+1:03:55 - Shiv Subramaniam
+  No problem.
+
+1:03:58 - Balaji Rajan
+  Good night, guys. Good night, guys.
+
+1:04:00 - Ashutosh Tiwari (cosmostrategy)
+  Great, guys.
+
+1:04:00 - Balaji Rajan
+  Thanks a lot.
+
+1:04:01 - Ashutosh Tiwari (cosmostrategy)
+  Also, another thing, Shiv, that was the thing that I wanted to check with you about, Soj, because I'm pulling in Aseem.  I would have loved to pull you in, given the fact that you have a lot of category knowledge and understanding.  But two things were weighing on my mind that if they have already approached you, then I don't want any past.  No, no, no.
+
+1:04:18 - Shiv Subramaniam
+  We have just said hello.
+
+1:04:20 - Ashutosh Tiwari (cosmostrategy)
+  That's all. Nothing else. I understand. I understand. That's number one.
+
+1:04:23 - Shiv Subramaniam
+  Number two is also the fact that I think you and I together are at a very advanced stage of closing McEnroe.  McEnroe, yeah. In that sense, right?
+
+1:04:29 - Ashutosh Tiwari (cosmostrategy)
+  So, we should take away a lot of time. So, you should do one thing.
+
+1:04:33 - Shiv Subramaniam
+  If at all, you land Soj, which is a big if, because of that guy, which is that he will constantly keep meeting consultants and never taking a decision.  He's known for that. So, if it does convert, then feel free to use me as a sounding board. Of course, I would.
+
+1:04:48 - Ashutosh Tiwari (cosmostrategy)
+  So, I think I would bring you in and use you as a sounding board once we see some kind of a light out there, right?  At the end of the day. Correct. But the very fact that the guy wants us to come down. And meet in person, etc.  And this is being anchored, not by Vinay. It's being anchored by CMO. That guy Deepak Mahnoth. Right in that sense.
+
+1:05:08 - Shiv Subramaniam
+  And Deepak is like, I know you so well, but I don't want you to act as if we know each other at all.  Yeah, got it.
+
+1:05:14 - Ashutosh Tiwari (cosmostrategy)
+  Fine.
+  ACTION ITEM: Forward Soch Apparels minutes to Balaji - WATCH: https://fathom.video/calls/807688139?timestamp=3916.9999
+
+1:05:15 - Shiv Subramaniam
+  Okay, that's fine. Okay.
+
+1:05:20 - Balaji Rajan
+  It's not doing Friday, they're doing Wednesday.
+
+1:05:22 - Shiv Subramaniam
+  Wednesday 11 o'clock, correct? I've already sent out the invite.
+
+1:05:27 - Balaji Rajan
+  I need the meeting minutes, you know, whenever Ashutosh is ready.
+
+1:05:31 - Ashutosh Tiwari (cosmostrategy)
+  Yeah, I know the moment I switch off, they will come to my email and I'll forward them to you.
+
+1:05:37 - Balaji Rajan
+  That's not a problem.
+
+1:05:39 - Shiv Subramaniam
+  And Shiv, when are we sitting for that C3 thing? Yeah, C3 we should do, yeah. Because now this is, so from my side, at least this Access Bank thing is almost out.  I saw all your comments. I think most of them are valid.
+
+1:05:52 - Ashutosh Tiwari (cosmostrategy)
+  So we'll just quickly incorporate them. One of the things that I was telling Sudhir also, under no circumstances, I want to send this proposal.
+
+1:06:00 - Shiv Subramaniam
+  Yeah, It won't work at all. Correct.
+
+1:06:04 - Ashutosh Tiwari (cosmostrategy)
+  No proposal ever works on email, because you are basically relying on a very high level of maturity of the other person to understand anything.
+
+1:06:11 - Shiv Subramaniam
+  Exactly.
+
+1:06:12 - Ashutosh Tiwari (cosmostrategy)
+  And then be able to give that amount of time, then understand the language, then understand the meaning. And with that kind of an impatient person, how much does she actually read anything that is said to her, I've got big doubts about it also.
+
+1:06:23 - Shiv Subramaniam
+  Yeah, that's true. So the first thing that you want, somebody shallowly skimming through and then rubbishing it. Yeah, exactly.
+
+1:06:30 - Ashutosh Tiwari (cosmostrategy)
+  Anyway, how are you placed tomorrow for C3? Yeah, I'm fine. Tomorrow, I'll just tell you. Just a moment.
+
+1:06:37 - Balaji Rajan
+  I'll lock off? Thanks, Balaji. Thanks, Satana.
+
+1:06:40 - Shiv Subramaniam
+  Yes, sir.
+
+1:06:41 - Balaji Rajan
+  Thanks, Satana, man.
+
+1:06:42 - Ashutosh Tiwari (cosmostrategy)
+  You made my day.
+
+1:06:43 - Balaji Rajan
+  No, no, absolutely. Something good will come. It will be fun.
+
+1:06:46 - Shiv Subramaniam
+  This will be superb. No, no, I'm very sure. First time, it's all coming together in such a comprehensive way.  I'm quite sure it will not work next.
+
+1:06:56 - Balaji Rajan
+  We should be able to raise a few million dollars. Yeah, Absolutely. Absolutely. Absolutely. Okay. I'm waiting for my DMW.  Why do you think Shiv is on the call?
+
+1:07:07 - Ashutosh Tiwari (cosmostrategy)
+  He's our gateway to prosperity.
+  ACTION ITEM: Schedule C3 session Sep 3 11–12 w/ Ash + Shiv - WATCH: https://fathom.video/calls/807688139?timestamp=4028.9999
+
+1:07:09 - Balaji Rajan
+  Correct, correct.
+
+1:07:12 - Shiv Subramaniam
+  I'll figure it out when I find the key.
+
+1:07:17 - Balaji Rajan
+  See you, bye. Hello, bye.
+
+1:07:19 - Shiv Subramaniam
+  So tomorrow, Ash, 10am is Lumity.
+
+1:07:24 - Ashutosh Tiwari (cosmostrategy)
+  So we can follow it up after that only, 11 to 12 or something like that, right? Yeah, let's do that.  That's fine. In one shot, we can just finish it off. Yeah, let's do that.
+
+1:07:33 - Shiv Subramaniam
+  That's fine. Okay. See you. Bye.
+
+1:07:37 - Ashutosh Tiwari (cosmostrategy)
+  See you. Bye. Oh, sorry, Shiv.

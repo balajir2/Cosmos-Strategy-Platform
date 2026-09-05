@@ -118,12 +118,30 @@ def init_db():
         customer_name TEXT NOT NULL,
         description TEXT,
         industry_context TEXT,
+        delivery_mode TEXT NOT NULL DEFAULT 'consultant_guided_async'
+            CHECK (delivery_mode IN ('consultant_guided_async', 'diy_self_serve', 'live_online')),
         status TEXT NOT NULL DEFAULT 'Draft'
             CHECK (status IN ('Draft', 'Active', 'Completed', 'Archived')),
         process_id BIGINT NOT NULL REFERENCES processes(id),
         created_by BIGINT NOT NULL REFERENCES users(id),
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    """)
+
+    # Migration for a projects table that already exists from before delivery_mode
+    # existed (2026-09-05, see documentation/product/roadmap.md's "Engagement
+    # Delivery Modes" section) - the CREATE TABLE IF NOT EXISTS above is a no-op
+    # against an existing table, so add the column and its CHECK constraint
+    # explicitly and idempotently (Postgres auto-names an inline CHECK after its
+    # column, so this name is predictable without an information_schema lookup -
+    # same pattern as project_artifacts' migration above). Only
+    # 'consultant_guided_async' has real behavior behind it today - see the
+    # roadmap section for what 'diy_self_serve' and 'live_online' still need.
+    cursor.execute("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivery_mode TEXT NOT NULL DEFAULT 'consultant_guided_async';")
+    cursor.execute("ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_delivery_mode_check;")
+    cursor.execute("""
+        ALTER TABLE projects ADD CONSTRAINT projects_delivery_mode_check
+        CHECK (delivery_mode IN ('consultant_guided_async', 'diy_self_serve', 'live_online'));
     """)
 
     cursor.execute("""

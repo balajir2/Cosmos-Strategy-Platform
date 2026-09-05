@@ -8,9 +8,19 @@ from database import get_db_connection
 def _project_dict(row: tuple) -> dict:
     return {
         "id": row[0], "name": row[1], "customer_name": row[2], "description": row[3],
-        "industry_context": row[4], "status": row[5], "process_id": row[6],
-        "created_by": row[7], "created_at": row[8].isoformat(),
+        "industry_context": row[4], "delivery_mode": row[5], "status": row[6],
+        "process_id": row[7], "created_by": row[8], "created_at": row[9].isoformat(),
     }
+
+
+_SELECT_COLUMNS = (
+    "id, name, customer_name, description, industry_context, delivery_mode, "
+    "status, process_id, created_by, created_at"
+)
+_SELECT_COLUMNS_QUALIFIED = (
+    "p.id, p.name, p.customer_name, p.description, p.industry_context, p.delivery_mode, "
+    "p.status, p.process_id, p.created_by, p.created_at"
+)
 
 
 def create_project(
@@ -26,10 +36,10 @@ def create_project(
         with conn.cursor() as cursor:
             try:
                 cursor.execute(
-                    """
+                    f"""
                     INSERT INTO projects (name, customer_name, description, industry_context, process_id, created_by)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                    RETURNING id, name, customer_name, description, industry_context, status, process_id, created_by, created_at;
+                    RETURNING {_SELECT_COLUMNS};
                     """,
                     (name, customer_name, description, industry_context, process_id, created_by),
                 )
@@ -52,10 +62,7 @@ def get_project_by_id(project_id: int):
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                """
-                SELECT id, name, customer_name, description, industry_context, status, process_id, created_by, created_at
-                FROM projects WHERE id = %s;
-                """,
+                f"SELECT {_SELECT_COLUMNS} FROM projects WHERE id = %s;",
                 (project_id,),
             )
             row = cursor.fetchone()
@@ -68,9 +75,8 @@ def list_projects_for_user(user_id: int) -> list:
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                """
-                SELECT p.id, p.name, p.customer_name, p.description, p.industry_context,
-                       p.status, p.process_id, p.created_by, p.created_at, pm.role
+                f"""
+                SELECT {_SELECT_COLUMNS_QUALIFIED}, pm.role
                 FROM projects p
                 JOIN project_members pm ON pm.project_id = p.id
                 WHERE pm.user_id = %s
@@ -79,18 +85,13 @@ def list_projects_for_user(user_id: int) -> list:
                 (user_id,),
             )
             rows = cursor.fetchall()
-    return [{**_project_dict(row), "role": row[9]} for row in rows]
+    return [{**_project_dict(row), "role": row[10]} for row in rows]
 
 
 def list_all_projects() -> list:
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT id, name, customer_name, description, industry_context, status, process_id, created_by, created_at
-                FROM projects ORDER BY created_at DESC;
-                """
-            )
+            cursor.execute(f"SELECT {_SELECT_COLUMNS} FROM projects ORDER BY created_at DESC;")
             rows = cursor.fetchall()
     return [_project_dict(row) for row in rows]
 
@@ -99,10 +100,10 @@ def set_project_status(project_id: int, status: str):
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                 UPDATE projects SET status = %s
                 WHERE id = %s
-                RETURNING id, name, customer_name, description, industry_context, status, process_id, created_by, created_at;
+                RETURNING {_SELECT_COLUMNS};
                 """,
                 (status, project_id),
             )
@@ -121,21 +122,26 @@ def delete_project(project_id: int) -> bool:
         return cursor.rowcount > 0
 
 
-def update_project(project_id: int, name=None, customer_name=None, description=None, industry_context=None):
+def update_project(project_id: int, name=None, customer_name=None, description=None, industry_context=None, delivery_mode=None):
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
-            cursor.execute(
-                """
-                UPDATE projects
-                SET name = COALESCE(%s, name),
-                    customer_name = COALESCE(%s, customer_name),
-                    description = COALESCE(%s, description),
-                    industry_context = COALESCE(%s, industry_context)
-                WHERE id = %s
-                RETURNING id, name, customer_name, description, industry_context, status, process_id, created_by, created_at;
-                """,
-                (name, customer_name, description, industry_context, project_id),
-            )
+            try:
+                cursor.execute(
+                    f"""
+                    UPDATE projects
+                    SET name = COALESCE(%s, name),
+                        customer_name = COALESCE(%s, customer_name),
+                        description = COALESCE(%s, description),
+                        industry_context = COALESCE(%s, industry_context),
+                        delivery_mode = COALESCE(%s, delivery_mode)
+                    WHERE id = %s
+                    RETURNING {_SELECT_COLUMNS};
+                    """,
+                    (name, customer_name, description, industry_context, delivery_mode, project_id),
+                )
+            except psycopg2.errors.CheckViolation as e:
+                conn.rollback()
+                raise ValueError(f"Invalid delivery_mode: {e}")
             row = cursor.fetchone()
         conn.commit()
     if not row:
@@ -147,10 +153,10 @@ def activate_project(project_id: int) -> dict:
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                 UPDATE projects SET status = 'Active'
                 WHERE id = %s AND status = 'Draft'
-                RETURNING id, name, customer_name, description, industry_context, status, process_id, created_by, created_at;
+                RETURNING {_SELECT_COLUMNS};
                 """,
                 (project_id,),
             )

@@ -54,6 +54,8 @@ Once implemented, the structured Q&A model drives five distinct organizational o
 | **Structured Visibility & Culture** | Bosses review answers, and peers can view them read-only, establishing reputational accountability without political nitpicking. |
 | **HR Performance Evaluation** | Evaluates a team member's quality of strategic thinking independently of trailing financial results. |
 
+**Not to be confused with the five product *modules*** in Section 5 below (Capability Building, Management Process Building, Organization Transparency Building, Performance & Potential Evaluation, DIY Consulting) — this table is the set of *organizational outcomes* the Q&A backbone produces once deployed, a different taxonomy that happens to also have five entries. A 2026-09-02 stakeholder call conflated the two lists in a product demo (presenting a version of this table missing Capability Building and DIY Consulting); see `documentation/product/stakeholder-clarifications-2026-09.md` for the open item to reconcile this before it appears in more pitch materials.
+
 ---
 
 ## 5. Scope of the Proof of Concept (POC)
@@ -63,6 +65,8 @@ To validate the DIY consulting model before committing to a full multi-tenant bu
 * **Core Hypothesis**: An LLM-backed RAG engine can provide enough comparative depth to support **Guided Self-Evaluation** without requiring a live human facilitator.
 
 **Long-term context (2026-08-24)**: the Insights Module is the first of five planned modules on the same underlying platform — capability building (this POC), management process building, organization transparency building, performance & potential evaluation, and DIY consulting — each with a distinct user experience despite sharing one corpus. Full detail: `documentation/product/functional-spec.md` §5. Not designed yet beyond this POC.
+
+**Separate axis, added 2026-09-05**: the above is *what domain* a module covers; *how* any given engagement is delivered is a different, orthogonal question with three options — Consultant-guided asynchronous (built, the only mode today), fully DIY self-serve (the same idea as "DIY consulting" above, given a concrete placeholder), and live/synchronous online consulting (new, undesigned). See `documentation/product/roadmap.md`'s "Engagement Delivery Modes" section.
 
 ---
 

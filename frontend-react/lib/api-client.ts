@@ -97,12 +97,19 @@ export async function getMe(): Promise<User> {
 
 // --- Projects -------------------------------------------------------------
 
+/** How an engagement is delivered. Only "consultant_guided_async" has real
+ * behavior behind it today - the other two are captured now so project setup
+ * doesn't need a second redesign once they're built. See
+ * documentation/product/roadmap.md's "Engagement Delivery Modes" section. */
+export type DeliveryMode = "consultant_guided_async" | "diy_self_serve" | "live_online";
+
 export interface Project {
   id: number;
   name: string;
   customer_name: string;
   description: string | null;
   industry_context: string | null;
+  delivery_mode: DeliveryMode;
   status: "Draft" | "Active" | "Completed" | "Archived";
   process_id: number;
   created_by: number;
@@ -136,6 +143,7 @@ export interface UpdateProjectPayload {
   customer_name?: string;
   description?: string;
   industry_context?: string;
+  delivery_mode?: DeliveryMode;
 }
 
 export async function listProjects(): Promise<Project[]> {

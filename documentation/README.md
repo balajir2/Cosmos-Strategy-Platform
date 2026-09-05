@@ -1,6 +1,6 @@
 # Documentation Index — Cosmos Strategic Capability Platform
 
-**Last Updated:** 2026-08-24
+**Last Updated:** 2026-09-05
 
 Welcome to the Cosmos Strategic Capability Platform documentation. This is the index; for the single-file project overview, see [`CLAUDE.md`](../CLAUDE.md) at the repo root.
 
@@ -19,6 +19,7 @@ Welcome to the Cosmos Strategic Capability Platform documentation. This is the i
 | Read the original ideation doc | [Concept Synthesis](./product/concept-synthesis.md) |
 | Understand the Users/Projects/Engagement Knowledge Base design | [Design Spec](../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md) |
 | Understand the database platform choice (Neon + pgvector) | [Design Spec](../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md) |
+| See open stakeholder questions ahead of the next planning session | [Stakeholder Clarifications](./product/stakeholder-clarifications-2026-09.md) |
 | See the version history | [CHANGELOG](../CHANGELOG.md) |
 
 ## Documentation Structure
@@ -30,7 +31,8 @@ documentation/
 │   ├── brd.md                 # Business Requirements Document
 │   ├── functional-spec.md     # User roles, workflows, UI/UX requirements
 │   ├── roadmap.md             # Living status: what's done, what's next
-│   └── concept-synthesis.md   # Original ideation doc (historical)
+│   ├── concept-synthesis.md   # Original ideation doc (historical)
+│   └── stakeholder-clarifications-2026-09.md  # Open questions for the next planning session
 ├── architecture/
 │   └── overview.md            # Current POC architecture + target Framework Factory architecture
 ├── development/
@@ -45,11 +47,11 @@ documentation/
 
 ## Status Snapshot
 
-- **Phase**: Insights POC — specs complete; Phase 0 (Database Platform) done, the rest of the code migration not started.
-- **Running code** (`backend/main.py`) still reflects the pre-pivot design (hardcoded Blazar/Basil cases, legacy rating/critique/recommendations output). `backend/database.py` and `backend/rag_engine.py`, however, already run on Neon Postgres + `pgvector`.
-- **Scope expanded 2026-08-24**: a design for real Users, Projects (replacing the ad hoc "case" concept), and a per-project Engagement Knowledge Base was added, ahead of the existing DB/API/frontend migration checklist — see [Design Spec](../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md).
-- **Database platform decided and built 2026-08-24 (Phase 0)**: Neon Postgres + `pgvector` replaces SQLite + flat-file vector storage for `processes`/`stages`/`questions`/`guidance` and the Framework Knowledge Base. The Users/Projects/Engagement KB portion of the data layer (Phases A/B/C) is still planned — see [Design Spec](../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md).
-- **Learning-flow design added 2026-08-24**: a stakeholder review meeting substantially detailed the Insights module's actual user experience — see [Functional Spec](./product/functional-spec.md).
-- **Test bed**: not yet built as of 2026-08-24 — see [Roadmap](./product/roadmap.md).
+- **Phase**: Insights POC — feature-complete in code through Framework Authoring Mode and the async artifact-ingestion pipeline. Production deployment has not started (only a CI test workflow exists; nothing has ever been applied to a live GCP project).
+- **Running code** (`backend/main.py`) has fully retired the pre-pivot design — `CASES_DATA`, `GET /api/cases`, `GET /api/case/{case_id}`, and `POST /api/evaluate` were removed 2026-08-31, not just superseded. The live, frontend-facing flow is the project-scoped chat interview (`POST /api/chat/sessions*`), backed by Level 1/2/3 comparative-benchmark generation. `backend/database.py` and `backend/rag_engine.py` run on Neon Postgres + `pgvector`.
+- **Users, Projects & Engagement Knowledge Base**: all done (Phases 0/A/B/C) — real auth, project lifecycle, per-project role membership, and a per-project document/audio knowledge base blended into every retrieval. See [Design Spec](../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md) and [Neon Postgres + pgvector Spec](../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md) for the original design.
+- **Guided Learning Flow**: two of eight items done (baseline concept calibration, adaptive question difficulty); the rest (keyword-agnostic answer mapping, case study resolution, corpus-relative depth signal, Start/Stop/Continue) are not built — see [Functional Spec](./product/functional-spec.md) and [Roadmap](./product/roadmap.md). A 2026-09-02 stakeholder call raised open questions about this flow's direction that a 2026-09-09 planning session is meant to resolve — see [Stakeholder Clarifications](./product/stakeholder-clarifications-2026-09.md).
+- **Async artifact-ingestion pipeline** (2026-09-02): built in code — a dual-mode upload path, a second Eventarc-invoked processor service, and the repo's first Terraform module — but never applied to a real GCP project. See [Roadmap](./product/roadmap.md).
+- **Test bed**: `pytest`, 379 tests, run via CI on every push/PR to `main` — see [Test Strategy](./testing/test-strategy.md).
 
 Full detail: [Roadmap](./product/roadmap.md).
