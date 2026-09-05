@@ -141,6 +141,34 @@ None of this should be copied as-is (different domain, different compliance requ
 - **Deviates from the original placeholder proposal in one way**: editable any time via the existing `PATCH /api/projects/{id}` pattern (same as `industry_context`), not fixed at `POST /api/projects` creation time as first proposed — this fits the app's existing "project setup" UI/terminology better and avoids touching the separate New Project creation flow. Nothing currently prevents changing it after activation; that may need revisiting once (a) or (c) have real behavior behind them, since switching mode mid-engagement could be meaningless or actively harmful depending on what each mode ends up requiring.
 - `consultant_guided_async` is still the only value with real behavior behind it — selecting the other two just persists the choice, nothing downstream reacts to it yet.
 
+## Cosmos-Owned Content Repositories (new — 2026-09-05, not built)
+
+Two related but distinct requirements, both about content Cosmos itself owns and reuses across engagements — as opposed to the per-project Engagement Knowledge Base (Consultant-uploaded, isolated per project) or the per-project case studies (also currently per-project only). Both directly sharpen open questions already tracked elsewhere in this document and in [Stakeholder Clarifications](stakeholder-clarifications-2026-09.md).
+
+### a. Cosmos Knowledge Uploads — the source the frameworks and questions are derived from
+
+Today, the shared Framework Knowledge Base (`framework_kb_chunks`) is populated **only** from two bundled PDFs in `archives/`, ingested once at startup (`rag_engine.py`'s `load_or_build_index()`) — there is no upload mechanism, no admin UI, and no way to add to it without physically dropping a new file into `archives/` and clearing the table. This requirement: a way for Cosmos to **upload** more of its own source material (the decks, guides, and case material its frameworks and master questions actually come from) into this shared knowledge base, available across every project — and specifically **available to DIY self-serve mode (a) above**, so that question generation for a project with no Consultant present has something to draw on.
+
+This is the concrete mechanism DIY mode (a) has been missing: it's been described as needing "a way to seed a baseline... without a Consultant curating it," and separately, [Stakeholder Clarifications §3/#7](stakeholder-clarifications-2026-09.md) flags that AI-assisted question generation (Ashutosh's "if AI actually gets trained on how to generate the questions" musing, which Shiv pushed back on for master questions specifically) remains an open "maybe someday." Widening the Framework Knowledge Base is what any such generation — AI-assisted master questions, or richer follow-up drill-downs — would need to draw on, whether that ends up serving DIY mode, better-informed Consultant authoring, or both.
+
+**Not designed.** Open questions to resolve before building:
+- Who can upload — `SystemAdmin` only (matches "Cosmos owns this," parallel to how only `SystemAdmin` creates projects), or a broader set of roles?
+- Reuse `project_knowledge_base.py`'s extraction pipeline (pdf/docx/pptx/txt/md/xlsx, already proven) rather than `rag_engine.py`'s narrower PDF-only startup ingestion — the two pipelines do almost the same job today and shouldn't diverge further.
+- `framework_kb_chunks` alone has no upload metadata (who, when, status) — likely needs a small tracking table alongside it, mirroring how `project_artifacts` tracks metadata for `project_kb_chunks`.
+- Whether "available to DIY consulting to frame the questions" means today's retrieval-at-answer-time behavior (this content just becomes more retrievable context, same as the two seeded PDFs already are), or a new question-*generation* capability that doesn't exist yet — these are different features, and the requirement as stated implies the latter is eventually wanted, not just more retrieval context.
+
+### b. Cosmos Case Study Repository — reusable case studies, selected at project setup, not re-uploaded each time
+
+Every engagement uses two case studies: the **customer's own** (their real, current, unsolved problem — today, `project_artifacts` with `purpose='case_study_internal'`, per-project, unique to that engagement) and one **Cosmos provides** (an off-category scenario for the respondent to reason from without personal familiarity — today, `purpose='case_study_external'`, but uploaded fresh, per-project, with no reuse across engagements). This requirement: a **repository** of Cosmos-owned case studies (each presumably still carrying its own hidden "what they did / should have done" resolution, per the Guided Learning Flow's case-study-resolution design) that a Consultant **selects from** during project setup, instead of uploading one from scratch every time.
+
+This is exactly what Balaji asked Ashutosh for on the 2 Sept call — *"give me the list of case studies... during project setup, we can say that this case study I'm going to administer"* — see [Stakeholder Clarifications §2](stakeholder-clarifications-2026-09.md), which flagged this as evidence that case-study content stays Consultant-curated even where the 2 Sept call's "remove document upload" push might otherwise apply. This requirement formalizes that into an actual feature rather than an ad hoc list Ashutosh emails over.
+
+**Not designed.** Open questions to resolve before building:
+- New table (`case_study_library` or similar), Cosmos-owned, no `project_id` — versus reusing `project_artifacts`' shape with a nullable `project_id`. A dedicated table is likely cleaner: `project_artifacts.project_id` is `NOT NULL` today with real code assuming it, and overloading that table risks the same kind of scope-creep this document keeps warning about elsewhere.
+- **Copy-on-attach vs. reference-on-attach**: when a Consultant picks a library case study for their project, does it get copied into that project's own `project_artifacts` row (simple, matches today's model, but diverges from the library original if either is edited later), or does the project just hold a reference to the shared library item (single source of truth, but needs care if the library item is edited or removed after projects are already using it)?
+- Project setup UI: a "choose from the Cosmos Case Study Library" selector alongside the existing raw-upload dropzone, scoped to the external case study specifically — the customer's own case study (internal) stays per-project regardless of how this is resolved.
+- Who curates the library (`SystemAdmin`, or a Consultant-facing "publish to library" action from an existing project's case study) is undecided.
+
 ## Beyond the POC
 
 The BRD frames this POC as validation before a full multi-tenant build. Originally "not yet scoped" items — one has since landed, the rest remain not yet designed:
