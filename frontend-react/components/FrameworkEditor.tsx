@@ -53,11 +53,14 @@ export default function FrameworkEditor({ projectId }: { projectId: number }) {
   }
 
   async function handleGenerate() {
-    if (!window.confirm("This replaces every stage and question in this project's framework with an AI-drafted set from Cosmos Knowledge. Continue?")) return;
+    if (!window.confirm("This replaces every stage and question in this project's framework with an AI-drafted set from Cosmos Knowledge, and permanently deletes any client answers or self-evaluations already saved against the current questions. Continue?")) return;
     setGenerating(true);
     setError(null);
     try {
-      await generateFramework(projectId);
+      const result = await generateFramework(projectId);
+      if (!result.generated) {
+        setError("Generation failed — the framework is unchanged. Try again, or check that an LLM provider is configured.");
+      }
       reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not generate the framework.");

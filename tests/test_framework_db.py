@@ -333,11 +333,45 @@ def test_generate_framework_from_knowledge_replaces_template_on_success(
     assert mock_delete_stage.call_count == 2  # one per existing stage
     mock_add_stage.assert_called_once_with(1, "Positioning")
     mock_add_question.assert_called_once_with(
-        99, 1, "Level 1", "What is your core promise?", None, "CMO", "CEO", ai_generated=True,
+        99, 1, "Level 1", "What is your core promise?", "What is your core promise?", "CMO", "CEO", ai_generated=True,
     )
     mock_update_question.assert_called_once_with(
         199, 1, guidance="Ground this in the Cosmos methodology.",
     )
+
+
+@patch("framework_db.update_question")
+@patch("framework_db.add_question")
+@patch("framework_db.add_stage")
+@patch("framework_db.delete_stage", return_value=True)
+@patch("framework_db.get_provider_adapter")
+@patch("framework_db.platform_settings.get_active_provider", return_value="anthropic")
+@patch("framework_db.process_db.get_process_detail", return_value=_CURRENT_FRAMEWORK)
+def test_generate_framework_from_knowledge_falls_back_to_question_text_for_search_query(
+    mock_get_detail, mock_get_active_provider, mock_get_adapter, mock_delete_stage, mock_add_stage, mock_add_question,
+    mock_update_question,
+):
+    # The LLM draft schema never includes a per-question search_query field, so add_question
+    # must be called with the question's own text as the 5th positional (search_query) argument,
+    # never None -- otherwise RagEngine.search_merged's embedding call fails at interview time
+    # and retrieval silently falls back to zero source chunks for every AI-generated question.
+    provider = MagicMock()
+    provider.complete.return_value = _VALID_DRAFT_JSON
+    mock_get_adapter.return_value = provider
+    mock_add_stage.return_value = {"id": 99, "name": "Positioning", "sequence_order": 1}
+    mock_add_question.return_value = {"id": 199, "ai_generated": True}
+
+    rag = MagicMock()
+    rag.search.return_value = [{"id": 1, "source_file": "brand-playbook.pdf", "text": "Cosmos framework context."}]
+
+    project = {"id": 5, "process_id": 1, "name": "Blazar India Entry", "industry_context": "B2B chemicals"}
+
+    result = framework_db.generate_framework_from_knowledge(rag, project)
+
+    assert result is True
+    search_query_arg = mock_add_question.call_args[0][4]
+    assert search_query_arg == "What is your core promise?"
+    assert search_query_arg is not None
 
 
 @patch("framework_db.add_question")

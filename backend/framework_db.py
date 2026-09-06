@@ -351,7 +351,7 @@ def generate_framework_from_knowledge(rag, project: dict) -> bool:
             for q in stage["questions"]:
                 new_question = add_question(
                     new_stage["id"], project["process_id"], q["level"], q["text"],
-                    q.get("search_query"), q["owner_role"], q.get("reviewer_role"),
+                    q.get("search_query") or q["text"], q["owner_role"], q.get("reviewer_role"),
                     ai_generated=True,
                 )
                 if q.get("guidance"):
