@@ -529,6 +529,13 @@ def delete_framework_question(project_id: int, question_id: int, member: dict = 
     return {"deleted": True}
 
 
+@app.post("/api/projects/{project_id}/framework/generate")
+def generate_project_framework(project_id: int, member: dict = Depends(require_consultant)):
+    project = _require_project_for_framework(project_id)
+    generated = framework_db.generate_framework_from_knowledge(rag, project)
+    return {"generated": generated, "framework": process_db.get_process_detail(project["process_id"])}
+
+
 @app.get("/api/projects/{project_id}/framework/calibration")
 def get_calibration_concepts(project_id: int, member: dict = Depends(require_consultant)):
     project = _require_project_for_framework(project_id)

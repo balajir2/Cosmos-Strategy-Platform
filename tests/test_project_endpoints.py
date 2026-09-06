@@ -303,3 +303,67 @@ def test_activate_project_rejects_already_active_project(mock_get_member, mock_a
         assert response.status_code == 400
     finally:
         main.app.dependency_overrides.clear()
+
+
+# --- POST /api/projects/{project_id}/framework/generate ----------------------
+
+@patch("auth.get_project_member", return_value={
+    "id": 2, "project_id": 1, "user_id": 2, "role": "ClientUser",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_generate_framework_rejects_non_consultant(mock_get_member):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _NON_ADMIN_USER
+    try:
+        response = client.post("/api/projects/1/framework/generate")
+        assert response.status_code == 403
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.process_db.get_process_detail", return_value={"id": 1, "name": "p", "description": None, "created_at": "2026-08-28T09:00:00", "stages": []})
+@patch("main.framework_db.generate_framework_from_knowledge", return_value=True)
+@patch("main.projects_db.get_project_by_id", return_value={"id": 1, "process_id": 1})
+@patch("auth.get_project_member", return_value={
+    "id": 1, "project_id": 1, "user_id": 1, "role": "Consultant",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_generate_framework_returns_generated_true_on_success(mock_get_member, mock_get_project, mock_generate, mock_get_detail):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _NON_ADMIN_USER
+    try:
+        response = client.post("/api/projects/1/framework/generate")
+        assert response.status_code == 200
+        assert response.json()["generated"] is True
+        mock_generate.assert_called_once_with(main.rag, {"id": 1, "process_id": 1})
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.process_db.get_process_detail", return_value={"id": 1, "name": "p", "description": None, "created_at": "2026-08-28T09:00:00", "stages": []})
+@patch("main.framework_db.generate_framework_from_knowledge", return_value=False)
+@patch("main.projects_db.get_project_by_id", return_value={"id": 1, "process_id": 1})
+@patch("auth.get_project_member", return_value={
+    "id": 1, "project_id": 1, "user_id": 1, "role": "Consultant",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_generate_framework_returns_generated_false_on_failure(mock_get_member, mock_get_project, mock_generate, mock_get_detail):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _NON_ADMIN_USER
+    try:
+        response = client.post("/api/projects/1/framework/generate")
+        assert response.status_code == 200
+        assert response.json()["generated"] is False
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.projects_db.get_project_by_id", return_value=None)
+@patch("auth.get_project_member", return_value={
+    "id": 1, "project_id": 1, "user_id": 1, "role": "Consultant",
+    "org_title": None, "assigned_at": "2026-08-28T09:00:00",
+})
+def test_generate_framework_returns_404_when_project_missing(mock_get_member, mock_get_project):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _NON_ADMIN_USER
+    try:
+        response = client.post("/api/projects/999/framework/generate")
+        assert response.status_code == 404
+    finally:
+        main.app.dependency_overrides.clear()
