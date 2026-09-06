@@ -22,6 +22,8 @@ import project_knowledge_base
 import gcs_artifact_storage
 import process_db
 import framework_db
+import framework_knowledge_db
+import framework_knowledge_ingestion
 import calibration_db
 import responses_db
 import brief
@@ -206,6 +208,39 @@ def admin_reset_password(user_id: int, payload: AdminPasswordReset, admin: dict 
     if not users_db.set_password(user_id, hash_password(payload.password)):
         raise HTTPException(status_code=404, detail="User not found.")
     return {"reset": True}
+
+@app.post("/api/admin/framework-knowledge")
+async def upload_framework_knowledge(
+    file: UploadFile = File(...),
+    admin: dict = Depends(require_admin),
+):
+    try:
+        source_format = framework_knowledge_ingestion.infer_framework_source_format(file.filename)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    file_bytes = await file.read(MAX_ARTIFACT_UPLOAD_BYTES + 1)
+    if len(file_bytes) > MAX_ARTIFACT_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail=f"File exceeds the {MAX_ARTIFACT_UPLOAD_BYTES // (1024 * 1024)} MB upload limit.")
+
+    try:
+        source = framework_knowledge_db.create_source(file.filename, source_format, admin["id"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    await run_in_threadpool(framework_knowledge_ingestion.ingest_framework_source, rag, source["id"], file_bytes)
+
+    return framework_knowledge_db.get_source_by_id(source["id"])
+
+@app.get("/api/admin/framework-knowledge")
+def list_framework_knowledge(admin: dict = Depends(require_admin)):
+    return framework_knowledge_db.list_sources()
+
+@app.delete("/api/admin/framework-knowledge/{source_id}")
+def delete_framework_knowledge(source_id: int, admin: dict = Depends(require_admin)):
+    if not framework_knowledge_db.delete_source(source_id):
+        raise HTTPException(status_code=404, detail="Source not found.")
+    return {"deleted": True}
 
 @app.post("/api/projects")
 def create_project(payload: ProjectCreateRequest, admin: dict = Depends(require_admin)):
