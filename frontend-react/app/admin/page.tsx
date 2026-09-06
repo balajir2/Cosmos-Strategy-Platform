@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { getMe, User } from "@/lib/api-client";
 import UsersTab from "@/components/admin/UsersTab";
 import ProjectsTab from "@/components/admin/ProjectsTab";
+import FrameworkKnowledgeTab from "@/components/admin/FrameworkKnowledgeTab";
 
 export default function AdminPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<"users" | "projects">("users");
+  const [tab, setTab] = useState<"users" | "projects" | "framework-knowledge">("users");
   const [checking, setChecking] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -44,8 +45,9 @@ export default function AdminPage() {
       <div className="admin-tabs">
         <button className={`admin-tab ${tab === "users" ? "active" : ""}`} onClick={() => setTab("users")}>Users</button>
         <button className={`admin-tab ${tab === "projects" ? "active" : ""}`} onClick={() => setTab("projects")}>Projects</button>
+        <button className={`admin-tab ${tab === "framework-knowledge" ? "active" : ""}`} onClick={() => setTab("framework-knowledge")}>Framework Knowledge</button>
       </div>
-      {tab === "users" ? <UsersTab /> : <ProjectsTab />}
+      {tab === "users" ? <UsersTab /> : tab === "projects" ? <ProjectsTab /> : <FrameworkKnowledgeTab />}
     </div>
   );
 }

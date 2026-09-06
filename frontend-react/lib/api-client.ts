@@ -281,6 +281,36 @@ export async function adminDeleteProject(projectId: number): Promise<void> {
   if (!res.ok) throw new Error(await errorDetail(res, `Failed to delete project: ${res.status}`));
 }
 
+// --- Admin: framework knowledge -----------------------------------------
+
+export interface FrameworkKnowledgeSource {
+  id: number;
+  filename: string;
+  source_format: "pdf" | "docx" | "pptx" | "txt" | "md" | "xlsx";
+  status: "Processing" | "Indexed" | "Failed";
+  uploaded_by: number;
+  uploaded_at: string;
+}
+
+export async function adminUploadFrameworkKnowledge(file: File): Promise<FrameworkKnowledgeSource> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await authFetch("/api/admin/framework-knowledge", { method: "POST", body: formData });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to upload: ${res.status}`));
+  return res.json();
+}
+
+export async function adminListFrameworkKnowledge(): Promise<FrameworkKnowledgeSource[]> {
+  const res = await authFetch("/api/admin/framework-knowledge");
+  if (!res.ok) throw new Error(`Failed to load Framework Knowledge sources: ${res.status}`);
+  return res.json();
+}
+
+export async function adminDeleteFrameworkKnowledge(sourceId: number): Promise<void> {
+  const res = await authFetch(`/api/admin/framework-knowledge/${sourceId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`Failed to delete source: ${res.status}`);
+}
+
 // --- Project members ----------------------------------------------------------
 
 export interface ProjectMemberDetail extends ProjectMember {
