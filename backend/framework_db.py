@@ -1,6 +1,10 @@
 import contextlib
 
+import process_db
+import settings as platform_settings
 from database import get_db_connection
+from llm_providers import get_provider_adapter
+from llm_providers.base import parse_evaluation_json
 
 
 def get_template_process():
@@ -274,3 +278,89 @@ def delete_question(question_id: int, process_id: int) -> bool:
             )
         conn.commit()
         return cursor.rowcount > 0
+
+
+def generate_framework_from_knowledge(rag, project: dict) -> bool:
+    """Best-effort: drafts a full stage/question set for `project` from the
+    shared Framework Knowledge Base via the active LLM provider, replacing
+    its current (template-cloned) stages/questions. Returns True if the
+    draft was applied, False if generation failed for any reason - in which
+    case the project's existing framework is left completely untouched, so
+    a project is never left without a working framework. Never raises past
+    this boundary."""
+    try:
+        current = process_db.get_process_detail(project["process_id"])
+        if current is None:
+            return False
+
+        queries = [stage["name"] for stage in current["stages"]]
+        if project.get("industry_context"):
+            queries.append(project["industry_context"])
+        if not queries:
+            queries = [project["name"]]
+
+        seen_ids = set()
+        hits = []
+        for query in queries:
+            for hit in rag.search(query, top_k=10):
+                if hit["id"] not in seen_ids:
+                    seen_ids.add(hit["id"])
+                    hits.append(hit)
+
+        context_str = "\n\n".join(
+            f"Source: {hit['source_file']}\nContext: {hit['text']}" for hit in hits
+        )
+
+        system_prompt = (
+            "You are Cosmos AI, a premier management consulting assistant. Draft a full "
+            "strategic framework for a self-serve engagement: a set of stages, each with "
+            "several restlessness-arousing questions, grounded in the Cosmos methodology "
+            "context provided below and tailored to the client's industry context.\n\n"
+            "Return ONLY a valid JSON object matching this schema:\n"
+            '{"stages": [{"name": "stage name", "questions": [{"level": "e.g. Level 3: Brand Positioning", '
+            '"text": "the question text", "owner_role": "e.g. CMO", "reviewer_role": "e.g. CEO", '
+            '"guidance": "short framework guidance for whoever answers this"}]}]}'
+        )
+        user_prompt = (
+            f"Cosmos methodology context:\n{context_str}\n\n"
+            f"Client industry context: {project.get('industry_context') or 'Not specified.'}\n\n"
+            f"Return ONLY the JSON object described above."
+        )
+
+        provider_name = platform_settings.get_active_provider()
+        provider = get_provider_adapter(provider_name)
+        response_text = provider.complete(system_prompt, [{"role": "user", "content": user_prompt}])
+        draft = parse_evaluation_json(response_text)
+
+        stages = draft.get("stages")
+        if not isinstance(stages, list) or not stages:
+            raise ValueError(f"LLM response missing a non-empty 'stages' list: {draft!r}")
+        for stage in stages:
+            if not isinstance(stage.get("name"), str) or not stage["name"].strip():
+                raise ValueError(f"Draft stage missing a name: {stage!r}")
+            questions = stage.get("questions")
+            if not isinstance(questions, list) or not questions:
+                raise ValueError(f"Draft stage '{stage.get('name')}' has no questions: {stage!r}")
+            for q in questions:
+                for field in ("level", "text", "owner_role"):
+                    if not isinstance(q.get(field), str) or not q[field].strip():
+                        raise ValueError(f"Draft question missing required field '{field}': {q!r}")
+
+        for stage in current["stages"]:
+            delete_stage(stage["id"], project["process_id"])
+
+        for stage in stages:
+            new_stage = add_stage(project["process_id"], stage["name"])
+            for q in stage["questions"]:
+                new_question = add_question(
+                    new_stage["id"], project["process_id"], q["level"], q["text"],
+                    q.get("search_query"), q["owner_role"], q.get("reviewer_role"),
+                    ai_generated=True,
+                )
+                if q.get("guidance"):
+                    update_question(new_question["id"], project["process_id"], guidance=q["guidance"])
+
+        return True
+    except Exception as e:
+        print(f"AI framework generation failed for project {project.get('id')}: {e}")
+        return False

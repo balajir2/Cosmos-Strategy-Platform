@@ -288,3 +288,135 @@ def test_delete_question_returns_true_when_deleted(mock_get_conn):
     sql, params = cursor.execute.call_args[0]
     assert "DELETE FROM questions" in sql
     assert params == (30, 1)
+
+
+_CURRENT_FRAMEWORK = {
+    "id": 1, "name": "Blazar Framework", "description": "desc", "created_at": "2026-09-06T09:00:00",
+    "stages": [
+        {"id": 10, "name": "Aim & SWOT", "sequence_order": 1, "questions": []},
+        {"id": 11, "name": "Opportunity Expansion", "sequence_order": 2, "questions": []},
+    ],
+}
+
+_VALID_DRAFT_JSON = (
+    '{"stages": [{"name": "Positioning", "questions": [{"level": "Level 1", '
+    '"text": "What is your core promise?", "owner_role": "CMO", "reviewer_role": "CEO", '
+    '"guidance": "Ground this in the Cosmos methodology."}]}]}'
+)
+
+
+@patch("framework_db.update_question")
+@patch("framework_db.add_question")
+@patch("framework_db.add_stage")
+@patch("framework_db.delete_stage", return_value=True)
+@patch("framework_db.get_provider_adapter")
+@patch("framework_db.platform_settings.get_active_provider", return_value="anthropic")
+@patch("framework_db.process_db.get_process_detail", return_value=_CURRENT_FRAMEWORK)
+def test_generate_framework_from_knowledge_replaces_template_on_success(
+    mock_get_detail, mock_get_active_provider, mock_get_adapter, mock_delete_stage, mock_add_stage, mock_add_question,
+    mock_update_question,
+):
+    provider = MagicMock()
+    provider.complete.return_value = _VALID_DRAFT_JSON
+    mock_get_adapter.return_value = provider
+    mock_add_stage.return_value = {"id": 99, "name": "Positioning", "sequence_order": 1}
+    mock_add_question.return_value = {"id": 199, "ai_generated": True}
+
+    rag = MagicMock()
+    rag.search.return_value = [{"id": 1, "source_file": "brand-playbook.pdf", "text": "Cosmos framework context."}]
+
+    project = {"id": 5, "process_id": 1, "name": "Blazar India Entry", "industry_context": "B2B chemicals"}
+
+    result = framework_db.generate_framework_from_knowledge(rag, project)
+
+    assert result is True
+    assert mock_delete_stage.call_count == 2  # one per existing stage
+    mock_add_stage.assert_called_once_with(1, "Positioning")
+    mock_add_question.assert_called_once_with(
+        99, 1, "Level 1", "What is your core promise?", None, "CMO", "CEO", ai_generated=True,
+    )
+    mock_update_question.assert_called_once_with(
+        199, 1, guidance="Ground this in the Cosmos methodology.",
+    )
+
+
+@patch("framework_db.add_question")
+@patch("framework_db.add_stage")
+@patch("framework_db.delete_stage")
+@patch("framework_db.get_provider_adapter")
+@patch("framework_db.platform_settings.get_active_provider", return_value="anthropic")
+@patch("framework_db.process_db.get_process_detail", return_value=_CURRENT_FRAMEWORK)
+def test_generate_framework_from_knowledge_leaves_framework_untouched_on_llm_error(
+    mock_get_detail, mock_get_active_provider, mock_get_adapter, mock_delete_stage, mock_add_stage, mock_add_question,
+):
+    provider = MagicMock()
+    provider.complete.side_effect = RuntimeError("provider unavailable")
+    mock_get_adapter.return_value = provider
+
+    rag = MagicMock()
+    rag.search.return_value = []
+
+    project = {"id": 5, "process_id": 1, "name": "Blazar India Entry", "industry_context": "B2B chemicals"}
+
+    result = framework_db.generate_framework_from_knowledge(rag, project)
+
+    assert result is False
+    mock_delete_stage.assert_not_called()
+    mock_add_stage.assert_not_called()
+    mock_add_question.assert_not_called()
+
+
+@patch("framework_db.add_question")
+@patch("framework_db.add_stage")
+@patch("framework_db.delete_stage")
+@patch("framework_db.get_provider_adapter")
+@patch("framework_db.platform_settings.get_active_provider", return_value="anthropic")
+@patch("framework_db.process_db.get_process_detail", return_value=_CURRENT_FRAMEWORK)
+def test_generate_framework_from_knowledge_leaves_framework_untouched_on_malformed_json(
+    mock_get_detail, mock_get_active_provider, mock_get_adapter, mock_delete_stage, mock_add_stage, mock_add_question,
+):
+    provider = MagicMock()
+    provider.complete.return_value = "not valid json at all"
+    mock_get_adapter.return_value = provider
+
+    rag = MagicMock()
+    rag.search.return_value = []
+
+    project = {"id": 5, "process_id": 1, "name": "Blazar India Entry", "industry_context": "B2B chemicals"}
+
+    result = framework_db.generate_framework_from_knowledge(rag, project)
+
+    assert result is False
+    mock_add_stage.assert_not_called()
+
+
+@patch("framework_db.add_question")
+@patch("framework_db.add_stage")
+@patch("framework_db.delete_stage")
+@patch("framework_db.get_provider_adapter")
+@patch("framework_db.platform_settings.get_active_provider", return_value="anthropic")
+@patch("framework_db.process_db.get_process_detail", return_value=_CURRENT_FRAMEWORK)
+def test_generate_framework_from_knowledge_leaves_framework_untouched_on_missing_stages_key(
+    mock_get_detail, mock_get_active_provider, mock_get_adapter, mock_delete_stage, mock_add_stage, mock_add_question,
+):
+    provider = MagicMock()
+    provider.complete.return_value = '{"not_stages": []}'
+    mock_get_adapter.return_value = provider
+
+    rag = MagicMock()
+    rag.search.return_value = []
+
+    project = {"id": 5, "process_id": 1, "name": "Blazar India Entry", "industry_context": "B2B chemicals"}
+
+    result = framework_db.generate_framework_from_knowledge(rag, project)
+
+    assert result is False
+    mock_add_stage.assert_not_called()
+
+
+@patch("framework_db.process_db.get_process_detail", return_value=None)
+def test_generate_framework_from_knowledge_returns_false_when_project_process_missing(mock_get_detail):
+    rag = MagicMock()
+    project = {"id": 5, "process_id": 999, "name": "Blazar India Entry", "industry_context": None}
+
+    assert framework_db.generate_framework_from_knowledge(rag, project) is False
