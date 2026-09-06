@@ -255,6 +255,33 @@ def init_db():
     ON framework_kb_chunks USING hnsw (embedding vector_cosine_ops);
     """)
 
+    # Cosmos Knowledge Uploads (added 2026-09-06, see roadmap's "Cosmos-Owned
+    # Content Repositories" section) - a SystemAdmin can widen the shared
+    # Framework Knowledge Base beyond the two bundled startup PDFs.
+    # framework_kb_sources tracks each upload; framework_kb_chunks widens to
+    # accept generic (non-slide-shaped) content alongside the legacy PDFs.
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS framework_kb_sources (
+        id BIGSERIAL PRIMARY KEY,
+        filename TEXT NOT NULL,
+        source_format TEXT NOT NULL
+            CHECK (source_format IN ('pdf', 'docx', 'pptx', 'txt', 'md', 'xlsx')),
+        status TEXT NOT NULL DEFAULT 'Processing'
+            CHECK (status IN ('Processing', 'Indexed', 'Failed')),
+        uploaded_by BIGINT NOT NULL REFERENCES users(id),
+        uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    """)
+
+    # phase/slide_number only ever apply to the two legacy startup-seeded
+    # PDFs - admin-uploaded content leaves them NULL, so both must become
+    # nullable, and the old (source_file, slide_number) uniqueness no longer
+    # means anything once slide_number is optional.
+    cursor.execute("ALTER TABLE framework_kb_chunks ALTER COLUMN phase DROP NOT NULL;")
+    cursor.execute("ALTER TABLE framework_kb_chunks ALTER COLUMN slide_number DROP NOT NULL;")
+    cursor.execute("ALTER TABLE framework_kb_chunks DROP CONSTRAINT IF NOT EXISTS framework_kb_chunks_source_file_slide_number_key;")
+    cursor.execute("ALTER TABLE framework_kb_chunks ADD COLUMN IF NOT EXISTS source_id BIGINT REFERENCES framework_kb_sources(id) ON DELETE CASCADE;")
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS platform_settings (
         id INTEGER PRIMARY KEY DEFAULT 1,
