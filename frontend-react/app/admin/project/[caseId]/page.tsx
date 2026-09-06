@@ -24,7 +24,7 @@ const PURPOSE_OPTIONS = Object.keys(PURPOSE_LABELS);
 // Delivery Modes" section.
 const DELIVERY_MODE_LABELS: Record<DeliveryMode, string> = {
   consultant_guided_async: "Consultant-Guided (Async)",
-  diy_self_serve: "Fully DIY (Self-Serve) — not yet available",
+  diy_self_serve: "Fully DIY (Self-Serve) - AI drafts the framework",
   live_online: "Live Online Consulting — not yet available",
 };
 
@@ -201,7 +201,7 @@ export default function ProjectSetupPage() {
                 <option key={mode} value={mode}>{DELIVERY_MODE_LABELS[mode]}</option>
               ))}
             </select>
-            <span className="dropzone-hint">Only Consultant-Guided is functional today — the other two are recorded for future development.</span>
+            <span className="dropzone-hint">Consultant-Guided and Fully DIY are functional today — Live Online is recorded for future development.</span>
           </div>
 
           <div className="answer-wrapper">

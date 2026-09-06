@@ -79,7 +79,7 @@ export default function FrameworkEditor({ projectId }: { projectId: number }) {
         <label htmlFor="new-stage-input">Add stage</label>
         <div className="assign-row">
           <input id="new-stage-input" type="text" value={newStageName} onChange={(e) => setNewStageName(e.target.value)} placeholder="e.g. Aim & SWOT" />
-          <button className="btn btn-secondary" onClick={handleAddStage} disabled={busy}><i className="fa-solid fa-plus"></i> Add</button>
+          <button className="btn btn-secondary" onClick={handleAddStage} disabled={busy || generating}><i className="fa-solid fa-plus"></i> Add</button>
         </div>
       </div>
 
@@ -92,10 +92,10 @@ export default function FrameworkEditor({ projectId }: { projectId: number }) {
           <div className="framework-stage-header">
             <span className="framework-stage-name">{stage.name}</span>
             <span className="framework-stage-actions">
-              <button className="btn btn-secondary" title="Move up" disabled={busy} onClick={() => run(() => updateFrameworkStage(projectId, stage.id, { action: "move_up" }))}><i className="fa-solid fa-arrow-up"></i></button>
-              <button className="btn btn-secondary" title="Move down" disabled={busy} onClick={() => run(() => updateFrameworkStage(projectId, stage.id, { action: "move_down" }))}><i className="fa-solid fa-arrow-down"></i></button>
-              <button className="btn btn-secondary" title="Rename" disabled={busy} onClick={() => { const n = window.prompt("Stage name", stage.name); if (n) run(() => updateFrameworkStage(projectId, stage.id, { name: n })); }}><i className="fa-solid fa-pen"></i></button>
-              <button className="btn btn-secondary" title="Delete stage" disabled={busy} onClick={() => { if (window.confirm(`Delete stage "${stage.name}" and all its questions?`)) run(() => deleteFrameworkStage(projectId, stage.id)); }}><i className="fa-solid fa-trash"></i></button>
+              <button className="btn btn-secondary" title="Move up" disabled={busy || generating} onClick={() => run(() => updateFrameworkStage(projectId, stage.id, { action: "move_up" }))}><i className="fa-solid fa-arrow-up"></i></button>
+              <button className="btn btn-secondary" title="Move down" disabled={busy || generating} onClick={() => run(() => updateFrameworkStage(projectId, stage.id, { action: "move_down" }))}><i className="fa-solid fa-arrow-down"></i></button>
+              <button className="btn btn-secondary" title="Rename" disabled={busy || generating} onClick={() => { const n = window.prompt("Stage name", stage.name); if (n) run(() => updateFrameworkStage(projectId, stage.id, { name: n })); }}><i className="fa-solid fa-pen"></i></button>
+              <button className="btn btn-secondary" title="Delete stage" disabled={busy || generating} onClick={() => { if (window.confirm(`Delete stage "${stage.name}" and all its questions?`)) run(() => deleteFrameworkStage(projectId, stage.id)); }}><i className="fa-solid fa-trash"></i></button>
             </span>
           </div>
 
@@ -112,9 +112,9 @@ export default function FrameworkEditor({ projectId }: { projectId: number }) {
                   <span className="dropzone-hint">Owner: {q.owner_role}{q.reviewer_role ? ` · Reviewer: ${q.reviewer_role}` : ""}</span>
                 </div>
                 <div className="framework-question-actions">
-                  <button className="btn btn-secondary" disabled={busy} onClick={() => run(() => updateFrameworkQuestion(projectId, q.id, { action: "move_up" }))}><i className="fa-solid fa-arrow-up"></i></button>
-                  <button className="btn btn-secondary" disabled={busy} onClick={() => run(() => updateFrameworkQuestion(projectId, q.id, { action: "move_down" }))}><i className="fa-solid fa-arrow-down"></i></button>
-                  <button className="btn btn-secondary" disabled={busy} onClick={() => {
+                  <button className="btn btn-secondary" disabled={busy || generating} onClick={() => run(() => updateFrameworkQuestion(projectId, q.id, { action: "move_up" }))}><i className="fa-solid fa-arrow-up"></i></button>
+                  <button className="btn btn-secondary" disabled={busy || generating} onClick={() => run(() => updateFrameworkQuestion(projectId, q.id, { action: "move_down" }))}><i className="fa-solid fa-arrow-down"></i></button>
+                  <button className="btn btn-secondary" disabled={busy || generating} onClick={() => {
                     const text = window.prompt("Question text", q.text); if (!text) return;
                     const level = window.prompt("Level", q.level) || q.level;
                     const owner = window.prompt("Owner role", q.owner_role) || q.owner_role;
@@ -123,14 +123,14 @@ export default function FrameworkEditor({ projectId }: { projectId: number }) {
                     const g = window.prompt("Guidance (framework text)", guidance);
                     run(() => updateFrameworkQuestion(projectId, q.id, { text, level, owner_role: owner, search_query: searchQuery, reviewer_role: reviewer, guidance: g === null ? undefined : g }));
                   }}><i className="fa-solid fa-pen"></i></button>
-                  <button className="btn btn-secondary" disabled={busy} onClick={() => { if (window.confirm("Delete this question?")) run(() => deleteFrameworkQuestion(projectId, q.id)); }}><i className="fa-solid fa-trash"></i></button>
+                  <button className="btn btn-secondary" disabled={busy || generating} onClick={() => { if (window.confirm("Delete this question?")) run(() => deleteFrameworkQuestion(projectId, q.id)); }}><i className="fa-solid fa-trash"></i></button>
                 </div>
                 {guidance && <div className="framework-guidance"><i className="fa-solid fa-book"></i> {guidance}</div>}
               </div>
             );
           })}
 
-          <button className="btn btn-secondary" disabled={busy} onClick={() => handleAddQuestion(stage.id)}><i className="fa-solid fa-plus"></i> Add question</button>
+          <button className="btn btn-secondary" disabled={busy || generating} onClick={() => handleAddQuestion(stage.id)}><i className="fa-solid fa-plus"></i> Add question</button>
         </div>
       ))}
 
