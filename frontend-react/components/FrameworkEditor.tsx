@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   getFramework, createFrameworkStage, updateFrameworkStage, deleteFrameworkStage,
-  createFrameworkQuestion, updateFrameworkQuestion, deleteFrameworkQuestion,
+  createFrameworkQuestion, updateFrameworkQuestion, deleteFrameworkQuestion, generateFramework,
   ProcessDetail,
 } from "@/lib/api-client";
 
@@ -12,6 +12,7 @@ export default function FrameworkEditor({ projectId }: { projectId: number }) {
   const [error, setError] = useState<string | null>(null);
   const [newStageName, setNewStageName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const reload = useCallback(() => {
     getFramework(projectId).then(setFramework).catch(() => setError("Could not load the framework."));
@@ -51,6 +52,20 @@ export default function FrameworkEditor({ projectId }: { projectId: number }) {
     await run(() => createFrameworkQuestion(projectId, stageId, { level, text, owner_role: ownerRole, search_query: searchQuery, reviewer_role: reviewerRole }));
   }
 
+  async function handleGenerate() {
+    if (!window.confirm("This replaces every stage and question in this project's framework with an AI-drafted set from Cosmos Knowledge. Continue?")) return;
+    setGenerating(true);
+    setError(null);
+    try {
+      await generateFramework(projectId);
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not generate the framework.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   if (!framework) {
     return <div className="loading-spinner"><i className="fa-solid fa-circle-notch fa-spin"></i> Loading framework...</div>;
   }
@@ -68,6 +83,10 @@ export default function FrameworkEditor({ projectId }: { projectId: number }) {
         </div>
       </div>
 
+      <button className="btn btn-secondary" onClick={handleGenerate} disabled={busy || generating}>
+        <i className="fa-solid fa-wand-magic-sparkles"></i> {generating ? "Generating..." : "Generate Framework from Cosmos Knowledge"}
+      </button>
+
       {framework.stages.map((stage) => (
         <div className="framework-stage" key={stage.id}>
           <div className="framework-stage-header">
@@ -84,7 +103,10 @@ export default function FrameworkEditor({ projectId }: { projectId: number }) {
             const guidance = q.guidance?.[0]?.content ?? "";
             return (
               <div className="framework-question" key={q.id}>
-                <div className="framework-question-level">{q.level}</div>
+                <div className="framework-question-level">
+                  {q.level}
+                  {q.ai_generated && <span className="role-tag" style={{ marginLeft: 8 }}>AI-drafted</span>}
+                </div>
                 <div className="framework-question-text">{q.text}</div>
                 <div className="framework-question-meta">
                   <span className="dropzone-hint">Owner: {q.owner_role}{q.reviewer_role ? ` · Reviewer: ${q.reviewer_role}` : ""}</span>

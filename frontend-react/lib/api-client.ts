@@ -136,6 +136,7 @@ export interface CreateProjectPayload {
   industry_context?: string;
   process_id?: number;
   consultant_user_id: number;
+  delivery_mode?: DeliveryMode;
 }
 
 export interface UpdateProjectPayload {
@@ -389,6 +390,7 @@ export interface Question {
   search_query: string | null;
   owner_role: string;
   reviewer_role: string | null;
+  ai_generated: boolean;
   guidance: Guidance[];
 }
 
@@ -458,6 +460,17 @@ export interface FrameworkQuestionUpdate {
 export async function getFramework(projectId: number): Promise<ProcessDetail> {
   const res = await authFetch(`/api/projects/${projectId}/framework`);
   if (!res.ok) throw new Error(`Failed to load framework: ${res.status}`);
+  return res.json();
+}
+
+export interface GenerateFrameworkResult {
+  generated: boolean;
+  framework: ProcessDetail;
+}
+
+export async function generateFramework(projectId: number): Promise<GenerateFrameworkResult> {
+  const res = await authFetch(`/api/projects/${projectId}/framework/generate`, { method: "POST" });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to generate framework: ${res.status}`));
   return res.json();
 }
 

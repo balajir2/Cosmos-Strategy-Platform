@@ -1,12 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createProject, adminListUsers, User } from "@/lib/api-client";
+import { createProject, adminListUsers, User, DeliveryMode } from "@/lib/api-client";
+
+const DELIVERY_MODE_LABELS: Record<DeliveryMode, string> = {
+  consultant_guided_async: "Consultant-Guided (Async)",
+  diy_self_serve: "Fully DIY (Self-Serve) - AI drafts the framework",
+  live_online: "Live Online Consulting - not yet available",
+};
+const DELIVERY_MODE_OPTIONS = Object.keys(DELIVERY_MODE_LABELS) as DeliveryMode[];
 
 export default function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [consultantUserId, setConsultantUserId] = useState("");
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("consultant_guided_async");
   const [users, setUsers] = useState<User[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +38,7 @@ export default function NewProjectModal({ onClose, onCreated }: { onClose: () =>
         name,
         customer_name: customerName,
         consultant_user_id: parseInt(consultantUserId, 10),
+        delivery_mode: deliveryMode,
       });
       onCreated();
     } catch (err) {
@@ -64,6 +73,15 @@ export default function NewProjectModal({ onClose, onCreated }: { onClose: () =>
               ))}
             </select>
             <span className="dropzone-hint">The selected user becomes the Consultant who leads this engagement.</span>
+          </div>
+          <div className="answer-wrapper">
+            <label htmlFor="np-delivery-mode">Engagement Delivery Mode</label>
+            <select id="np-delivery-mode" value={deliveryMode} onChange={(e) => setDeliveryMode(e.target.value as DeliveryMode)}>
+              {DELIVERY_MODE_OPTIONS.map((mode) => (
+                <option key={mode} value={mode}>{DELIVERY_MODE_LABELS[mode]}</option>
+              ))}
+            </select>
+            <span className="dropzone-hint">Choosing &quot;Fully DIY&quot; drafts the framework automatically from Cosmos Knowledge instead of the standard template.</span>
           </div>
           <div className="actions-row">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
