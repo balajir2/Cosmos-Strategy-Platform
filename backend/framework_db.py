@@ -346,9 +346,6 @@ def generate_framework_from_knowledge(rag, project: dict) -> bool:
                     if not isinstance(q.get(field), str) or not q[field].strip():
                         raise ValueError(f"Draft question missing required field '{field}': {q!r}")
 
-        for stage in current["stages"]:
-            delete_stage(stage["id"], project["process_id"])
-
         for stage in stages:
             new_stage = add_stage(project["process_id"], stage["name"])
             for q in stage["questions"]:
@@ -359,6 +356,9 @@ def generate_framework_from_knowledge(rag, project: dict) -> bool:
                 )
                 if q.get("guidance"):
                     update_question(new_question["id"], project["process_id"], guidance=q["guidance"])
+
+        for stage in current["stages"]:
+            delete_stage(stage["id"], project["process_id"])
 
         return True
     except Exception as e:
