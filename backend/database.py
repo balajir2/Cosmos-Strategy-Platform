@@ -79,6 +79,7 @@ def init_db():
     cursor.execute("UPDATE questions SET sequence_order = id WHERE sequence_order IS NULL;")
     cursor.execute("ALTER TABLE questions ALTER COLUMN sequence_order SET NOT NULL;")
     cursor.execute("ALTER TABLE questions ALTER COLUMN sequence_order SET DEFAULT 0;")
+    cursor.execute("ALTER TABLE questions ADD COLUMN IF NOT EXISTS ai_generated BOOLEAN NOT NULL DEFAULT false;")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS guidance (

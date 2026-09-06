@@ -25,7 +25,7 @@ def get_process_detail(process_id: int):
 
             cursor.execute(
                 """
-                SELECT q.id, q.stage_id, q.level, q.text, q.search_query, q.owner_role, q.reviewer_role
+                SELECT q.id, q.stage_id, q.level, q.text, q.search_query, q.owner_role, q.reviewer_role, q.ai_generated
                 FROM questions q
                 JOIN stages s ON s.id = q.stage_id
                 WHERE s.process_id = %s
@@ -53,10 +53,10 @@ def get_process_detail(process_id: int):
         guidance_by_question.setdefault(q_id, []).append({"id": g_id, "type": g_type, "content": content})
 
     questions_by_stage = {}
-    for q_id, stage_id, level, text, search_query, owner_role, reviewer_role in question_rows:
+    for q_id, stage_id, level, text, search_query, owner_role, reviewer_role, ai_generated in question_rows:
         questions_by_stage.setdefault(stage_id, []).append({
             "id": q_id, "level": level, "text": text, "search_query": search_query,
-            "owner_role": owner_role, "reviewer_role": reviewer_role,
+            "owner_role": owner_role, "reviewer_role": reviewer_role, "ai_generated": ai_generated,
             "guidance": guidance_by_question.get(q_id, []),
         })
 

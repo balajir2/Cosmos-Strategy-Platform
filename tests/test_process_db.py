@@ -18,7 +18,7 @@ def _fake_conn(fetchone_result=None, fetchall_results=None):
 _PROCESS_ROW = (1, "Aditya Birla Brand Compass V2", "The master strategic framework...", datetime.datetime(2026, 8, 28, 9, 0, 0))
 _STAGE_ROWS = [(10, "Aim & SWOT", 1), (11, "Opportunity Expansion", 2)]
 _QUESTION_ROWS = [
-    (100, 10, "Level 7: Business Model", "What core attributes...?", "core attributes strengths weaknesses", "Brand Manager", "CMO"),
+    (100, 10, "Level 7: Business Model", "What core attributes...?", "core attributes strengths weaknesses", "Brand Manager", "CMO", False),
 ]
 _GUIDANCE_ROWS = [(1000, 100, "Framework", "Guidance module for Level 7: Business Model.")]
 
@@ -59,6 +59,7 @@ def test_get_process_detail_nests_stages_questions_and_guidance(mock_get_conn):
     assert question_one["guidance"] == [
         {"id": 1000, "type": "Framework", "content": "Guidance module for Level 7: Business Model."}
     ]
+    assert question_one["ai_generated"] is False
 
     # stage 11 has no questions in this fixture
     assert result["stages"][1]["questions"] == []

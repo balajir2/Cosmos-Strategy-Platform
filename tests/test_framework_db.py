@@ -196,12 +196,22 @@ def test_add_question_appends_and_creates_guidance(mock_get_conn):
     assert result == {
         "id": 30, "stage_id": 20, "level": "L1", "text": "text",
         "search_query": "sq", "owner_role": "CMO", "reviewer_role": "CEO",
-        "sequence_order": 3,
+        "sequence_order": 3, "ai_generated": False,
         "guidance": [{"id": 40, "type": "Framework", "content": ""}],
     }
     guidance_inserts = [c[0][0] for c in cursor.execute.call_args_list if "INSERT INTO guidance" in c[0][0]]
     assert len(guidance_inserts) == 1
     assert guidance_inserts[0] and "'Framework'" in guidance_inserts[0]
+
+
+@patch("framework_db.get_db_connection")
+def test_add_question_can_be_flagged_ai_generated(mock_get_conn):
+    conn, cursor = _fake_conn(fetchone_results=[(20,), (2,), (30,), (40,)])
+    mock_get_conn.return_value = conn
+
+    result = framework_db.add_question(20, 1, "L1", "text", "sq", "CMO", "CEO", ai_generated=True)
+
+    assert result["ai_generated"] is True
 
 
 @patch("framework_db.get_db_connection")

@@ -174,7 +174,7 @@ def delete_stage(stage_id: int, process_id: int) -> bool:
         return cursor.rowcount > 0
 
 
-def add_question(stage_id: int, process_id: int, level: str, text: str, search_query, owner_role: str, reviewer_role):
+def add_question(stage_id: int, process_id: int, level: str, text: str, search_query, owner_role: str, reviewer_role, ai_generated: bool = False):
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
@@ -191,9 +191,9 @@ def add_question(stage_id: int, process_id: int, level: str, text: str, search_q
             next_seq = cursor.fetchone()[0] + 1
 
             cursor.execute(
-                "INSERT INTO questions (stage_id, level, text, search_query, owner_role, reviewer_role, sequence_order) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id;",
-                (stage_id, level, text, search_query, owner_role, reviewer_role, next_seq),
+                "INSERT INTO questions (stage_id, level, text, search_query, owner_role, reviewer_role, sequence_order, ai_generated) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;",
+                (stage_id, level, text, search_query, owner_role, reviewer_role, next_seq, ai_generated),
             )
             new_q_id = cursor.fetchone()[0]
             cursor.execute(
@@ -205,7 +205,7 @@ def add_question(stage_id: int, process_id: int, level: str, text: str, search_q
     return {
         "id": new_q_id, "stage_id": stage_id, "level": level, "text": text,
         "search_query": search_query, "owner_role": owner_role, "reviewer_role": reviewer_role,
-        "sequence_order": next_seq,
+        "sequence_order": next_seq, "ai_generated": ai_generated,
         "guidance": [{"id": guidance_id, "type": "Framework", "content": ""}],
     }
 
