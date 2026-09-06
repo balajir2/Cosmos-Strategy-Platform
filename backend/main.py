@@ -537,8 +537,19 @@ def delete_framework_question(project_id: int, question_id: int, member: dict = 
 
 
 @app.post("/api/projects/{project_id}/framework/generate")
-def generate_project_framework(project_id: int, member: dict = Depends(require_consultant)):
+def generate_project_framework(project_id: int, force: bool = False, member: dict = Depends(require_consultant)):
     project = _require_project_for_framework(project_id)
+    if not force:
+        existing_responses = responses_db.get_responses_for_project(project_id)
+        if existing_responses:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"This project has {len(existing_responses)} saved client response(s). "
+                    "Regenerating the framework will permanently delete them. "
+                    "Retry with force=true to proceed anyway."
+                ),
+            )
     generated = framework_db.generate_framework_from_knowledge(rag, project)
     return {"generated": generated, "framework": process_db.get_process_detail(project["process_id"])}
 

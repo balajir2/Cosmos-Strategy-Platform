@@ -468,8 +468,9 @@ export interface GenerateFrameworkResult {
   framework: ProcessDetail;
 }
 
-export async function generateFramework(projectId: number): Promise<GenerateFrameworkResult> {
-  const res = await authFetch(`/api/projects/${projectId}/framework/generate`, { method: "POST" });
+export async function generateFramework(projectId: number, force = false): Promise<GenerateFrameworkResult> {
+  const query = force ? "?force=true" : "";
+  const res = await authFetch(`/api/projects/${projectId}/framework/generate${query}`, { method: "POST" });
   if (!res.ok) throw new Error(await errorDetail(res, `Failed to generate framework: ${res.status}`));
   return res.json();
 }

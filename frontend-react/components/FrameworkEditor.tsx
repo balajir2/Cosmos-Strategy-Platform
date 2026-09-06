@@ -54,16 +54,28 @@ export default function FrameworkEditor({ projectId }: { projectId: number }) {
 
   async function handleGenerate() {
     if (!window.confirm("This replaces every stage and question in this project's framework with an AI-drafted set from Cosmos Knowledge, and permanently deletes any client answers or self-evaluations already saved against the current questions. Continue?")) return;
+    await runGenerate(false);
+  }
+
+  async function runGenerate(force: boolean) {
     setGenerating(true);
     setError(null);
     try {
-      const result = await generateFramework(projectId);
+      const result = await generateFramework(projectId, force);
       if (!result.generated) {
         setError("Generation failed — the framework is unchanged. Try again, or check that an LLM provider is configured.");
       }
       reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not generate the framework.");
+      const message = err instanceof Error ? err.message : "Could not generate the framework.";
+      if (!force && message.includes("force=true")) {
+        if (window.confirm(`${message}\n\nThis cannot be undone. Continue anyway?`)) {
+          await runGenerate(true);
+          return;
+        }
+      } else {
+        setError(message);
+      }
     } finally {
       setGenerating(false);
     }
