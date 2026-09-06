@@ -279,7 +279,7 @@ def init_db():
     # means anything once slide_number is optional.
     cursor.execute("ALTER TABLE framework_kb_chunks ALTER COLUMN phase DROP NOT NULL;")
     cursor.execute("ALTER TABLE framework_kb_chunks ALTER COLUMN slide_number DROP NOT NULL;")
-    cursor.execute("ALTER TABLE framework_kb_chunks DROP CONSTRAINT IF NOT EXISTS framework_kb_chunks_source_file_slide_number_key;")
+    cursor.execute("ALTER TABLE framework_kb_chunks DROP CONSTRAINT IF EXISTS framework_kb_chunks_source_file_slide_number_key;")
     cursor.execute("ALTER TABLE framework_kb_chunks ADD COLUMN IF NOT EXISTS source_id BIGINT REFERENCES framework_kb_sources(id) ON DELETE CASCADE;")
 
     cursor.execute("""
