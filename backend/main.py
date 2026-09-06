@@ -80,6 +80,7 @@ class ProjectCreateRequest(BaseModel):
     industry_context: Optional[str] = None
     process_id: Optional[int] = None
     consultant_user_id: int
+    delivery_mode: Optional[str] = None
 
 class ProjectUpdateRequest(BaseModel):
     name: Optional[str] = None
@@ -249,16 +250,22 @@ def create_project(payload: ProjectCreateRequest, admin: dict = Depends(require_
     template = framework_db.get_template_process()
     if template is None:
         raise HTTPException(status_code=500, detail="No template process configured.")
+    delivery_mode = payload.delivery_mode or "consultant_guided_async"
     try:
         process_id = framework_db.clone_process(
             template["id"], f"{payload.name} Framework", template["description"],
         )
-        return projects_db.create_project(
+        project = projects_db.create_project(
             payload.name, payload.customer_name, payload.description, payload.industry_context,
-            process_id, admin["id"], payload.consultant_user_id,
+            process_id, admin["id"], payload.consultant_user_id, delivery_mode,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    if delivery_mode == "diy_self_serve":
+        framework_db.generate_framework_from_knowledge(rag, project)
+
+    return project
 
 @app.get("/api/projects")
 def list_projects(current_user: dict = Depends(get_current_user)):

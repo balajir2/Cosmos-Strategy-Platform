@@ -55,6 +55,40 @@ def test_create_project_raises_value_error_on_invalid_foreign_key(mock_get_conn)
 
 
 @patch("projects_db.get_db_connection")
+def test_create_project_defaults_delivery_mode(mock_get_conn):
+    row = (1, "Blazar India Entry", "Blazar", None, None, "consultant_guided_async", "Draft", 1, 1, datetime.datetime(2026, 9, 6, 9, 0, 0))
+    conn, cursor = _fake_conn(fetchone_result=row)
+    mock_get_conn.return_value = conn
+
+    result = projects_db.create_project("Blazar India Entry", "Blazar", None, None, 1, 1, 5)
+
+    assert result["delivery_mode"] == "consultant_guided_async"
+
+
+@patch("projects_db.get_db_connection")
+def test_create_project_accepts_explicit_delivery_mode(mock_get_conn):
+    row = (1, "Blazar India Entry", "Blazar", None, None, "diy_self_serve", "Draft", 1, 1, datetime.datetime(2026, 9, 6, 9, 0, 0))
+    conn, cursor = _fake_conn(fetchone_result=row)
+    mock_get_conn.return_value = conn
+
+    result = projects_db.create_project("Blazar India Entry", "Blazar", None, None, 1, 1, 5, delivery_mode="diy_self_serve")
+
+    assert result["delivery_mode"] == "diy_self_serve"
+
+
+@patch("projects_db.get_db_connection")
+def test_create_project_raises_value_error_on_invalid_delivery_mode(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.execute.side_effect = psycopg2.errors.CheckViolation("violates check constraint")
+    mock_get_conn.return_value = conn
+
+    with pytest.raises(ValueError):
+        projects_db.create_project("Blazar India Entry", "Blazar", None, None, 1, 1, 5, delivery_mode="not_a_real_mode")
+
+    conn.rollback.assert_called_once()
+
+
+@patch("projects_db.get_db_connection")
 def test_get_project_by_id_returns_none_when_missing(mock_get_conn):
     conn, _ = _fake_conn(fetchone_result=None)
     mock_get_conn.return_value = conn

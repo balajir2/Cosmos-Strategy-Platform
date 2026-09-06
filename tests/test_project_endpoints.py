@@ -64,7 +64,38 @@ def test_create_project_clones_template_for_admin(mock_template, mock_clone, moc
         assert response.status_code == 200
         assert response.json() == _PROJECT_DICT
         mock_clone.assert_called_once_with(1, "Blazar India Entry Framework", "desc")
-        mock_create.assert_called_once_with("Blazar India Entry", "Blazar", None, None, 99, 1, 5)
+        mock_create.assert_called_once_with("Blazar India Entry", "Blazar", None, None, 99, 1, 5, "consultant_guided_async")
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.framework_db.generate_framework_from_knowledge")
+@patch("main.projects_db.create_project", return_value={**_PROJECT_DICT, "delivery_mode": "consultant_guided_async"})
+@patch("main.framework_db.clone_process", return_value=99)
+@patch("main.framework_db.get_template_process", return_value=_TEMPLATE)
+@patch("main.users_db.get_user_by_id", return_value=_CONSULTANT_USER)
+def test_create_project_skips_generation_for_consultant_guided_async(mock_get_user, mock_template, mock_clone, mock_create, mock_generate):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
+    try:
+        response = client.post("/api/projects", json=_CREATE_PAYLOAD)
+        assert response.status_code == 200
+        mock_generate.assert_not_called()
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.framework_db.generate_framework_from_knowledge")
+@patch("main.projects_db.create_project", return_value={**_PROJECT_DICT, "delivery_mode": "diy_self_serve"})
+@patch("main.framework_db.clone_process", return_value=99)
+@patch("main.framework_db.get_template_process", return_value=_TEMPLATE)
+@patch("main.users_db.get_user_by_id", return_value=_CONSULTANT_USER)
+def test_create_project_triggers_generation_for_diy_self_serve(mock_get_user, mock_template, mock_clone, mock_create, mock_generate):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _ADMIN_USER
+    try:
+        response = client.post("/api/projects", json={**_CREATE_PAYLOAD, "delivery_mode": "diy_self_serve"})
+        assert response.status_code == 200
+        mock_create.assert_called_once_with("Blazar India Entry", "Blazar", None, None, 99, 1, 5, "diy_self_serve")
+        mock_generate.assert_called_once_with(main.rag, {**_PROJECT_DICT, "delivery_mode": "diy_self_serve"})
     finally:
         main.app.dependency_overrides.clear()
 

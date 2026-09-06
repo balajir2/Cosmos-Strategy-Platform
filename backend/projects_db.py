@@ -31,17 +31,18 @@ def create_project(
     process_id: int,
     created_by: int,
     consultant_user_id: int,
+    delivery_mode: str = "consultant_guided_async",
 ) -> dict:
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:
             try:
                 cursor.execute(
                     f"""
-                    INSERT INTO projects (name, customer_name, description, industry_context, process_id, created_by)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO projects (name, customer_name, description, industry_context, process_id, created_by, delivery_mode)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                     RETURNING {_SELECT_COLUMNS};
                     """,
-                    (name, customer_name, description, industry_context, process_id, created_by),
+                    (name, customer_name, description, industry_context, process_id, created_by, delivery_mode),
                 )
                 project_row = cursor.fetchone()
                 cursor.execute(
@@ -54,6 +55,9 @@ def create_project(
             except psycopg2.errors.ForeignKeyViolation as e:
                 conn.rollback()
                 raise ValueError(f"Invalid process_id or consultant_user_id: {e}")
+            except psycopg2.errors.CheckViolation as e:
+                conn.rollback()
+                raise ValueError(f"Invalid delivery_mode: {e}")
         conn.commit()
     return _project_dict(project_row)
 
