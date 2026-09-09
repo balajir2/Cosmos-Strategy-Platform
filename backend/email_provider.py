@@ -1,3 +1,4 @@
+import html
 import os
 
 import requests
@@ -27,7 +28,7 @@ def send_invite_email(to_email: str, full_name: str, setup_link: str) -> bool:
                 "to": [to_email],
                 "subject": "You've been invited to Cosmos Strategic Capability Platform",
                 "html": (
-                    f"<p>Hi {full_name},</p>"
+                    f"<p>Hi {html.escape(full_name)},</p>"
                     f"<p>Your Cosmos consultant has set up an engagement for you. "
                     f'<a href="{setup_link}">Click here to set your password and get started</a>.</p>'
                     f"<p>This link expires in 7 days.</p>"

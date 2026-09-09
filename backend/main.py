@@ -200,10 +200,11 @@ def accept_invite(payload: AcceptInviteRequest):
     if status["consumed"] or status["expired"]:
         raise HTTPException(status_code=400, detail="This invite link has expired or already been used. Ask your consultant to resend it.")
 
-    users_db.set_password(status["user_id"], hash_password(payload.password))
+    user = users_db.get_user_by_id(status["user_id"])
+    if user is None or not users_db.set_password(status["user_id"], hash_password(payload.password)):
+        raise HTTPException(status_code=404, detail="This account no longer exists.")
     invite_tokens_db.consume_token(payload.token)
 
-    user = users_db.get_user_by_id(status["user_id"])
     token = create_access_token(user["id"], user["email"])
     return {"access_token": token, "token_type": "bearer"}
 
@@ -407,11 +408,23 @@ def invite_client(project_id: int, payload: InviteClientRequest, member: dict = 
 
     existing_user = users_db.get_user_by_email(payload.email)
     if existing_user is not None:
-        try:
-            new_member = projects_db.add_project_member(project_id, existing_user["id"], "ClientUser")
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+        existing_member = projects_db.get_project_member(project_id, existing_user["id"])
+        if existing_member is None:
+            try:
+                new_member = projects_db.add_project_member(project_id, existing_user["id"], "ClientUser")
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+        else:
+            new_member = existing_member
+
         safe_user = {k: v for k, v in existing_user.items() if k != "password_hash"}
+
+        if existing_user["password_hash"] is None:
+            token_info = invite_tokens_db.create_token(existing_user["id"])
+            setup_link = f"{FRONTEND_BASE_URL}/accept-invite?token={token_info['token']}"
+            email_sent = email_provider.send_invite_email(payload.email, payload.full_name, setup_link)
+            return {"user": safe_user, "member": new_member, "email_sent": email_sent, "setup_link": setup_link}
+
         return {"user": safe_user, "member": new_member, "email_sent": False, "setup_link": None}
 
     try:

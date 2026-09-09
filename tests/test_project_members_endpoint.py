@@ -209,9 +209,10 @@ def test_invite_client_rejects_blank_fields(mock_get_member):
 
 
 @patch("main.projects_db.add_project_member", return_value=_MEMBER_DICT)
+@patch("main.projects_db.get_project_member", return_value=None)
 @patch("main.users_db.get_user_by_email", return_value=_INVITED_USER)
 @patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
-def test_invite_client_adds_existing_user_without_sending_email(mock_get_member, mock_get_user, mock_add_member):
+def test_invite_client_adds_existing_user_without_sending_email(mock_get_member, mock_get_user, mock_get_project_member, mock_add_member):
     main.app.dependency_overrides[main.get_current_user] = lambda: _USER
     try:
         response = client.post("/api/projects/1/invite-client", json={"email": "client@customer.com", "full_name": "Cindy Client"})
@@ -221,6 +222,43 @@ def test_invite_client_adds_existing_user_without_sending_email(mock_get_member,
         assert body["setup_link"] is None
         assert "password_hash" not in body["user"]
         mock_add_member.assert_called_once_with(1, 9, "ClientUser")
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.email_provider.send_invite_email", return_value=True)
+@patch("main.invite_tokens_db.create_token", return_value={"token": "fresh-token-value", "expires_at": "2026-09-16T00:00:00"})
+@patch("main.projects_db.get_project_member", return_value=_MEMBER_DICT)
+@patch("main.users_db.get_user_by_email", return_value={**_INVITED_USER, "password_hash": None})
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_invite_client_reissues_link_for_still_pending_existing_member(mock_get_member, mock_get_user, mock_get_project_member, mock_create_token, mock_send_email):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.post("/api/projects/1/invite-client", json={"email": "client@customer.com", "full_name": "Cindy Client"})
+        assert response.status_code == 200
+        body = response.json()
+        assert body["email_sent"] is True
+        assert body["setup_link"] == "http://localhost:3000/accept-invite?token=fresh-token-value"
+        mock_create_token.assert_called_once_with(9)
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+@patch("main.email_provider.send_invite_email", return_value=True)
+@patch("main.invite_tokens_db.create_token", return_value={"token": "fresh-token-value", "expires_at": "2026-09-16T00:00:00"})
+@patch("main.projects_db.add_project_member", return_value=_MEMBER_DICT)
+@patch("main.projects_db.get_project_member", return_value=None)
+@patch("main.users_db.get_user_by_email", return_value={**_INVITED_USER, "password_hash": None})
+@patch("auth.get_project_member", return_value=_CONSULTANT_MEMBER)
+def test_invite_client_reissues_link_for_pending_user_not_yet_a_member(mock_get_member, mock_get_user, mock_get_project_member, mock_add_member, mock_create_token, mock_send_email):
+    main.app.dependency_overrides[main.get_current_user] = lambda: _USER
+    try:
+        response = client.post("/api/projects/2/invite-client", json={"email": "client@customer.com", "full_name": "Cindy Client"})
+        assert response.status_code == 200
+        body = response.json()
+        assert body["email_sent"] is True
+        assert body["setup_link"] == "http://localhost:3000/accept-invite?token=fresh-token-value"
+        mock_add_member.assert_called_once_with(2, 9, "ClientUser")
     finally:
         main.app.dependency_overrides.clear()
 

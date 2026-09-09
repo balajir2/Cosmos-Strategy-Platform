@@ -157,6 +157,13 @@ def test_accept_invite_returns_400_for_consumed_token(mock_status):
     assert response.status_code == 400
 
 
+@patch("main.users_db.get_user_by_id", return_value=None)
+@patch("main.invite_tokens_db.get_token_status", return_value={"user_id": 9, "consumed": False, "expired": False})
+def test_accept_invite_returns_404_when_user_no_longer_exists(mock_status, mock_get_user):
+    response = client.post("/api/auth/accept-invite", json={"token": "raw-token-value", "password": "newpass123"})
+    assert response.status_code == 404
+
+
 # --- login: pending (password_hash IS NULL) accounts -------------------------
 
 @patch(
