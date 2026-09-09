@@ -76,6 +76,10 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class AcceptInviteRequest(BaseModel):
+    token: str
+    password: str
+
 class ProjectCreateRequest(BaseModel):
     name: str
     customer_name: str
@@ -179,7 +183,7 @@ def register(payload: RegisterRequest):
 @app.post("/api/auth/login")
 def login(payload: LoginRequest):
     user = users_db.get_user_by_email(payload.email)
-    if not user or not verify_password(payload.password, user["password_hash"]):
+    if not user or user["password_hash"] is None or not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
     token = create_access_token(user["id"], user["email"])
     return {"access_token": token, "token_type": "bearer"}
@@ -187,6 +191,21 @@ def login(payload: LoginRequest):
 @app.get("/api/auth/me")
 def get_me(current_user: dict = Depends(get_current_user)):
     return current_user
+
+@app.post("/api/auth/accept-invite")
+def accept_invite(payload: AcceptInviteRequest):
+    status = invite_tokens_db.get_token_status(payload.token)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Invalid invite link.")
+    if status["consumed"] or status["expired"]:
+        raise HTTPException(status_code=400, detail="This invite link has expired or already been used. Ask your consultant to resend it.")
+
+    users_db.set_password(status["user_id"], hash_password(payload.password))
+    invite_tokens_db.consume_token(payload.token)
+
+    user = users_db.get_user_by_id(status["user_id"])
+    token = create_access_token(user["id"], user["email"])
+    return {"access_token": token, "token_type": "bearer"}
 
 @app.get("/api/admin/users")
 def admin_list_users(admin: dict = Depends(require_admin)):

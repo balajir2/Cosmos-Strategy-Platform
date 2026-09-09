@@ -115,3 +115,58 @@ def test_get_me_returns_current_user_for_valid_token():
         assert response.json() == fake_user
     finally:
         main.app.dependency_overrides.clear()
+
+
+# --- POST /api/auth/accept-invite --------------------------------------------
+
+@patch("main.create_access_token", return_value="fake-jwt-token")
+@patch("main.users_db.get_user_by_id", return_value={
+    "id": 9, "email": "client@customer.com", "full_name": "Cindy Client",
+    "is_active": True, "is_admin": False, "created_at": "2026-09-09T09:00:00",
+})
+@patch("main.invite_tokens_db.consume_token")
+@patch("main.hash_password", return_value="new-hashed-value")
+@patch("main.users_db.set_password", return_value=True)
+@patch("main.invite_tokens_db.get_token_status", return_value={"user_id": 9, "consumed": False, "expired": False})
+def test_accept_invite_sets_password_and_returns_token(mock_status, mock_set_password, mock_hash, mock_consume, mock_get_user, mock_token):
+    response = client.post("/api/auth/accept-invite", json={"token": "raw-token-value", "password": "newpass123"})
+
+    assert response.status_code == 200
+    assert response.json() == {"access_token": "fake-jwt-token", "token_type": "bearer"}
+    mock_hash.assert_called_once_with("newpass123")
+    mock_set_password.assert_called_once_with(9, "new-hashed-value")
+    mock_consume.assert_called_once_with("raw-token-value")
+    mock_token.assert_called_once_with(9, "client@customer.com")
+
+
+@patch("main.invite_tokens_db.get_token_status", return_value=None)
+def test_accept_invite_returns_404_for_unknown_token(mock_status):
+    response = client.post("/api/auth/accept-invite", json={"token": "bogus", "password": "newpass123"})
+    assert response.status_code == 404
+
+
+@patch("main.invite_tokens_db.get_token_status", return_value={"user_id": 9, "consumed": False, "expired": True})
+def test_accept_invite_returns_400_for_expired_token(mock_status):
+    response = client.post("/api/auth/accept-invite", json={"token": "raw-token-value", "password": "newpass123"})
+    assert response.status_code == 400
+
+
+@patch("main.invite_tokens_db.get_token_status", return_value={"user_id": 9, "consumed": True, "expired": False})
+def test_accept_invite_returns_400_for_consumed_token(mock_status):
+    response = client.post("/api/auth/accept-invite", json={"token": "raw-token-value", "password": "newpass123"})
+    assert response.status_code == 400
+
+
+# --- login: pending (password_hash IS NULL) accounts -------------------------
+
+@patch(
+    "main.users_db.get_user_by_email",
+    return_value={
+        "id": 9, "email": "client@customer.com", "password_hash": None, "full_name": "Cindy Client",
+        "is_active": True, "is_admin": False, "created_at": "2026-09-09T09:00:00",
+    },
+)
+def test_login_rejects_account_with_no_password_set(mock_get_user):
+    response = client.post("/api/auth/login", json={"email": "client@customer.com", "password": "anything"})
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password."
