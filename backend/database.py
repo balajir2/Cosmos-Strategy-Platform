@@ -112,6 +112,23 @@ def init_db():
     );
     """)
 
+    # Consultant-Initiated Client Invites (added 2026-09-09) - a Consultant
+    # can register a brand-new customer whose password isn't set yet; they
+    # activate via a one-time emailed link. password_hash must become
+    # nullable to represent that pending state.
+    cursor.execute("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;")
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS password_setup_tokens (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash TEXT NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        consumed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    """)
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS projects (
         id BIGSERIAL PRIMARY KEY,

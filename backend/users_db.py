@@ -28,6 +28,29 @@ def create_user(email: str, password_hash: str, full_name: str) -> dict:
     }
 
 
+def create_pending_user(email: str, full_name: str) -> dict:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO users (email, password_hash, full_name)
+                    VALUES (%s, NULL, %s)
+                    RETURNING id, email, full_name, is_active, is_admin, created_at;
+                    """,
+                    (email, full_name),
+                )
+            except psycopg2.errors.UniqueViolation:
+                conn.rollback()
+                raise ValueError(f"Email '{email}' is already registered.")
+            row = cursor.fetchone()
+        conn.commit()
+    return {
+        "id": row[0], "email": row[1], "full_name": row[2],
+        "is_active": row[3], "is_admin": row[4], "created_at": row[5].isoformat(),
+    }
+
+
 def get_user_by_email(email: str):
     with contextlib.closing(get_db_connection()) as conn:
         with conn.cursor() as cursor:

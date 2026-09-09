@@ -155,3 +155,32 @@ def test_set_password_returns_false_when_user_missing(mock_get_conn):
     mock_get_conn.return_value = conn
 
     assert users_db.set_password(999, "hashed") is False
+
+
+@patch("users_db.get_db_connection")
+def test_create_pending_user_inserts_with_null_password_hash(mock_get_conn):
+    now = datetime.datetime(2026, 9, 9, 9, 0, 0)
+    conn, cursor = _fake_conn(fetchone_result=(9, "client@customer.com", "Cindy Client", True, False, now))
+    mock_get_conn.return_value = conn
+
+    result = users_db.create_pending_user("client@customer.com", "Cindy Client")
+
+    assert result == {
+        "id": 9, "email": "client@customer.com", "full_name": "Cindy Client",
+        "is_active": True, "is_admin": False, "created_at": now.isoformat(),
+    }
+    conn.commit.assert_called_once()
+    insert_sql = cursor.execute.call_args[0][0]
+    assert "NULL" in insert_sql
+
+
+@patch("users_db.get_db_connection")
+def test_create_pending_user_raises_value_error_on_duplicate_email(mock_get_conn):
+    conn, cursor = _fake_conn()
+    cursor.execute.side_effect = psycopg2.errors.UniqueViolation("dup")
+    mock_get_conn.return_value = conn
+
+    with pytest.raises(ValueError, match="client@customer.com"):
+        users_db.create_pending_user("client@customer.com", "Cindy Client")
+
+    conn.rollback.assert_called_once()
