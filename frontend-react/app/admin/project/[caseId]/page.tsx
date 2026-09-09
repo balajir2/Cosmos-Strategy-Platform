@@ -281,11 +281,13 @@ export default function ProjectSetupPage() {
             {inviteResult && (
               inviteResult.email_sent ? (
                 <p style={{ color: "green", marginTop: 8 }}>Invite emailed to {inviteResult.user.email}.</p>
-              ) : (
+              ) : inviteResult.setup_link ? (
                 <div style={{ marginTop: 8 }}>
                   <p>Email not configured — copy this link and send it to the client yourself:</p>
                   <code style={{ wordBreak: "break-all" }}>{inviteResult.setup_link}</code>
                 </div>
+              ) : (
+                <p style={{ marginTop: 8 }}>{inviteResult.user.email} already has an account and has been added to this project.</p>
               )
             )}
           </div>
