@@ -27,6 +27,8 @@ import framework_knowledge_ingestion
 import calibration_db
 import responses_db
 import brief
+import invite_tokens_db
+import email_provider
 from auth import (
     hash_password, verify_password, create_access_token, get_current_user,
     require_admin, require_project_role, require_active_project,
@@ -51,6 +53,7 @@ app.add_middleware(
 rag = RagEngine()
 
 MAX_ARTIFACT_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
+FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "http://localhost:3000")
 
 class ProviderSettingUpdate(BaseModel):
     active_llm_provider: str
@@ -95,6 +98,10 @@ class AdminProjectStatusUpdate(BaseModel):
 class ProjectMemberAddRequest(BaseModel):
     email: str
     role: str
+
+class InviteClientRequest(BaseModel):
+    email: str
+    full_name: str
 
 class MemberRoleUpdate(BaseModel):
     role: str
@@ -373,6 +380,35 @@ def add_member_to_project(
         return projects_db.add_project_member(project_id, user["id"], payload.role)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/projects/{project_id}/invite-client")
+def invite_client(project_id: int, payload: InviteClientRequest, member: dict = Depends(require_consultant)):
+    if not payload.email.strip() or not payload.full_name.strip():
+        raise HTTPException(status_code=400, detail="email and full_name must not be empty.")
+
+    existing_user = users_db.get_user_by_email(payload.email)
+    if existing_user is not None:
+        try:
+            new_member = projects_db.add_project_member(project_id, existing_user["id"], "ClientUser")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        safe_user = {k: v for k, v in existing_user.items() if k != "password_hash"}
+        return {"user": safe_user, "member": new_member, "email_sent": False, "setup_link": None}
+
+    try:
+        new_user = users_db.create_pending_user(payload.email, payload.full_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    try:
+        new_member = projects_db.add_project_member(project_id, new_user["id"], "ClientUser")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    token_info = invite_tokens_db.create_token(new_user["id"])
+    setup_link = f"{FRONTEND_BASE_URL}/accept-invite?token={token_info['token']}"
+    email_sent = email_provider.send_invite_email(payload.email, payload.full_name, setup_link)
+
+    return {"user": new_user, "member": new_member, "email_sent": email_sent, "setup_link": setup_link}
 
 @app.get("/api/projects/{project_id}/members")
 def list_members(project_id: int, member: dict = Depends(require_admin_or_consultant)):
