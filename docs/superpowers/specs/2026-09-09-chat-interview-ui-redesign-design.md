@@ -64,10 +64,14 @@ Returns `[{"id", "name", "sequence_order", "question_count"}, ...]`, ordered by 
 - **`backend/main.py`**: new endpoint —
   ```python
   @app.get("/api/projects/{project_id}/stage-progress")
-  def get_project_stage_progress(project_id: int, project: dict = Depends(require_active_project)):
+  def get_project_stage_progress(
+      project_id: int,
+      member: dict = Depends(require_project_member),
+      project: dict = Depends(require_active_project),
+  ):
       return {"stages": process_db.get_stage_summary(project["process_id"])}
   ```
-  Gated the same way as `/evaluate`, `/responses`, and `/brief` (`require_active_project` — any project member, `403` for a `ClientUser` on a non-`Active` project); `404` if the project doesn't exist (handled inside `require_active_project`, same as those three endpoints).
+  Gated the same way as `/evaluate`, `/responses`, and `/brief` — both `require_project_member` (`403` if the caller isn't a `Consultant` or `ClientUser` on this project) and `require_active_project` (`403` for a `ClientUser` on a non-`Active` project); `404` if the project doesn't exist.
 
 ## Frontend Changes
 
