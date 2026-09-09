@@ -95,6 +95,18 @@ export async function getMe(): Promise<User> {
   return res.json();
 }
 
+export async function acceptInvite(token: string, password: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/api/auth/accept-invite`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to set password: ${res.status}`));
+  const data = await res.json();
+  setToken(data.access_token);
+  return data.access_token;
+}
+
 // --- Projects -------------------------------------------------------------
 
 /** How an engagement is delivered. Only "consultant_guided_async" has real
@@ -196,6 +208,23 @@ export async function addProjectMember(
     body: JSON.stringify({ email, role }),
   });
   if (!res.ok) throw new Error(await errorDetail(res, `Failed to add member: ${res.status}`));
+  return res.json();
+}
+
+export interface InviteClientResult {
+  user: User;
+  member: ProjectMember;
+  email_sent: boolean;
+  setup_link: string | null;
+}
+
+export async function inviteClient(projectId: number, email: string, fullName: string): Promise<InviteClientResult> {
+  const res = await authFetch(`/api/projects/${projectId}/invite-client`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, full_name: fullName }),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to invite client: ${res.status}`));
   return res.json();
 }
 

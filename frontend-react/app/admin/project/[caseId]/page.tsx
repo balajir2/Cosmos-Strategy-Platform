@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   getProject, updateProject, activateProject, listArtifacts, uploadArtifact, deleteArtifact,
-  addProjectMember, Project, ProjectArtifact, DeliveryMode,
+  addProjectMember, inviteClient, Project, ProjectArtifact, DeliveryMode, InviteClientResult,
 } from "@/lib/api-client";
 import FrameworkEditor from "@/components/FrameworkEditor";
 import CalibrationEditor from "@/components/CalibrationEditor";
@@ -49,6 +49,11 @@ export default function ProjectSetupPage() {
   const [memberRole, setMemberRole] = useState<"Consultant" | "ClientUser">("ClientUser");
   const [assigning, setAssigning] = useState(false);
   const [assignedEmails, setAssignedEmails] = useState<string[]>([]);
+
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteFullName, setInviteFullName] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [inviteResult, setInviteResult] = useState<InviteClientResult | null>(null);
 
   function reloadArtifacts() {
     listArtifacts(projectId).then(setArtifactsState).catch(() => setError("Could not load artifacts."));
@@ -135,6 +140,23 @@ export default function ProjectSetupPage() {
       setError(err instanceof Error ? err.message : "Could not assign this team member.");
     } finally {
       setAssigning(false);
+    }
+  }
+
+  async function handleInviteClient() {
+    if (!inviteEmail.trim() || !inviteFullName.trim()) return;
+    setInviting(true);
+    setError(null);
+    setInviteResult(null);
+    try {
+      const result = await inviteClient(projectId, inviteEmail.trim(), inviteFullName.trim());
+      setInviteResult(result);
+      setInviteEmail("");
+      setInviteFullName("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not invite this customer.");
+    } finally {
+      setInviting(false);
     }
   }
 
@@ -233,6 +255,40 @@ export default function ProjectSetupPage() {
               ))}
             </ul>
           )}
+
+          <div className="answer-wrapper">
+            <label htmlFor="invite-name-input">Invite a New Customer</label>
+            <div className="assign-row">
+              <input
+                type="text"
+                id="invite-name-input"
+                placeholder="Customer full name"
+                value={inviteFullName}
+                onChange={(e) => setInviteFullName(e.target.value)}
+              />
+              <input
+                type="email"
+                id="invite-email-input"
+                placeholder="name@customer.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+              />
+              <button className="btn btn-secondary" onClick={handleInviteClient} disabled={inviting}>
+                <i className="fa-solid fa-paper-plane"></i> {inviting ? "Inviting..." : "Invite"}
+              </button>
+            </div>
+            <span className="dropzone-hint">Registers a brand-new customer as a ClientUser and emails them a link to set their password.</span>
+            {inviteResult && (
+              inviteResult.email_sent ? (
+                <p style={{ color: "green", marginTop: 8 }}>Invite emailed to {inviteResult.user.email}.</p>
+              ) : (
+                <div style={{ marginTop: 8 }}>
+                  <p>Email not configured — copy this link and send it to the client yourself:</p>
+                  <code style={{ wordBreak: "break-all" }}>{inviteResult.setup_link}</code>
+                </div>
+              )
+            )}
+          </div>
         </div>
 
         <div className="glass-card artifacts-card">
