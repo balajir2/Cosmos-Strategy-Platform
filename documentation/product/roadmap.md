@@ -168,6 +168,16 @@ This is exactly what Balaji asked Ashutosh for on the 2 Sept call — *"give me 
 - Project setup UI: a "choose from the Cosmos Case Study Library" selector alongside the existing raw-upload dropzone, scoped to the external case study specifically — the customer's own case study (internal) stays per-project regardless of how this is resolved.
 - Who curates the library (`SystemAdmin`, or a Consultant-facing "publish to library" action from an existing project's case study) is undecided.
 
+## Voice Input for the Client Interview (new — 2026-09-10; not yet designed)
+
+**Requirement**: on the chat interview screen (`frontend-react/app/client/case/[caseId]/chat/`, just redesigned — see Migration Checklist), a `ClientUser` should be able to **speak** their answer instead of typing it into the composer textarea. Requested by Balaji 2026-09-10, planned for development starting 2026-09-11.
+
+**Not designed.** Nothing built yet. Open questions to resolve before building:
+- **Capture mechanism**: browser mic capture (`MediaRecorder`/Web Speech API) recording a full answer before transcribing, versus a live streaming transcript as the user talks. A sibling project, `D:\GitHub\Mental Health App`, already has a working WebSocket audio-streaming pattern (cited elsewhere in this roadmap, under Engagement Delivery Modes, for the live/synchronous mode) — worth checking whether that pattern is reusable here even though this is async, not a live co-piloted session.
+- **Transcription path**: the codebase already has a Google Speech-to-Text integration (`backend/project_knowledge_base.py`, used for pre-recorded audio *artifact* uploads, gracefully degrading to `'Transcript Needed'` when unconfigured) — decide whether this chat-input feature reuses that same `google-cloud-speech` plumbing/`GCS_TRANSCRIBE_BUCKET` convention, uses the browser's built-in Web Speech API instead (no backend round-trip, but Chrome-only and no server-side control), or something else.
+- **UX**: does speaking populate the same textarea as text (user can review/edit before sending), or send directly on stop-recording? Does this apply to every composer instance (regular answers, self-evaluation notes, calibration answers) or just the main answer field?
+- **Graceful degradation**: if voice input isn't available/configured (mirroring the existing audio-artifact pattern), typing must remain fully functional — this is additive, not a replacement.
+
 ## Beyond the POC
 
 The BRD frames this POC as validation before a full multi-tenant build. Originally "not yet scoped" items — one has since landed, the rest remain not yet designed:
