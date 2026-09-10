@@ -1,0 +1,354 @@
+.chatRoot {
+  --bg-page: #f7f6f3;
+  --bg-surface: #ffffff;
+  --border: #e6e3dd;
+  --text-primary: #23202b;
+  --text-secondary: #6b6577;
+  --text-tertiary: #8a8394;
+  --accent-primary: #2f2740;
+  --accent-primary-soft: #ece9f7;
+  --level-1-bg: #ece9f7;
+  --level-1-fg: #5b4d8a;
+  --level-2-bg: #fdeedb;
+  --level-2-fg: #a8631a;
+  --level-3-bg: #dff3e7;
+  --level-3-fg: #1f8a55;
+  --success: #1f8a55;
+  --error: #c23b3b;
+  --shadow-card: 0 1px 2px rgba(20, 15, 30, 0.04);
+
+  background: var(--bg-page);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+.topBar {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.backBtn:hover {
+  background: var(--bg-page);
+  color: var(--text-primary);
+}
+
+.layout {
+  display: flex;
+  gap: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+  align-items: flex-start;
+}
+
+.sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  position: sticky;
+  top: 76px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    position: static;
+  }
+}
+
+.stageItem {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.stageItemDone {
+  color: var(--success);
+}
+
+.stageItemCurrent {
+  background: var(--accent-primary-soft);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.mainColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.cardBadge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+
+.questionText {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.calibrationFeedback {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.userBubble {
+  align-self: flex-end;
+  max-width: 78%;
+  background: var(--accent-primary);
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.genericBubble {
+  align-self: flex-start;
+  max-width: 78%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.benchmarkWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.benchLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+
+.benchGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 700px) {
+  .benchGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.levelCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: var(--shadow-card);
+  font: inherit;
+  color: inherit;
+}
+
+.levelCardInteractive {
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.levelCardInteractive:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.levelCardSelected {
+  border-color: var(--success);
+  box-shadow: 0 0 0 2px var(--level-3-bg);
+}
+
+.levelTag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-bottom: 6px;
+}
+
+.levelTag1 {
+  background: var(--level-1-bg);
+  color: var(--level-1-fg);
+}
+
+.levelTag2 {
+  background: var(--level-2-bg);
+  color: var(--level-2-fg);
+}
+
+.levelTag3 {
+  background: var(--level-3-bg);
+  color: var(--level-3-fg);
+}
+
+.levelText {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.selectedChip {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--success);
+  color: #ffffff;
+}
+
+.referencesCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.referenceItem {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.referenceItem:last-child {
+  border-bottom: none;
+}
+
+.refMeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+.refSource {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.refScore {
+  color: var(--text-tertiary);
+}
+
+.composer {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.fieldLabel {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text-primary);
+  resize: vertical;
+}
+
+.actionsRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.sendBtn {
+  background: var(--accent-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sendBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.completeCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+}
+
+.completeIcon {
+  color: var(--success);
+}
+
+.errorText {
+  color: var(--error);
+  margin-top: 12px;
+}
