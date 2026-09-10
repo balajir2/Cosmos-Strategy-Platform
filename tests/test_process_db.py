@@ -86,3 +86,19 @@ def test_get_question_by_id_returns_dict_with_joined_process_id(mock_get_conn):
         "text": "What core attributes...?", "search_query": "core attributes strengths weaknesses",
         "owner_role": "Brand Manager", "reviewer_role": "CMO", "process_id": 1,
     }
+
+
+_STAGE_SUMMARY_ROWS = [(10, "Aim & SWOT", 1, 3), (11, "Opportunity Expansion", 2, 0)]
+
+
+@patch("process_db.get_db_connection")
+def test_get_stage_summary_maps_rows_to_dicts(mock_get_conn):
+    conn, cursor = _fake_conn(fetchall_results=[_STAGE_SUMMARY_ROWS])
+    mock_get_conn.return_value = conn
+
+    result = process_db.get_stage_summary(1)
+
+    assert result == [
+        {"id": 10, "name": "Aim & SWOT", "sequence_order": 1, "question_count": 3},
+        {"id": 11, "name": "Opportunity Expansion", "sequence_order": 2, "question_count": 0},
+    ]

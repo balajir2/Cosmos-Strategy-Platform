@@ -90,3 +90,25 @@ def get_question_by_id(question_id: int):
         "id": row[0], "stage_id": row[1], "level": row[2], "text": row[3],
         "search_query": row[4], "owner_role": row[5], "reviewer_role": row[6], "process_id": row[7],
     }
+
+
+def get_stage_summary(process_id: int) -> list:
+    with contextlib.closing(get_db_connection()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT s.id, s.name, s.sequence_order, COUNT(q.id)
+                FROM stages s
+                LEFT JOIN questions q ON q.stage_id = s.id
+                WHERE s.process_id = %s
+                GROUP BY s.id, s.name, s.sequence_order
+                ORDER BY s.sequence_order ASC;
+                """,
+                (process_id,),
+            )
+            rows = cursor.fetchall()
+
+    return [
+        {"id": r[0], "name": r[1], "sequence_order": r[2], "question_count": r[3]}
+        for r in rows
+    ]
