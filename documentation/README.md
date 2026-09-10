@@ -52,6 +52,6 @@ documentation/
 - **Users, Projects & Engagement Knowledge Base**: all done (Phases 0/A/B/C) — real auth, project lifecycle, per-project role membership, and a per-project document/audio knowledge base blended into every retrieval. See [Design Spec](../docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md) and [Neon Postgres + pgvector Spec](../docs/superpowers/specs/2026-08-24-neon-postgres-pgvector-design.md) for the original design.
 - **Guided Learning Flow**: two of eight items done (baseline concept calibration, adaptive question difficulty); the rest (keyword-agnostic answer mapping, case study resolution, corpus-relative depth signal, Start/Stop/Continue) are not built — see [Functional Spec](./product/functional-spec.md) and [Roadmap](./product/roadmap.md). A 2026-09-02 stakeholder call raised open questions about this flow's direction that a 2026-09-09 planning session is meant to resolve — see [Stakeholder Clarifications](./product/stakeholder-clarifications-2026-09.md).
 - **Async artifact-ingestion pipeline** (2026-09-02): built in code — a dual-mode upload path, a second Eventarc-invoked processor service, and the repo's first Terraform module — but never applied to a real GCP project. See [Roadmap](./product/roadmap.md).
-- **Test bed**: `pytest`, 379 tests, run via CI on every push/PR to `main` — see [Test Strategy](./testing/test-strategy.md).
+- **Test bed**: `pytest`, 458 tests, run via CI on every push/PR to `main` — see [Test Strategy](./testing/test-strategy.md).
 
 Full detail: [Roadmap](./product/roadmap.md).

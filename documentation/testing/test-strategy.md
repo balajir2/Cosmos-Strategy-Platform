@@ -1,6 +1,6 @@
 # Test Strategy — Cosmos Strategic Capability Platform
 
-**Last Updated:** 2026-09-05
+**Last Updated:** 2026-09-10
 
 ## Philosophy
 
@@ -11,7 +11,7 @@ Test what exists, honestly. Tests document *current* behavior so regressions are
 Location: `tests/` at the repo root, run with `pytest` from the repo root.
 
 - **Framework**: `pytest` + FastAPI's `TestClient` (via `httpx`).
-- **Scope**: 379 tests covering essentially every backend module — see "What's Covered" below.
+- **Scope**: 458 tests covering essentially every backend module — see "What's Covered" below.
 - **CI**: `.github/workflows/ci.yml` runs the full suite on every push/PR to `main`.
 - **No network dependency required to pass**: `backend/rag_engine.py` degrades gracefully — no active LLM provider credentials configured means evaluation falls back to a local heuristic critique (`fallback_local_critique`); if the archive PDFs were ever missing, vector indexing falls back to a synthetic in-memory dataset. The tests exercise these fallback paths rather than mocking around them.
 - **First-run cost**: `RagEngine.__init__` always loads the `all-MiniLM-L6-v2` SentenceTransformer model (downloaded once, ~80MB, cached locally after) and, if the `framework_kb_chunks` table (Neon Postgres) is empty, ingests the `archives/` PDFs into it. This is the same cost the app already pays on every startup — the test bed doesn't add to it.
@@ -31,6 +31,8 @@ Location: `tests/` at the repo root, run with `pytest` from the repo root.
 | Baseline Calibration | `test_calibration_db.py`, `test_calibration_endpoints.py`, plus the calibration-phase cases in `test_chat_engine.py` |
 | Admin UI backend | `test_admin_users_endpoints.py`, `test_admin_projects_endpoints.py` |
 | Async artifact ingestion pipeline | `test_gcs_artifact_storage.py`, `test_processor_main.py`, `.md`/`.xlsx` extraction cases in `test_project_knowledge_base.py`, and the dual-mode upload/GCS-cascading-delete cases in `test_project_artifact_endpoints.py` |
+| Consultant-Initiated Client Invites | `test_invite_tokens_db.py`, `test_email_provider.py`, plus invite-client/accept-invite cases in `test_auth_endpoints.py` and `test_project_members_endpoint.py` |
+| Chat Interview Screen UI/UX Redesign (backend slice) | `test_stage_progress_endpoint.py`, plus the blank-note regression case in `test_chat_engine.py` — the frontend slice (CSS module, `StageSidebar`, restyled `ChatMessageBubble`, page wiring) has no automated coverage, per "Not covered" below |
 | Legacy/misc | `test_main_api.py` (`GET /api/status`) |
 
 **Not covered**: `frontend-react/` has no test runner configured — `npx tsc --noEmit` and `npm run build` catch type/build errors, but there's no automated UI test coverage; the frontend is verified manually. Also not covered: Framework Knowledge Base ingestion correctness beyond what `RagEngine` unit tests already exercise, and any end-to-end (browser-driven) flow.

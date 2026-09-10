@@ -95,7 +95,7 @@ The business case, functional spec, technical spec, and architecture describe a 
 - **Baseline concept calibration and adaptive question difficulty** (two of the eight Guided Learning Flow items): a Consultant-authored calibration step before the first question, and a probe-then-escalate follow-up loop on every question that keeps drilling until the answer shows sufficient depth.
 - An admin console (`/admin`): user management and a cross-project admin view, on top of the per-project Consultant/ClientUser roles above.
 - An **async artifact-ingestion pipeline** (built in code, not deployed): a dual-mode upload path, a second Eventarc-invoked processor service, `.md`/`.xlsx` support, and the repo's first Terraform module — see Roadmap below.
-- 379 automated tests (`pytest`) and a CI workflow running them on every push/PR.
+- 458 automated tests (`pytest`) and a CI workflow running them on every push/PR.
 
 **What's genuinely not built yet:**
 - The rest of the **Guided Learning Flow** — keyword-agnostic answer mapping, an actionability check, the two-case-study resolution flow with a hidden reveal, a corpus-relative self-evaluation depth signal, and a module-end Start/Stop/Continue reflection. A 2026-09-02 stakeholder call raised open questions about this flow's direction (see [Stakeholder Clarifications](documentation/product/stakeholder-clarifications-2026-09.md)) pending a 2026-09-09 planning session.
@@ -150,7 +150,7 @@ Cosmos Strategy Platform/
 ├── archives/          # Source PDFs + meeting transcripts for RAG ingestion / design source material
 ├── documentation/     # Full knowledge base — see documentation/README.md
 ├── docs/superpowers/  # Design specs & implementation plans (e.g. Users/Projects/Engagement KB)
-├── tests/             # pytest suite — 379 tests
+├── tests/             # pytest suite — 458 tests
 ├── CLAUDE.md          # Consolidated project reference
 └── CHANGELOG.md       # Version history
 ```

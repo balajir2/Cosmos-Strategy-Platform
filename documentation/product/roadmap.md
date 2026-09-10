@@ -111,7 +111,7 @@ Landed the same day as the Frontend GUI Overhaul cutover above, closing two gaps
 
 ## Verification Status
 
-- **Automated**: done — `tests/` (379 pytest tests) covers auth, projects, artifacts/ingestion (both the inline and the GCS-staged/processor paths, the latter with mocked GCS), framework authoring, the merged-retrieval/comparative-benchmark pipeline, responses, and brief compilation. Schema migration validation and the brief-compilation endpoint both have dedicated tests now. See `documentation/testing/test-strategy.md` for the full breakdown.
+- **Automated**: done — `tests/` (458 pytest tests) covers auth, projects, artifacts/ingestion (both the inline and the GCS-staged/processor paths, the latter with mocked GCS), framework authoring, the merged-retrieval/comparative-benchmark pipeline, responses, and brief compilation. Schema migration validation and the brief-compilation endpoint both have dedicated tests now. See `documentation/testing/test-strategy.md` for the full breakdown.
 - **Manual — still the meaningful outstanding check**: a full end-to-end walkthrough through a real browser — author a custom framework via Framework Authoring Mode, map user roles, submit answers through the chat interview, run guided self-evaluation against the benchmark responses, generate and download a finalized strategic brief. No automated browser-driven coverage exists for this; `frontend-react/` has no test runner configured.
 
 The Users/Projects/Engagement Knowledge Base spec carries its own verification plan (auth, role enforcement, project scoping, source-tagged retrieval) — see the spec linked above rather than duplicating it here.

@@ -72,7 +72,7 @@ From the repo root (not `backend/`):
 pytest
 ```
 
-379 tests, requiring a reachable `DATABASE_URL` (same as the app itself) but no LLM provider credentials or GCP access — see `documentation/testing/test-strategy.md` for what's covered.
+458 tests, requiring a reachable `DATABASE_URL` (same as the app itself) but no LLM provider credentials or GCP access — see `documentation/testing/test-strategy.md` for what's covered.
 
 ## Troubleshooting
 
