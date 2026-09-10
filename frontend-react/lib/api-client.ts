@@ -492,6 +492,23 @@ export async function getFramework(projectId: number): Promise<ProcessDetail> {
   return res.json();
 }
 
+export interface StageProgress {
+  id: number;
+  name: string;
+  sequence_order: number;
+  question_count: number;
+}
+
+export interface StageProgressResponse {
+  stages: StageProgress[];
+}
+
+export async function getStageProgress(projectId: number): Promise<StageProgressResponse> {
+  const res = await authFetch(`/api/projects/${projectId}/stage-progress`);
+  if (!res.ok) throw new Error(`Failed to load stage progress: ${res.status}`);
+  return res.json();
+}
+
 export interface GenerateFrameworkResult {
   generated: boolean;
   framework: ProcessDetail;
