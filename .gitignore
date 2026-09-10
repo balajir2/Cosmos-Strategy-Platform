@@ -29,3 +29,6 @@ Desktop.ini
 
 # Playwright MCP test artifacts
 .playwright-mcp/
+
+# Superpowers skill session state (brainstorm previews, subagent-driven-development progress/review logs)
+.superpowers/
