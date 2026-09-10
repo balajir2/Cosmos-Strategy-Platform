@@ -467,6 +467,54 @@ def test_advance_session_project_scoped_saves_response_when_status_given(
     )
 
 
+@patch("chat_engine.responses_db.save_response")
+@patch("chat_engine.process_db.get_process_detail", return_value=FAKE_PROCESS_DETAIL)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.get_level_messages")
+@patch("chat_engine.get_messages")
+@patch("chat_engine.update_session")
+@patch("chat_engine.get_session")
+def test_advance_session_project_scoped_passes_none_not_empty_string_for_blank_note(
+    mock_get_session, mock_update_session, mock_get_messages, mock_get_level_messages, mock_add_message,
+    mock_get_project, mock_get_process, mock_save_response,
+):
+    # Regression test: a follow-up round on the same question (the adaptive-difficulty
+    # loop can revisit awaiting_self_rating for the same question_id/level_index more
+    # than once) where the user leaves the now-optional note blank must NOT erase a
+    # non-empty self_evaluation_notes saved on an earlier round. responses_db.save_response
+    # is mocked here (as in the sibling test above), so this asserts the contract at the
+    # chat_engine boundary: an empty user_content must be passed through as None, not "",
+    # since responses_db's COALESCE-based upsert (see test_responses_db.py) only preserves
+    # the previously-saved note when the new value is SQL NULL.
+    mock_get_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "awaiting_self_rating"}
+    # Cap already reached this level, so the test stays focused on save_response, not depth-checking.
+    mock_get_messages.return_value = [
+        {"id": 1, "role": "assistant", "content": "q", "message_type": "question", "level_index": 0, "created_at": "t"},
+        {"id": 5, "role": "assistant", "content": "q", "message_type": "question", "level_index": 0, "created_at": "t"},
+        {"id": 9, "role": "assistant", "content": "q", "message_type": "question", "level_index": 0, "created_at": "t"},
+    ]
+    mock_get_level_messages.return_value = [
+        {"role": "assistant", "content": "Project question one?"},
+        {"role": "user", "content": "my original answer"},
+        {"role": "assistant", "content": '{"level_1": "l1", "level_2": "l2", "level_3": "l3", "source_chunks": []}'},
+        {"role": "assistant", "content": "Where does your answer fall, and why?"},
+        {"role": "user", "content": ""},
+    ]
+    mock_add_message.side_effect = [
+        {"id": 30, "role": "user", "content": "", "message_type": "chat", "level_index": 0, "created_at": "t"},
+        {"id": 31, "role": "assistant", "content": "Project question two?", "message_type": "question", "level_index": 1, "created_at": "t"},
+    ]
+
+    result = chat_engine.advance_session(_fake_rag(), 1, "", self_evaluation_status="Strong")
+
+    assert result["phase"] == "awaiting_answer"
+    mock_save_response.assert_called_once_with(
+        FAKE_PROJECT_ID, 100, submitted_text="my original answer",
+        self_evaluation_notes=None, self_evaluation_status="Strong",
+    )
+
+
 @patch("chat_engine.CASES_DATA", {FAKE_CASE_ID: {"id": FAKE_CASE_ID, "questions": FAKE_QUESTIONS}})
 @patch("chat_engine.responses_db.save_response")
 @patch("chat_engine.add_message")

@@ -273,9 +273,17 @@ def advance_session(rag, session_id: int, user_content: str, self_evaluation_sta
             # runs, now 3 positions further back since the benchmark message, the
             # self-rating prompt, and this self-eval reply have since been appended.
             submitted_text = level_messages[-4]["content"] if len(level_messages) >= 4 else ""
+            # An empty note must be passed through as None, not "" - responses_db's
+            # upsert uses COALESCE(EXCLUDED.self_evaluation_notes, responses.self_evaluation_notes)
+            # to preserve a previously-saved note when the new value is SQL NULL, but
+            # an empty string is not NULL and would silently overwrite it. This matters
+            # because the adaptive-difficulty follow-up loop can revisit the same
+            # question's self-rating more than once (see the "3 positions further
+            # back" comment above), so a thoughtful note from an earlier round must
+            # survive a later round where the user leaves the now-optional note blank.
             responses_db.save_response(
                 project_id, question["id"], submitted_text=submitted_text,
-                self_evaluation_notes=user_content, self_evaluation_status=self_evaluation_status,
+                self_evaluation_notes=(user_content or None), self_evaluation_status=self_evaluation_status,
             )
 
         question_count = _question_count_for_level(session_id, level_index)
