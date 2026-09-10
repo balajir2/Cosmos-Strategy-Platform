@@ -32,7 +32,7 @@
 **Interfaces:**
 - Produces: `process_db.get_stage_summary(process_id: int) -> list[dict]`, each dict `{"id": int, "name": str, "sequence_order": int, "question_count": int}`, ordered by `sequence_order ASC`. Counts every question per stage regardless of level — the same population `chat_engine._get_project_questions` flattens, so a running sum of `question_count` lines up with `current_level_index`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/test_process_db.py`:
 
@@ -53,12 +53,12 @@ def test_get_stage_summary_maps_rows_to_dicts(mock_get_conn):
     ]
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_process_db.py::test_get_stage_summary_maps_rows_to_dicts -v`
 Expected: FAIL with `AttributeError: module 'process_db' has no attribute 'get_stage_summary'`
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Append to `backend/process_db.py`:
 
@@ -85,12 +85,12 @@ def get_stage_summary(process_id: int) -> list:
     ]
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pytest tests/test_process_db.py -v`
 Expected: PASS (all tests in the file, including the new one)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/process_db.py tests/test_process_db.py
@@ -109,7 +109,7 @@ git commit -m "feat: add process_db.get_stage_summary for stage-progress sidebar
 - Consumes: `process_db.get_stage_summary(process_id: int) -> list[dict]` (Task 1).
 - Produces: `GET /api/projects/{project_id}/stage-progress` → `{"stages": [{"id","name","sequence_order","question_count"}, ...]}`. `403` if the caller isn't a `Consultant`/`ClientUser` member of the project, or is a `ClientUser` on a non-`Active` project; `404` if the project doesn't exist.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/test_stage_progress_endpoint.py`:
 
@@ -198,12 +198,12 @@ def test_stage_progress_allows_consultant(mock_get_member, mock_get_project, moc
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_stage_progress_endpoint.py -v`
 Expected: FAIL — `404 Not Found` for all four (the route doesn't exist yet)
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Insert into `backend/main.py` immediately after the `get_project_brief` function (after line 518, before the blank line and `def _reject_blank` at line 521):
 
@@ -219,17 +219,17 @@ def get_project_stage_progress(
 
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pytest tests/test_stage_progress_endpoint.py -v`
 Expected: PASS (all 4 tests)
 
-- [ ] **Step 5: Run the full backend suite**
+- [x] **Step 5: Run the full backend suite**
 
 Run: `pytest`
 Expected: PASS (no regressions — this is a purely additive endpoint)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/main.py tests/test_stage_progress_endpoint.py
@@ -247,7 +247,7 @@ git commit -m "feat: add GET /api/projects/{id}/stage-progress endpoint"
 - Consumes: `GET /api/projects/{project_id}/stage-progress` (Task 2).
 - Produces: `export interface StageProgress { id: number; name: string; sequence_order: number; question_count: number; }`, `export interface StageProgressResponse { stages: StageProgress[]; }`, `export async function getStageProgress(projectId: number): Promise<StageProgressResponse>`.
 
-- [ ] **Step 1: Add the types and function**
+- [x] **Step 1: Add the types and function**
 
 In `frontend-react/lib/api-client.ts`, insert immediately after the `getFramework` function (after line 493, before the `GenerateFrameworkResult` interface):
 
@@ -270,12 +270,12 @@ export async function getStageProgress(projectId: number): Promise<StageProgress
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds with no new TypeScript errors (unused-export warnings, if any, are fine — `getStageProgress` and `StageProgress` are consumed by Task 5 and Task 7)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-react/lib/api-client.ts
@@ -292,7 +292,7 @@ git commit -m "feat: add getStageProgress API client function"
 **Interfaces:**
 - Produces: a CSS Module with the classes `chatRoot`, `topBar`, `backBtn`, `layout`, `sidebar`, `stageItem`, `stageItemDone`, `stageItemCurrent`, `mainColumn`, `card`, `cardBadge`, `questionText`, `calibrationFeedback`, `userBubble`, `genericBubble`, `benchmarkWrap`, `benchLabel`, `benchGrid`, `levelCard`, `levelCardInteractive`, `levelCardSelected`, `levelTag`, `levelTag1`, `levelTag2`, `levelTag3`, `levelText`, `selectedChip`, `referencesCard`, `referenceItem`, `refMeta`, `refSource`, `refScore`, `composer`, `fieldLabel`, `textarea`, `actionsRow`, `sendBtn`, `completeCard`, `completeIcon`, `errorText`. Consumed by Tasks 5, 6, and 7 (all three import this same file by its full path).
 
-- [ ] **Step 1: Create the CSS Module**
+- [x] **Step 1: Create the CSS Module**
 
 Create `frontend-react/app/client/case/[caseId]/chat/chat.module.css`:
 
@@ -653,12 +653,12 @@ Create `frontend-react/app/client/case/[caseId]/chat/chat.module.css`:
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds (the module isn't imported by anything yet, so this just confirms no other regression; Tasks 5-7 exercise the classes above)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add "frontend-react/app/client/case/[caseId]/chat/chat.module.css"
@@ -676,7 +676,7 @@ git commit -m "feat: add Light Professional design tokens for the chat screen"
 - Consumes: `StageProgress` type (Task 3); `.sidebar`/`.stageItem`/`.stageItemDone`/`.stageItemCurrent` classes (Task 4).
 - Produces: default export `StageSidebar(props: { stages: StageProgress[]; currentQuestionIndex: number; isComplete: boolean })`; named export `computeStageStatuses(stages: StageProgress[], currentQuestionIndex: number, isComplete: boolean): Array<{ stage: StageProgress; status: "done" | "current" | "upcoming" }>`. Renders `null` when `stages` is empty.
 
-- [ ] **Step 1: Create the component**
+- [x] **Step 1: Create the component**
 
 Create `frontend-react/components/chat/StageSidebar.tsx`:
 
@@ -736,12 +736,12 @@ export default function StageSidebar({ stages, currentQuestionIndex, isComplete 
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds — `StageSidebar` isn't imported anywhere yet, so this confirms the file itself is syntactically and type-correct with no other regression.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-react/components/chat/StageSidebar.tsx
@@ -759,7 +759,7 @@ git commit -m "feat: add StageSidebar component for chat progress navigation"
 - Consumes: `.card`, `.cardBadge`, `.questionText`, `.calibrationFeedback`, `.userBubble`, `.genericBubble`, `.benchmarkWrap`, `.benchLabel`, `.benchGrid`, `.levelCard`, `.levelCardInteractive`, `.levelCardSelected`, `.levelTag`, `.levelTag1/2/3`, `.levelText`, `.selectedChip`, `.referencesCard`, `.referenceItem`, `.refMeta`, `.refSource`, `.refScore` (Task 4).
 - Produces: default export `ChatMessageBubble(props: { message: ChatMessage; interactive?: boolean; selectedLevel?: SelfEvalLevel | null; onSelectLevel?: (level: SelfEvalLevel) => void })`; named export `type SelfEvalLevel = 1 | 2 | 3`. Consumed by Task 7.
 
-- [ ] **Step 1: Replace the file's content**
+- [x] **Step 1: Replace the file's content**
 
 Replace the entire contents of `frontend-react/components/ChatMessageBubble.tsx` with:
 
@@ -929,12 +929,12 @@ export default function ChatMessageBubble({ message, interactive, selectedLevel,
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds. `page.tsx` still calls `<ChatMessageBubble key={...} message={m} />` at this point (Task 7 hasn't wired the new props yet) — that's still valid since `interactive`, `selectedLevel`, and `onSelectLevel` are all optional props, so this compiles and renders exactly like before (every benchmark card renders as a non-interactive `<div>`, `interactive` is `undefined`/falsy).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-react/components/ChatMessageBubble.tsx
@@ -952,7 +952,7 @@ git commit -m "feat: restyle ChatMessageBubble and make benchmark levels interac
 - Consumes: `getStageProgress`, `StageProgress` (Task 3); `chatRoot`/`topBar`/`backBtn`/`layout`/`mainColumn`/`card`/`composer`/`fieldLabel`/`textarea`/`actionsRow`/`sendBtn`/`completeCard`/`completeIcon`/`errorText` classes (Task 4); default export `StageSidebar` (Task 5); default export `ChatMessageBubble` and type `SelfEvalLevel` (Task 6).
 - Produces: the redesigned chat page at `/client/case/{caseId}/chat`. No other file consumes this one.
 
-- [ ] **Step 1: Replace the file's content**
+- [x] **Step 1: Replace the file's content**
 
 Replace the entire contents of `frontend-react/app/client/case/[caseId]/chat/page.tsx` with:
 
@@ -1178,12 +1178,12 @@ export default function ChatPage() {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds with no TypeScript errors.
 
-- [ ] **Step 3: Manual verification**
+- [x] **Step 3: Manual verification**
 
 Run the app locally (`python backend/main.py` and `npm run dev` in `frontend-react/`, per the Quick Start guide) and, logged in as a `ClientUser` on a real `Active` project with a multi-stage framework:
 
@@ -1196,12 +1196,12 @@ Run the app locally (`python backend/main.py` and `npm run dev` in `frontend-rea
 7. Reach `Engagement Complete` — confirm all stages show "done" and the Download Brief button still works.
 8. Resize the browser window below ~900px — confirm the sidebar collapses to a horizontal scrollable strip above the chat instead of overlapping content.
 
-- [ ] **Step 4: Run the full backend suite one more time**
+- [x] **Step 4: Run the full backend suite one more time**
 
 Run: `pytest`
 Expected: PASS (this task made no backend changes, but this confirms nothing in the working tree broke it)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add "frontend-react/app/client/case/[caseId]/chat/page.tsx"
