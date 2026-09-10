@@ -517,6 +517,14 @@ def get_project_brief(
     markdown = brief.compile_brief_markdown(project, responses)
     return {"project_id": project_id, "markdown": markdown}
 
+@app.get("/api/projects/{project_id}/stage-progress")
+def get_project_stage_progress(
+    project_id: int,
+    member: dict = Depends(require_project_member),
+    project: dict = Depends(require_active_project),
+):
+    return {"stages": process_db.get_stage_summary(project["process_id"])}
+
 
 def _reject_blank(value, field: str):
     if value is not None and not value.strip():
