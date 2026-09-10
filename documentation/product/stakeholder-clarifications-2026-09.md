@@ -10,7 +10,7 @@
 
 **Compared against:** `CLAUDE.md`, `documentation/product/roadmap.md`, and the live code (`backend/chat_engine.py`, `backend/calibration_db.py`, `backend/project_artifacts_db.py`, `backend/project_knowledge_base.py`, `frontend-react/`).
 
-**Next checkpoint:** a dedicated, no-demo planning session on **Sept 9, 11:00–12:00** with Ashutosh and Shiv, called specifically because Ashutosh said he needs "some boundaries in which to work." The items below are what should come out of that session with a decision attached.
+**Next checkpoint:** a dedicated, no-demo planning session, rescheduled from Sept 9 to **Sept 11**, with Ashutosh and Shiv, called specifically because Ashutosh said he needs "some boundaries in which to work." The items below are what should come out of that session with a decision attached — as of this writing (Sept 10) it hasn't happened yet, so nothing below is resolved.
 
 ---
 
