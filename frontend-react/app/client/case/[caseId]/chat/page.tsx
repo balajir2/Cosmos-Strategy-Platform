@@ -3,11 +3,24 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  createChatSession, postChatMessage, getChatSession, getBrief, getProject,
+  createChatSession, postChatMessage, getChatSession, getBrief, getProject, getStageProgress,
   getCachedChatSessionId, setCachedChatSessionId,
-  ChatMessage as ChatMessageType,
+  ChatMessage as ChatMessageType, StageProgress,
 } from "@/lib/api-client";
-import ChatMessageBubble from "@/components/ChatMessageBubble";
+import ChatMessageBubble, { SelfEvalLevel } from "@/components/ChatMessageBubble";
+import StageSidebar from "@/components/chat/StageSidebar";
+import styles from "./chat.module.css";
+
+const LEVEL_TO_STATUS: Record<SelfEvalLevel, string> = {
+  1: "Needs Work",
+  2: "Satisfactory",
+  3: "Strong",
+};
+const STATUS_TO_LEVEL: Record<string, SelfEvalLevel> = {
+  "Needs Work": 1,
+  "Satisfactory": 2,
+  "Strong": 3,
+};
 
 export default function ChatPage() {
   const params = useParams();
@@ -18,6 +31,8 @@ export default function ChatPage() {
   const [sessionId, setLocalSessionId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [phase, setPhase] = useState<string>("awaiting_answer");
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const [stages, setStages] = useState<StageProgress[]>([]);
   const [input, setInput] = useState("");
   const [selfEvalStatus, setSelfEvalStatus] = useState("");
   const [sending, setSending] = useState(false);
@@ -34,6 +49,13 @@ export default function ChatPage() {
           return;
         }
 
+        try {
+          const progress = await getStageProgress(projectId);
+          setStages(progress.stages);
+        } catch {
+          setStages([]);
+        }
+
         let id = getCachedChatSessionId(projectId);
         if (!id) {
           const started = await createChatSession({ projectId });
@@ -41,10 +63,12 @@ export default function ChatPage() {
           setCachedChatSessionId(projectId, id);
           setMessages(started.messages);
           setPhase(started.phase);
+          setCurrentQuestionIndex(started.current_level_index);
         } else {
           const detail = await getChatSession(id);
           setMessages(detail.messages);
           setPhase(detail.phase);
+          setCurrentQuestionIndex(detail.current_level_index);
         }
         setLocalSessionId(id);
       } catch {
@@ -58,9 +82,14 @@ export default function ChatPage() {
 
   const lastMessage = messages[messages.length - 1];
   const isSelfRatingReply = lastMessage?.message_type === "self_rating_prompt";
+  const liveBenchmarkIndex =
+    isSelfRatingReply && messages[messages.length - 2]?.message_type === "benchmark"
+      ? messages.length - 2
+      : -1;
 
   async function handleSend() {
-    if (!input.trim() || !sessionId) return;
+    if (!sessionId) return;
+    if (isSelfRatingReply ? !selfEvalStatus : !input.trim()) return;
     const content = input.trim();
     const statusToSend = isSelfRatingReply && selfEvalStatus ? selfEvalStatus : undefined;
     setInput("");
@@ -75,6 +104,7 @@ export default function ChatPage() {
         ...result.messages,
       ]);
       setPhase(result.phase);
+      setCurrentQuestionIndex(result.current_level_index);
     } catch {
       setError("Could not send your message. Is the backend running?");
     } finally {
@@ -109,13 +139,13 @@ export default function ChatPage() {
 
   if (projectStatus !== "Active") {
     return (
-      <div className="project-shell">
-        <header className="project-header">
-          <button className="btn btn-secondary back-btn" onClick={() => router.push(`/client/case/${projectId}`)}>
+      <div className={styles.chatRoot}>
+        <header className={styles.topBar}>
+          <button className={styles.backBtn} onClick={() => router.push(`/client/case/${projectId}`)}>
             <i className="fa-solid fa-arrow-left"></i> Back to Progress
           </button>
         </header>
-        <div className="glass-card" style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
+        <div className={styles.card} style={{ margin: 24, textAlign: "center", color: "var(--text-tertiary)" }}>
           <p>Not yet activated by your consultant</p>
         </div>
       </div>
@@ -123,62 +153,67 @@ export default function ChatPage() {
   }
 
   const isComplete = phase === "complete";
+  const sidebarCurrentIndex = phase === "calibration_awaiting_answer" ? -1 : currentQuestionIndex;
 
   return (
-    <div className="project-shell">
-      <header className="project-header">
-        <button className="btn btn-secondary back-btn" onClick={() => router.push(`/client/case/${projectId}`)}>
+    <div className={styles.chatRoot}>
+      <header className={styles.topBar}>
+        <button className={styles.backBtn} onClick={() => router.push(`/client/case/${projectId}`)}>
           <i className="fa-solid fa-arrow-left"></i> Back to Progress
         </button>
       </header>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        {messages.map((m, i) => (
-          <ChatMessageBubble key={m.id ?? i} message={m} />
-        ))}
-      </div>
+      <div className={styles.layout}>
+        <StageSidebar stages={stages} currentQuestionIndex={sidebarCurrentIndex} isComplete={isComplete} />
 
-      {isComplete ? (
-        <div className="glass-card" style={{ padding: 32, marginTop: 24, textAlign: "center" }}>
-          <h3>
-            <i className="fa-solid fa-circle-check" style={{ color: "var(--accent-green)" }}></i> Engagement Complete
-          </h3>
-          <p>You&apos;ve worked through all levels of this strategy workshop.</p>
-          <button className="btn btn-primary" onClick={handleDownloadBrief} style={{ marginTop: 16 }}>
-            <i className="fa-solid fa-download"></i> Download Brief
-          </button>
-        </div>
-      ) : (
-        <div className="glass-card question-card animate-slide-up" style={{ marginTop: 24 }}>
-          {isSelfRatingReply && (
-            <div className="answer-wrapper">
-              <label htmlFor="self-eval-status">Self-Evaluation Status</label>
-              <select id="self-eval-status" value={selfEvalStatus} onChange={(e) => setSelfEvalStatus(e.target.value)}>
-                <option value="">Select a status...</option>
-                <option value="Needs Work">Needs Work</option>
-                <option value="Satisfactory">Satisfactory</option>
-                <option value="Strong">Strong</option>
-              </select>
+        <div className={styles.mainColumn}>
+          {messages.map((m, i) => (
+            <ChatMessageBubble
+              key={m.id ?? i}
+              message={m}
+              interactive={i === liveBenchmarkIndex}
+              selectedLevel={i === liveBenchmarkIndex && selfEvalStatus ? STATUS_TO_LEVEL[selfEvalStatus] : null}
+              onSelectLevel={(level) => setSelfEvalStatus(LEVEL_TO_STATUS[level])}
+            />
+          ))}
+
+          {isComplete ? (
+            <div className={styles.completeCard}>
+              <h3>
+                <i className={`fa-solid fa-circle-check ${styles.completeIcon}`}></i> Engagement Complete
+              </h3>
+              <p>You&apos;ve worked through all levels of this strategy workshop.</p>
+              <button className={styles.sendBtn} onClick={handleDownloadBrief} style={{ marginTop: 16 }}>
+                <i className="fa-solid fa-download"></i> Download Brief
+              </button>
+            </div>
+          ) : (
+            <div className={styles.composer}>
+              <label className={styles.fieldLabel} htmlFor="chat-input">
+                {isSelfRatingReply ? "Add a note on why (optional)" : "Your Response"}
+              </label>
+              <textarea
+                id="chat-input"
+                className={styles.textarea}
+                rows={4}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={isSelfRatingReply ? "Add a note on why (optional)..." : "Type your response here..."}
+              />
+              <div className={styles.actionsRow}>
+                <button
+                  className={styles.sendBtn}
+                  onClick={handleSend}
+                  disabled={sending || (isSelfRatingReply ? !selfEvalStatus : !input.trim())}
+                >
+                  <i className="fa-solid fa-paper-plane"></i> {sending ? "Sending..." : "Send"}
+                </button>
+              </div>
             </div>
           )}
-          <div className="answer-wrapper">
-            <label htmlFor="chat-input">Your Response</label>
-            <textarea
-              id="chat-input"
-              rows={4}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your response here..."
-            />
-          </div>
-          <div className="actions-row">
-            <button className="btn btn-primary" onClick={handleSend} disabled={sending || !input.trim()}>
-              <i className="fa-solid fa-paper-plane"></i> {sending ? "Sending..." : "Send"}
-            </button>
-          </div>
+          {error && <p className={styles.errorText}>{error}</p>}
         </div>
-      )}
-      {error && <p style={{ color: "var(--level-1)", marginTop: 12 }}>{error}</p>}
+      </div>
     </div>
   );
 }
