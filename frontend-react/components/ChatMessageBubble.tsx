@@ -1,4 +1,5 @@
 import { ChatMessage } from "@/lib/api-client";
+import styles from "@/app/client/case/[caseId]/chat/chat.module.css";
 
 interface BenchmarkSourceChunk {
   id: number;
@@ -29,32 +30,41 @@ function parseBenchmarkPayload(content: string): BenchmarkPayload | null {
   }
 }
 
-export default function ChatMessageBubble({ message }: { message: ChatMessage }) {
+export type SelfEvalLevel = 1 | 2 | 3;
+
+interface ChatMessageBubbleProps {
+  message: ChatMessage;
+  interactive?: boolean;
+  selectedLevel?: SelfEvalLevel | null;
+  onSelectLevel?: (level: SelfEvalLevel) => void;
+}
+
+export default function ChatMessageBubble({ message, interactive, selectedLevel, onSelectLevel }: ChatMessageBubbleProps) {
   if (message.message_type === "question") {
     return (
-      <div className="glass-card question-card animate-slide-up">
-        <div className="card-badge">Question</div>
-        <h2 className="restless-question">{message.content}</h2>
+      <div className={styles.card}>
+        <div className={styles.cardBadge}>Question</div>
+        <h2 className={styles.questionText}>{message.content}</h2>
       </div>
     );
   }
 
   if (message.message_type === "calibration_prompt") {
     return (
-      <div className="glass-card question-card animate-slide-up">
-        <div className="card-badge">Baseline Calibration</div>
-        <h2 className="restless-question">{message.content}</h2>
+      <div className={styles.card}>
+        <div className={styles.cardBadge}>Baseline Calibration</div>
+        <h2 className={styles.questionText}>{message.content}</h2>
       </div>
     );
   }
 
   if (message.message_type === "calibration_feedback") {
     return (
-      <div className="glass-card recommendations-card animate-slide-up">
+      <div className={styles.card}>
         <h3>
           <i className="fa-solid fa-compass"></i> Calibration Feedback
         </h3>
-        <p className="recommendations-text">{message.content}</p>
+        <p className={styles.calibrationFeedback}>{message.content}</p>
       </div>
     );
   }
@@ -63,62 +73,68 @@ export default function ChatMessageBubble({ message }: { message: ChatMessage })
     const payload = parseBenchmarkPayload(message.content);
 
     // No valid JSON payload - a legacy case-based session's plain-text
-    // benchmark prose. Render exactly as before so those sessions are
-    // visually unaffected (spec Decision 7).
+    // benchmark prose. Render exactly as before, just restyled.
     if (!payload) {
       return (
-        <div className="glass-card critique-card animate-slide-up">
+        <div className={styles.card}>
           <h3>
             <i className="fa-solid fa-scale-balanced"></i> Benchmark Answers
           </h3>
-          <p className="critique-text" style={{ whiteSpace: "pre-wrap" }}>
-            {message.content}
-          </p>
+          <p style={{ whiteSpace: "pre-wrap" }}>{message.content}</p>
         </div>
       );
     }
 
+    const levels: Array<{ n: SelfEvalLevel; label: string; text: string; tagClass: string }> = [
+      { n: 1, label: "Level 1 - Superficial", text: payload.level_1, tagClass: styles.levelTag1 },
+      { n: 2, label: "Level 2 - Needs-Based", text: payload.level_2, tagClass: styles.levelTag2 },
+      { n: 3, label: "Level 3 - Insight-Driven", text: payload.level_3, tagClass: styles.levelTag3 },
+    ];
+
     return (
-      <div className="evaluation-results-wrapper animate-slide-up">
-        <div className="rating-card lvl-1">
-          <div className="rating-icon-container"><i className="fa-solid fa-1"></i></div>
-          <div className="rating-info">
-            <span className="rating-label">Level 1 - Superficial</span>
-            <span className="rating-title" style={{ fontSize: "0.95rem", fontWeight: 400, lineHeight: 1.5 }}>{payload.level_1}</span>
-          </div>
+      <div className={styles.benchmarkWrap}>
+        <div className={styles.benchLabel}>
+          {interactive ? "How this compares — click the level closest to your answer" : "How this compares"}
         </div>
-        <div className="rating-card lvl-2">
-          <div className="rating-icon-container"><i className="fa-solid fa-2"></i></div>
-          <div className="rating-info">
-            <span className="rating-label">Level 2 - Needs-Based</span>
-            <span className="rating-title" style={{ fontSize: "0.95rem", fontWeight: 400, lineHeight: 1.5 }}>{payload.level_2}</span>
-          </div>
-        </div>
-        <div className="rating-card lvl-3">
-          <div className="rating-icon-container"><i className="fa-solid fa-3"></i></div>
-          <div className="rating-info">
-            <span className="rating-label">Level 3 - Insight-Driven</span>
-            <span className="rating-title" style={{ fontSize: "0.95rem", fontWeight: 400, lineHeight: 1.5 }}>{payload.level_3}</span>
-          </div>
+        <div className={styles.benchGrid}>
+          {levels.map(({ n, label, text, tagClass }) => {
+            const isSelected = Boolean(interactive) && selectedLevel === n;
+            const classes = [
+              styles.levelCard,
+              interactive ? styles.levelCardInteractive : "",
+              isSelected ? styles.levelCardSelected : "",
+            ].join(" ");
+            const Tag = interactive ? "button" : "div";
+            return (
+              <Tag
+                key={n}
+                type={interactive ? "button" : undefined}
+                className={classes}
+                onClick={interactive && onSelectLevel ? () => onSelectLevel(n) : undefined}
+              >
+                <span className={`${styles.levelTag} ${tagClass}`}>{label}</span>
+                <span className={styles.levelText}>{text}</span>
+                {isSelected && <span className={styles.selectedChip}>&#10003; You&apos;re here</span>}
+              </Tag>
+            );
+          })}
         </div>
 
         {payload.source_chunks.length > 0 && (
-          <div className="glass-card references-card">
-            <div className="references-header">
-              <h3>
-                <i className="fa-solid fa-book"></i> Source References
-              </h3>
-            </div>
-            <div className="references-list">
+          <div className={styles.referencesCard}>
+            <h3>
+              <i className="fa-solid fa-book"></i> Source References
+            </h3>
+            <div>
               {payload.source_chunks.map((chunk) => (
-                <div className="reference-item" key={chunk.id}>
-                  <div className="ref-meta">
-                    <span className="ref-source">
+                <div className={styles.referenceItem} key={chunk.id}>
+                  <div className={styles.refMeta}>
+                    <span className={styles.refSource}>
                       {chunk.source === "framework" ? "Framework Reference" : "Customer Document"} - {chunk.source_file}
                     </span>
-                    <span className="ref-score">{Math.round(chunk.score * 100)}% match</span>
+                    <span className={styles.refScore}>{Math.round(chunk.score * 100)}% match</span>
                   </div>
-                  <p className="ref-text">{chunk.text}</p>
+                  <p>{chunk.text}</p>
                 </div>
               ))}
             </div>
@@ -130,25 +146,17 @@ export default function ChatMessageBubble({ message }: { message: ChatMessage })
 
   if (message.message_type === "self_rating_prompt") {
     return (
-      <div className="glass-card recommendations-card animate-slide-up">
+      <div className={styles.card}>
         <h3>
           <i className="fa-solid fa-circle-chevron-up"></i> Self-Evaluation
         </h3>
-        <p className="recommendations-text">{message.content}</p>
+        <p className={styles.calibrationFeedback}>{message.content}</p>
       </div>
     );
   }
 
   return (
-    <div
-      className="glass-card animate-slide-up"
-      style={{
-        padding: "16px 20px",
-        marginLeft: message.role === "user" ? "20%" : 0,
-        marginRight: message.role === "user" ? 0 : "20%",
-        background: message.role === "user" ? "rgba(0, 122, 255, 0.08)" : undefined,
-      }}
-    >
+    <div className={message.role === "user" ? styles.userBubble : styles.genericBubble}>
       <p style={{ whiteSpace: "pre-wrap" }}>{message.content}</p>
     </div>
   );
