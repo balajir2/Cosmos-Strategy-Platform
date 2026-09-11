@@ -1,0 +1,364 @@
+Capability Product Meeting Demo - September 11
+VIEW RECORDING - 49 mins (No highlights): 
+
+---
+
+0:00 - Balaji Rajan
+  So eventually, every time that I send out an invite, I disable that.
+
+0:04 - Shiv Subramaniam
+  And I say, Microsoft Teams, I switch off.
+
+0:08 - Ashutosh Tiwari (cosmostrategy)
+  Yeah, I delete the entire Microsoft trailing mail completely. Right. So it's like, because Teams is not very great. It's used by most of the corporations.  So we end up using it because a lot of clients use it. Otherwise, think Zoom is better.
+
+0:24 - Balaji Rajan
+  But now Teams is getting better. You know, for example, the notes that it takes, it's much, much better. It's able to identify participants.  able to identify a lot of things.
+
+0:34 - Ashutosh Tiwari (cosmostrategy)
+  But this is what I think the point is that the point is also the fact that Teams made that see the mostly that's the story with Microsoft, very robust solutions.  I still remember Microsoft voice command was the only one that could recognize my voice. Even today, Siri and Android are pathetic, right?  In trying to understand what I'm saying. They'll get a bloody value of driving. someone. It'll give five prompts before it understands who I
+
+1:04 - Balaji Rajan
+  They are not able to consumerize the solutions on one side and because their UI and UX is pathetic.
+
+1:11 - Ashutosh Tiwari (cosmostrategy)
+  In teams, if there is no pre-scheduled meeting, if I just say, Balaji, let's come and meet on teams, I have to really search through two or three menus to find out how to start a team's meeting with you and those.
+
+1:25 - Balaji Rajan
+  If it's in the calendar, it's easy.
+
+1:28 - Ashutosh Tiwari (cosmostrategy)
+  So there are those quirks and stupidities. They never thought of things from the point of view of the consumer.  Only time they thought was Kinect. And that also they could not manage the success of.
+
+1:39 - Shiv Subramaniam
+  No, it was a big success.
+
+1:41 - Ashutosh Tiwari (cosmostrategy)
+  It sold more than iPhone. And eventually they could not manage the success of it. Xbox is only 10% of the market share despite Xbox being far superior in the console.  No, even their Microsoft phone.
+
+1:53 - Balaji Rajan
+  I used Microsoft One.
+
+1:55 - Ashutosh Tiwari (cosmostrategy)
+  Yeah, I used one a long time. It was very, very good.
+
+1:58 - Balaji Rajan
+  Very, very good before they created it.
+
+2:00 - Ashutosh Tiwari (cosmostrategy)
+  O3, HTC, Dupod. These are the three brands that I used, which are working on Microsoft for a long time.
+
+2:05 - Shiv Subramaniam
+  I think they get uncomfortable when something works well, then they have to bug it up.
+
+2:09 - Balaji Rajan
+  Correct. It's a typical B2B mentality.
+
+2:13 - Shiv Subramaniam
+  They can't think on enterprise.
+
+2:16 - Ashutosh Tiwari (cosmostrategy)
+  And enterprise, they believe that there are enterprise IT nerds, which are sitting on the other side, so they don't need to simplify anything.  If everything is complicated, it's fine.
+
+2:28 - Shiv Subramaniam
+  It was the same problem that we had even at the time that we were considering Hybris, Balaji. Yeah, Hybris also.
+
+2:35 - Balaji Rajan
+  See, good thing is Hybris was not Microsoft. So it was SAPs. And there were, at that point of time, only two people who were offering this enterprise-wide.  So one was SAP, hugely successful, Hybris. And IBM is another Microsoft company. Right? So they made it extremely difficult for anybody to use, but then everybody used.  So there was like a lot of friction using WebSphere.
+
+3:06 - Shiv Subramaniam
+  WebSphere, correct.
+
+3:07 - Ashutosh Tiwari (cosmostrategy)
+  The problem today is that Android is not designed for productivity solutions. Microsoft is what it is, it's tough to use.  And Apple is like a privileged jail. Once you enter Apple, you cannot get out of Apple. have to use everything of Apple to extract the most out of it.  Which is the reason I never, you know, even when I was like scouting for a laptop, I never bought an Apple.
+
+3:31 - Balaji Rajan
+  never used anything of Apple till date, right?
+
+3:33 - Ashutosh Tiwari (cosmostrategy)
+  Now my mobile ecosystem is on Android and my laptop and everything, desktop ecosystem is on Microsoft.
+
+3:38 - Balaji Rajan
+  I curse Microsoft every day, but I still use Same here, same here. So today, coming back to, you know, what, so I got your answers, you know, Ash, so which is good.  A couple of things and then I will open it up. So today what we are going to do, we are recording it.  So we are going to use, I want you to walk me through how you. So saw different users using this application.  That's the only thing I want. Before we start there, let me show you a couple of things that I have made changes to.  So the comments that I sent across, whatever Shiv's comments were, and my comments were, there's no further clarification or misalignment on those.
+
+4:20 - Ashutosh Tiwari (cosmostrategy)
+  Nothing. There was only one point where I had mentioned that we need to discuss in my comments. So if you want, we can discuss that.  Otherwise, we can park it for later.
+
+4:30 - Balaji Rajan
+  No, no. Let me quickly, you know, the art of...
+  SCREEN SHARING: Balaji started screen sharing - WATCH: https://fathom.video/calls/819484555?timestamp=275.919009
+
+4:33 - Shiv Subramaniam
+  Can just show the comments also? Because I didn't find the time to read Ashes. I will just open it.
+
+4:39 - Balaji Rajan
+  One second. Just give me a second. I will open it from... So here are the comments I'd say. So the first comment was here.  So Shiv, it is like, the question was like, no baseline calibration ordering. And this is your comment. And this is Ash's comment.  Sorry, not two, three aspects to this.
+
+5:37 - Ashutosh Tiwari (cosmostrategy)
+  Typo.
+
+5:38 - Balaji Rajan
+  That's okay. Let me know and then I'll scroll. Sorry, don't trouble your eyes.
+
+5:52 - Shiv Subramaniam
+  Okay. So Ash, just explain this. What are you saying? Different from what I've said.
+
+6:01 - Ashutosh Tiwari (cosmostrategy)
+  No, so I think the first part of what you said is that one and three is the same as what you said, which is what the user understands certain key concepts and what is his or her specific answer to certain questions.  We can assess that at the beginning and it can be assessed at the end or at any intervening stage because then the delta that has happened in his own mind becomes more tangible and comes alive.  That was one part of it. The second part of it, which is what is the company's status currently as a baseline that can be got from a lot of, you know, a lot of external material that is available for most companies.  However, the point is that what do we do this? Why do we need it for this? Why do we need to do this baseline at all?  Because in real life, have never done any baseline calibration pre any workshop, frankly. So what is the utility that comes out here?  And the utility that I see as two, one is measuring this pre and post shift or delta in the user's own things, which I think is valuable.  The second part was content changes as a consequence of the answers to 1, 2, and 3, right? That, okay, because of these answers, the content, the way it is administered, etc., or even the actual examples, they change significantly, etc.  So my point of view was that on this B, content changes, I cannot comment at this stage, because if it was possible, it would be awesome.  But is it possible without hallucinating, without inventing stuff and unnecessarily screwing it up is something that I don't know right now, so I cannot comment on the utility of B.  So B is a little utopian, if it was possible, great, if it was not possible, even if there's a 5% chance of it not working, not worth going up, is what essentially did I say, yeah?
+
+7:42 - Shiv Subramaniam
+  So I've understood baseline calibration as a different thing, slightly different thing. In fact, that's why, in fact, in my comment, I have said, I've understood baseline calibration as C.  We are not running a generic academic institution. So there is a certain way in which Cosmos actually talks about...  how to use this product. If eventually somebody has to buy this product from us, they have to understand saying that we bring a certain perspective and a position that is actually different from other people and what they are used to.  So the baseline calibration, as far as I'm concerned, is what is the cosmos design? That is the baseline calibration, which means how does cosmos describe and understand and define insights?  How does cosmos do something else? How does cosmos define distribution? That's what I mean as baseline calibration. Initially, I argued from the point of view of the organization's understanding of it, whereas, but I'm saying that then will become, we'll have to create a customized version for every organization, which doesn't make sense.  But if somebody decides that actually in a organization decides that our approach towards these things is actually making sense to them, and they would rather that this approach be followed by all the people in their organization, then the baseline calibration should be what as defined by cosmos.  That was really what I was saying. So to me, once we do that, then the way that the person, it at least gives a direction to the person who is answering these questions, a very clear idea about saying, okay, so how should I be thinking about insight?  How should I be answering the questions around insight? What are therefore some of the tools that I can actually look at?  That he can bring in all his understanding of insights from everywhere and bring it in, as long as he has a singular understanding of how we, therefore cosmos, and as a result of the adoption by that organization, that organization starts to understand and define insights and any other terminologies.
+
+9:43 - Ashutosh Tiwari (cosmostrategy)
+  See, Shiv, so I think that part of the intent that you're saying is absolutely right. And that is already there in the content.  That's why I did not go into it. So every part of the content is starting with what is the brand, what is the strategy and exercises to actually align onto cosmos way of.  Looking at things as compared to just serving it up in terms of, you know, okay, this is the cosmos way and now you take it kind of a thing.  So because that is already integrated into the content, that's the part I did not go into. But your objective is valid.  Perfectly. Yeah.
+
+10:15 - Shiv Subramaniam
+  So which is why I'm saying, no, I'm saying therefore for a product to actually bring that out, if I just left it as what is an insight and just provide some case studies, the difficulty for most people would be to relate the question to the methodology.  Then they will start bringing in their own methodology. I'm saying it really needs to be a lot tighter because one of the things that we will sell this product on is if the organization, if the client believes that our approach is actually a very solid approach.  So once they adopt that, that is the adoption that they will try in the system from the top down.  So if we don't provide those guardrails and that calibration upfront, then how is this product going to work?
+
+11:00 - Ashutosh Tiwari (cosmostrategy)
+  Yeah, so I think alignment on those definitions is crucial to get into the questions stage. My only point was that alignment on definitions and terms and concepts in a very clear manner is actually the foundational piece in the content before we dive into the questions at each stage in any case.  So that's what I'm not disagreeing with you. I'm saying I agree with you.
+
+11:29 - Shiv Subramaniam
+  But as far as product is concerned, again, this is a self-serve product, which means that the guy is actually going to go onto his machine, he is going to access it, and he or she is actually going to attempt to answer it.  So before getting into the answering, I'm saying an understanding of what is important in this organization and how does this organization see all of these critical questions, and therefore helping with the definition, I think will help to make that user a lot more.  Focused and convergent rather than go all over the place because then their interest in the product also will start to wane very quickly because you're saying you're just one more generic, another generic sort of learning and development platform.  But that's not what it is. You actually want to think of this product as a decision-making tool. It will help me sharpen my thinking and it will help me take a decision.  Up to there, I want to see this product delivering value. Yeah.
+
+12:32 - Ashutosh Tiwari (cosmostrategy)
+  So I'm only reacting to what you have said because the last part of what you said, right now what you said is what I also said, the same thing, right?  That if the user puts in their understanding of certain key concepts as well as certain, not all the questions, right?  Just two or three or four very fundamental questions and gives their intuitive understanding of it as a baseline to measure their progress against later because that makes it feel very, you know.  Customize, et cetera, et cetera, in that sense. The essence of a good product is not to customize itself too much, but give a sense that it is customized in the manner of putting the ball back in the user's code, right?  That's how the product development works most of the time. So that part is, I think, is what I said in my note.  I was only reacting to the part that you talked about right now, which I think it's a good point, that before somebody delves into the actual tools and the actual thing, their understanding of what insight means or brand means or strategy means, innovation means or whatever should be aligned to what we are approaching as our understanding of those concepts.  Because if they don't approach it like that, it can all go away. For somebody who, for a brand is just a brand name in communication, right?  All of this will be like, you know, completely going all over the head, completely over the head.
+
+13:49 - Shiv Subramaniam
+  Also because the organization that decided to buy our product is buying it or whoever is the leadership team that is buying it is because there is alignment in the content.  In the definition that, in the methodology that Cosmos has suggested. So that is what they want to drive through the length and breadth of their organization.  For that, you can't leave it at a space where it seemed like a generic tool, but it is something very specific that actually makes sense for the people, for the decision maker to have actually bought the product in the first place.  I'm saying there are two levels to it. First level is where the leadership is convinced saying that this approach that Cosmos is suggesting and Cosmos's framework is best for their organization.  Therefore, is the customization begins, you know, it's not really customization, because if there are 200 organizations that buy this product, it means 200 organizations agree with our framework.  And they would like to adapt it for themselves.
+
+14:48 - Ashutosh Tiwari (cosmostrategy)
+  So Shiv, right now I am not commenting on the pre-sales process, which is very crucial in that sense. And we should park that and come back to it because pre-sales is about convincing the leader.  That about why this product makes sense, right? In that sense. And alignment on Cosmos way of looking at things will be a crucial input, not the only input, but a crucial input into doing so.  So for the moment, I'm not, I'm parking that aside. agree with you, but that I think is a different topic.  What I'm just saying as a user, now the organization has decided, fine, it has bought into it. Or maybe the organization has not decided.  The organization is going through a trial version of kind of a thing, right? In that sense, whichever way. Now, but let's, for the moment, stay on organization has decided, the user is using it.  Now there was this whole question of baseline. So what is the baseline and what would we do with it?  So one baseline was the fact that you get a sense and that is where Balaji originally was, that get a sense of the entire organization, let them upload the documents, this, that, the other, so that the content can be, you know, the content will, in the belief that the content will be customized at least sectorally, right?  Right. My pushback was that, that content. Other than B2C versus B2B, maybe just three or four clusters, right, in that sense, the content would not be very hyper-customized in that sense, because maybe B2B, B2C services, right, something like that.  But beyond that, nothing in that sense, because unless AI can do that very, very accurately and very, very without hallucinating, which I doubt, right.  So my sense was the fact that hence, if it can be done by AI, great. If it cannot be done by AI with 99.9% accuracy, then we should not go there at all.  We don't need to customize their content beyond three or four big heads in that sense. So that's, I think, one part of it.  The second part of it was, yes, from a user experience, I was answering a question, who is the person who's supposed to be my consumer in a particular manner before I went through this program, and now I'm answering this question differently.  I can see the difference that this program has made. So a user-specific baseline, and user can be the user as an individual user, user can be the user as an organization, that what is  That you were saying before this, and what are you saying now before this? More than any other diagnostic that intuitively, experientially tells you the distance that you have traveled.  So that was the other baseline, which I've said that that could be a good one in that sense, because that is user-led in that sense.  The third point that you are making, let me just complete. The third point that you are making, which I had not made, which I think is very useful, is the fact that, okay, beyond the user baseline and beyond the customization story, the other thing is that there's a cosmos way of looking at some of these concepts, right?  And alignment on those, some of those concepts is important before you, and that alignment is also a baseline, per se, before somebody gets deeper into it, and since they are deep into it, to which my answer is that you are absolutely right.  I agree with that. In fact, the way the current content in a non-product manner is designed is the fact that, for example, you first ask, so what do you understand about a brand?  Different people give their own answers. Try to synthesize an answer and move the group towards what we feel is the right definition of a brand.  Similarly for insight, similarly for strategy, similarly for every key concept. So gamifying that in a product form to drive an alignment before you get into the actual tool and the actual decision-making tool is essential.  I agree with you and that is there in the content is what I meant to say. So it makes the job a little easier.
+
+18:25 - Shiv Subramaniam
+  Yeah, again, I'll go back to where I started. Remember saying that this is actually, there is no interaction here with another human being or a consulting firm.  So it's not a consulting practice. It's actually an interface that you actually are interfacing with a machine or with a product.  So I think it's important to therefore imagine what that journey will be and then logically take the person from one to the other without getting that person's attention to vain.  That's point number one, which is the reason why I said too many things at a theory. I don't think that the product should do.  It should get much more to the action level as quickly as possible. Your point two that you made, I'm saying I'm frankly not interested in measuring that individual's progress from what he was earlier to what he is now.  I want to understand whether he's become even more useful to the organization from where he was to where he actually has gotten to.  So in relation to the impact and the result and the benefit that he's adding or the value that he's adding to the organization to me is much more important than his own learning.  If it happens as a natural consequence, that's fine. And if he's interested, that's fine. But he jolly well understands how this organization works.  He can go to some other organization and go back to his old ways. That's fine. But I'm saying this product should help him constantly keep him on track to say, not only is it my learning, but it's my learning in the context.
+
+20:16 - Ashutosh Tiwari (cosmostrategy)
+  So, Shiv, two things out there. I think we are getting locked up into the baseline because some of the things that you are talking about are answered later on in the document.  So, first is that, yes, there is no person on the other side and the product has to do a different architecture of trying to bring that alive, right?  So, that's the part I would defer to Balaji in that sense on how that can be done. So, that's, I think, one part of it.  Second is when you are talking about the user, I meant the user, see, it will be an organization, but it will be somebody within the organization as a representative of the organization.  And you are right, they would be looking at it from an organization point of view, but the learning is often mostly of the individual and hence of the organization and five people learn.  Then it's for the organization, right? So what is their answer? What is the organization's answer pre-going through this? And what is the organization's answer post-going through this?  Or throughout would still be an important diagnostic in that sense? Not essential. I wouldn't even question it as essential, but I think it can add value.  The third point that you mentioned about how does this whole thing, while being a standard product, make very specific and customized sense to me and my organization?  So I think there the answer is not in this baseline. So Balaji, I think later on in the document, we have referenced the case studies part, right?  In that sense. And one of the things I think it's right in the next question or some question after that.  So where I think what we have said is that there will be two case studies that the user will have to navigate through this entire deck from end to end.  There will be multiple exercises in between, but there will be two case studies that the user Another will have to navigate from end to end.  One of those case studies will be supplied by us from a repository of case studies that we give to the system.  So that is from Cosmos side. Another case study will have to be supplied by the user pertaining to their organization on a certain format or it can even be open format.  That's not a problem. In that sense, they can give as much detail or as little detail. doesn't matter. The point is the fact that they will have to navigate their own case study continuously over the period of going through this.  And that is exactly what you are saying. That is what will make it specific. Not necessarily the content or the questions or the stuff is very, very specific to that organization in that sense.  So the answer to what you said is probably lying elsewhere. And yes, you could argue that that case study being given by the user is a baseline.  Yeah, in that sense, that could also be a baseline. But more importantly, it is not just... It is an exercise to solve.  Upload your one problem that your organization is facing in this arena with certain guardrails about what kind of problem to choose.  It should have a business implication. If this is about insights, it should have a market side implication, etc. Whatever case study from your organization that you may want to give, that is essential to you because that is what you will be working through, utilizing these concepts in that sense.  That is what will make it effective.
+
+23:43 - Balaji Rajan
+  You know, what I will do is, again, merge and find out, you know, where are the additional clarifications. So I'm going to take the transcripts that you and Shiv have been speaking, find out, you know, whether there's still, you know, clarification.  Thanks, Okay, I'm just going to move forward. That is okay with you. Quickly, we'll do this because I wanted to show other things to you.  So on the second part, which is like, you the reasoning, standalone product, no cosmos, human in the loop. I think, you know, the removed document.  So, you know, this goes back to the discussion we've just had, right? Any organization, context of an organization. Anything before I move?  Because we discussed the same. Both the points are interrelated.
+
+24:39 - Ashutosh Tiwari (cosmostrategy)
+  Yeah, because that was the case study point comes out here, right? Is that okay?
+
+24:46 - Balaji Rajan
+  Shiv? Yeah.
+
+24:48 - Shiv Subramaniam
+  There is a difference of opinion.
+
+24:50 - Balaji Rajan
+  I'll get a document and we will find out how to bridge that.
+
+24:54 - Shiv Subramaniam
+  Yeah, yeah. That may be better.
+
+24:58 - Balaji Rajan
+  The master question. So essentially human authored consultant. So Ash's point was, human is not in the loop, everything should be AI.  And that is where this discussion was. So AI actually gets trained on how to generate the questions. So Ash, quickly, you want to give your point of view?  I know you have answered this.
+
+25:18 - Ashutosh Tiwari (cosmostrategy)
+  Now, think the point here was more to do with the fact that follow-up questions to be created by AI are all questions to be created by AI, right?  In that sense. And Shiv's point, which I completely agree with, is that the master questions are basically which are to do with our own intellectual property, the way we ask, right?
+
+25:37 - Shiv Subramaniam
+  In that sense.
+
+25:38 - Ashutosh Tiwari (cosmostrategy)
+  However, having read your point, having read your thing, there are some thoughts that came to my mind, which is why I said that, okay, there are certain routes out there.  One route, and I'm just going to the second paragraph in the kind of, no, sorry, the first paragraph. One is standard questions are generated by Cosmos holding everything together.  These questions remain the same across Jesus across. And the follow-up questions are generated by AI. That's not a problem.  Second is question customization based on user inputs. So Balaji, you may remember in the last meeting we were discussing, we can even provide a slider or a switch that you want a more creative version of this question or you want a very hardworking version of this question.  That gives a little bit power to the user to decide while both the questions or three different versions of that same question still come from Cosmo.
+
+26:29 - Balaji Rajan
+  Yeah, I worked on it. So I have something to show. Just hold on to that thought. Sure.
+
+26:35 - Ashutosh Tiwari (cosmostrategy)
+  And then route three was, no, even the master questions can be customized basis user identity and this can only be done by AI.  Having a product where user is supposed, administrator is supposed to do that is a non-starter. So the point was that in my mind, simplest to choose is route one, which is also preferred by me and Shiv also.  However, there are two things that I wanted to just place it on the table, which means... So Shiv, a standard set of questions, which remain standard across industries, across users, is an IP waiting to be leaked?  anybody takes a screenshot and just leaks that IP, right? Obviously, that's the problem when we become successful, not in the process of becoming successful, right?  So I think that's one point that I wanted to make. Second, a lot of our users, typically every user changes their role once in three years, and every professional in the industry changes their job once in five years, right?  If and when we become successful, they are likely to encounter the same product in more than one company, right?  In that sense. So what happens is the fact that suddenly you are having the same questions in a steel company versus you were having the same question in a fashion retail industry.  It was otherwise opaque to you. Otherwise, you did not know about that, right? In that sense, can be a slightly underwhelming experience out there, right?  So the point, and which is not the issue when you do a workshop mode, because there it doesn't matter, right?  At the end of the day, frankly. So because you're not looking for volume, you are not having 200 users, right?  In that sense that you're gunning for, in that sense. So it's a very thin sample. So while both Shiv and my preference was route one, I was just putting out the other two routes as that at best, at this stage, I think to not complicate things too much, either route one or route two, where you're giving the power to the user to do the variant of the question make sense as compared to AI generating the master question.  But eventually, we will have to go to AI generating master questions also in a very tight corridor, which is defined by Cosmos, right?  So the IP will not rest in the actual verbiage of the question. As compared to the actual import of the question, that sense, right?
+
+29:04 - Balaji Rajan
+  Yeah, true.
+
+29:04 - Ashutosh Tiwari (cosmostrategy)
+  So that was my point, okay.
+
+29:08 - Balaji Rajan
+  Sure. No compound question, I agree, you know, so we've, you know, here there is like, no, absolutely, you know, I also, like, open roadmaps, so case studies, you know, you will provide a case study, Ash, right, and there will be a, so there are three users for this application, there is a admin who will set up a project, so for example, you know, Dr.  Redis, you get another project, the admin will set up a project, there will be an assigned consultant, Cosmos consultant, who will set up the case studies, what is required, because the case studies repository will be there, so you'll be able to, you know, pick which case study you want to administer for here, the questions that are coming in, you know, the AI generated, a human is like actually looking at it, he's not writing it, he's looking at it, and then he's approved, right, now that's how the questions will get generated.  And the keyword agnostic answer mapping, etc. So we discussed that. So there is absolutely no problem here. Product framing inconsistency, pitch material, not code.  So here, not sure what. No, this was an observation. So capability building is foundational.
+
+30:24 - Ashutosh Tiwari (cosmostrategy)
+  just, Balaji, here I just mapped it to what your summary was saying about what your understanding and my understanding.  So I think this is just a bridging comment, not much. sure.
+
+30:34 - Balaji Rajan
+  So again, we'll revisit this baseline calibration. I'll come back with where there is agreement and where there is no agreement.  Document upload, it again depends on how we solve the baseline. The inside POCs target standalone product, which is correct.  And once we are done with this, will take you to, you know, this is our last conversation. There are three pathways I have defined.  So when you set up a project, it can be a project which is consultant assisted. So there are like three modes in which this program can run.  And we are like right now in phase one, we are only doing a standalone, which is like, no, it is administered remotely, right?  And everything is automatic. But there are like two more ways in which the project can be done. One is like a consultant doing an online workshop, right?  So that is another feature that we can build. I'm just leaving a placeholder in the product. I'm not spending time on it.  And the second is like, no, there are like no interactions which are like no going forward.
+
+31:40 - Shiv Subramaniam
+  So I will show both of them. Also, just Balaji, one point to add to that is that here, there is a pre-sales component that comes into play.
+
+31:49 - Balaji Rajan
+  Okay. Because eventually, how will you sell this product?
+
+31:52 - Shiv Subramaniam
+  Even for leadership to agree that this is good, they will have to use it as a one-on-one, which means that you are actually going to be physically present.
+
+32:07 - Balaji Rajan
+  So if there are any discussion points, I will bring it up in the next document. I think this document format works very well.  You can offline give comments, I can merge them together. Shall I move forward if you guys are okay? So next thing that I want to show is, shift to your point.  How will this work when consultant and the customer, they want to have an online interaction, where the prompts are coming from our knowledge base.  So I just picked up something that I developed for my friend.
+
+32:45 - Ashutosh Tiwari (cosmostrategy)
+  Sorry, between customer, could you repeat that? So there are three modes in which this product can work.
+
+32:50 - Balaji Rajan
+  And I'm just, this is food for thought. I'm not building this. Okay, Ash. The food for thought is, like, no, if you are doing an online administered, you know,  So you have an offline workshop. You can also have an online workshop. We discussed that last time. So how does that work?  So I built something for some other project. I just have grabbed some movies from it. The movie clipping I'll show you on how that interaction works.  Is that okay? Yeah, sure.
+
+33:24 - Shiv Subramaniam
+  Go ahead.
+
+33:24 - Ashutosh Tiwari (cosmostrategy)
+  My only perspective that I mentioned in the comment was that as an aid to current consulting or offline practice, it's a very nice feature, but that's not the central pivot of why we are that's not.
+
+33:37 - Balaji Rajan
+  It's a future development, Ash. I'm seeding this into your head that it is possible.
+
+33:42 - Ashutosh Tiwari (cosmostrategy)
+  Okay.
+
+33:43 - Balaji Rajan
+  Okay.
+
+33:43 - Ashutosh Tiwari (cosmostrategy)
+  No problem.
+
+33:44 - Balaji Rajan
+  So here, this application is actually a psychiatric psychologist session. Counseling kind of counseling session, right? And this is like, no, especially for mentally disturbed people.  And, you know, when that So you know, essentially there are like no good psychologists and there are like not so good psychologists.  So how do you make every psychologist good psychologist, which is what this tool was. So what it does is like no, all the psychiatry tools, etc.  is like no into a knowledge base. And from that knowledge base, you know, for example, there is a session with Arjun and Arjun is like no talking about and I'm not sure whether voice will come because this has voice.  Let me know if you're able to hear the voice in this video. Okay. Are you able to hear the voice?  Not yet. Let me see if I can, how I can just give me a second. Looking at where the zoom is.
+  SCREEN SHARING: Balaji started screen sharing - WATCH: https://fathom.video/calls/819484555?timestamp=2117.500364  Sorry, sorry for. No problem. I'm going to stop sharing, then share again. This time, don't share, share sound. I'm going to now, hopefully you will be able to hear the, so Arjun is coming and Balaji is the doctor.  So Balaji is like a not so good psychologist. And this is like no browser based. So it is happening on a browser.  My tuition teacher, even my grandmother calls to ask about marks. I haven't even written the exam yet. So here the transcription is happening.  that make you feel when they speaking? Client is speaking. So, you know, on the, on the flight, like what's the point?  Even if I study, I can't remember anything. I read the same page five times and nothing stays. Yeah. So as soon as it, it hears some key.  So from the knowledge base, interventions start coming up, right?
+
+36:03 - Shiv Subramaniam
+  So this is only coming up for the counselor.
+
+36:07 - Balaji Rajan
+  So counselor sees, examine the evidence, do a Socratic questioning. it is actually starting to prompt the doctor saying what he should do.
+
+36:17 - Shiv Subramaniam
+  Embed the theory behind it.
+
+36:18 - Balaji Rajan
+  last time that focusing has been hard. Is that still happening? So I'm not going to, the gory details, I'll just forward.  That sounds exhausting. As patient becomes suicidal, immediately alerts start coming in saying, you you need to do something else.  You this conversation is not going well. When you are lying awake at night, what you mean, Arjun? It takes courage.  I want you to know. said something, you know, so immediately safety alerts, you know, go and, you know, get to this foundation because this patient is not good.  No, he's not in a good condition. So the feature is like, in Shiver Nash, this is for, you know, both of you to think about.  So it is like, you taking a Zoom call, right? You are not adding anything new to it, right? So it is like, you  From a Zoom call and this particular session is only available to you as a consultant. It's not available to the patient.  Patient still sees a Zoom or a Teams call. So without any other inbuilt thing, is able to work standalone.  Second thing is, it is able to transcribe everything that is going on on the fly. Third thing is, it is going to make an intervention basis what has been said.  Now in this case, the domain knowledge of psychiatry and psychology, in our case, the domain knowledge of, you know, brands and etc.  So that is something that is possible. So I'm going to stop this. The other thing I want You're also saying that these prompts happen in real time, depending on the subject.  One conversation. So for example, if I'm the consultant, so I know that, you know, what is the next question to ask or which direction this, you know, probably the answer is not at the level at which I want.  I want them to think further. So you can drive the conversation, you know, with the context and, you know, keep driving.
+
+38:01 - Ashutosh Tiwari (cosmostrategy)
+  So Shiv, there's an interesting different application of this that is coming to light from my mind. Just sorry, Balaji, for the moment I'm leaving the capability product and capability workshop aside.
+
+38:17 - Balaji Rajan
+  You know, the reason I bought it is like, no, it is possible and I have the code. No, I understand, I understand.
+
+38:22 - Ashutosh Tiwari (cosmostrategy)
+  See, one of the things Shiv, which is important to scale up the firm and delivery of the firm, if we are going to be remaining true to workshop model, is for different partners to be able to lead and conduct workshops on their own, right?  I don't know whether that is true, my impression is true or not, right? I have tried to push a lot of partners into the language, boss, you conduct the workshop, let me be the resource, right, kind of a thing.  But I've often found marked resistance to that, in that sense. Now, that resistance can be broken down into three parts.  One is that some people are just not confident of workshopping itself. Now, that cannot be done anything about. They are much more suited to more transactional relationships for workshops being conducted by others, right?  So that's, I think, part one, which nothing can be done about. So the second is more to do with the fact that, yes, now they are comfortable doing the workshops, but they are not comfortable doing the workshops on this content or this kind of stuff, right?  Or third, they are comfortable doing the workshops on this content, but they are not as familiar with the IPs and the entire frameworks, et cetera, to be able to conduct it powerfully, right?  I'm not talking about capability building. I'm talking about even, you know, normal delivery kind of a thing, right? So one of the things could be, this could be an interesting aid for those, for the latter two, people who are comfortable in a workshop setting and leading workshops, but they want, they are not as comfortable in the content or they are not as comfortable with the IPs to be able to.  To help themselves to go ahead and lead.
+
+40:04 - Shiv Subramaniam
+  So if they have signed into this app and they are actually following it on their laptop, even while presenting, the prompts that keep coming up, depending on the kind of responses from the group, is a great way to sort of continue that.  Because many people actually get stuck. They also don't know, what comes next? I don't know how to take this forward.  So that prompt at the right time is a very useful tool.
+
+40:26 - Ashutosh Tiwari (cosmostrategy)
+  Yeah, I think that's why I'm seeing the utility of this a little beyond from a capability product side, also on the mainstream consulting side, helping people, you know, because if we are true to a workshop model and a very open-ended workshop model, right?  Then comfort in conducting an open-ended workshop, which seems much more spontaneous, etc., even though there was a preparation that might have gone into it, is essential, right?  And in that sense. And this can help me to get there.
+
+41:00 - Shiv Subramaniam
+  Even the answer to the last question saying that to me both capabilities must be baked in from day one is my sense.  Because I think over a period of time it's going to be very difficult to sort of demarcate this and say this is valid for consulting, this is valid for product.  But I think over a period of time both will become valid for both.
+
+41:19 - Ashutosh Tiwari (cosmostrategy)
+  Sure. My only perspective there was nothing to do with the utility. I myself said that there's this utility out here.  My only perspective was that if I'm razor sharp on product and monetization and selling a lot of units, then that's the way.  This can be a brilliant internal aid to build familiarity and capability in the system currently. Yeah.
+
+41:41 - Shiv Subramaniam
+  I feel some of those capabilities may add a lot more value to the product itself. Could be. definitely.
+
+41:47 - Ashutosh Tiwari (cosmostrategy)
+  There could be some kind of symbiotic relationship. Yeah, will be there.
+
+41:50 - Shiv Subramaniam
+  So we should actually keep it open because otherwise it will become very strictly demarcated. Then we might end up losing some things that are adding value even to the product to say that, but this is suitable to control.
+
+42:00 - Ashutosh Tiwari (cosmostrategy)
+  No, I think the point there is, no, that's, that's, think fair and it harks back to the same philosophy Balaji that we have been having all throughout that the corpus, the core product is only one, one manifestation of it is capability product and another manifestation is consulting, a third manifestation is management process building, fourth is performance, potential assessment, fifth is DIY consulting, right?  Trying to do multiple products for different things doesn't make any sense.
+  SCREEN SHARING: Balaji started screen sharing - WATCH: https://fathom.video/calls/819484555?timestamp=2545.071676
+
+42:27 - Balaji Rajan
+  Yeah, so this is what I had done. Okay. So the project can be set up in three ways. There is a async consultant guided, there will be a full DIY, you know, which is what we are talking right now.  And there is a live online consulting. It's not available yet, but the art of possibility is what I was showing, right?  So when you set up, there are three parts when you're like, and going back to Ash, what you're saying, the product is one, you know, the manifestations and, you know, how, you know, different parts come together, you know, happens, you know, behind, right?  So when you, when you set up. So this is one change that I have done between last time and this time, and I stopped further development for this call.  The other thing that I did was here, I changed the UI UX, this is how a customer will see.  So when you send this link, and the customer, let us say it is Dr. Redis and somebody in Dr.  Redis, what they will see is progress through these. And so the first question that came to him was like, what core brand attribute does your organization command?  The answer was like, no, brand does not give any story for, so I just made something up, right? So from our knowledge base, it brought in, how does this compare with what we think?  So at a superficial level, our brand core attribute is like premium pricing. At a need-based, the brand attribute is like high-touch, bespoke.  At an insight level, we command. So this actually came from our, what do you call our framework? This is our IP.
+
+43:58 - Shiv Subramaniam
+  References that we had already.
+
+44:00 - Balaji Rajan
+  Yeah, so it referenced those documents to create an answer at three different levels for the user to think about.  Once obviously it goes into production, this source reference I will remove. So it will not be visible to the end user.
+
+44:16 - Shiv Subramaniam
+  I have just kept it here for our discussion.
+
+44:18 - Balaji Rajan
+  So then it says that now that you know your answer and the answers that I am giving through insight, how does it compare with what you have done?  So where does your answer fall? So I said my answer actually falls at the context of cultural. We commend the context of cultural context.  I just made something up. So it is not leaving it there. It's just saying, okay, what specific elements, right?  Now you start drilling down. It will not leave till it actually gets what you are thinking and it records that and then it will move to the next question.  Okay, so it is like forcing the, you know, that, you know, In Ash's terms, right? It is forcing him into a very uncomfortable space to get an answer.  Yeah.
+
+45:06 - Shiv Subramaniam
+  And also that you can't leave it at a generic level or an intellectual level. Everything has to be written down and then actionable.  Correct. Correct.
+
+45:16 - Balaji Rajan
+  So here, you know, for example, this was like not something that you and I set up. This is like, no, it came in from a response, from the response and the context, and then it made the next question, right?  Making uncomfortable questions till the answer is got. So what I will do is, now I have enough, you know, material, right?  No basis, this transcript, etc. So I'm going to do the, you know, the build. I was waiting for this call.  I'll do the build and maybe next week I will show what the prototype looks like. Is that okay?
+
+45:56 - Shiv Subramaniam
+  Yeah, sounds good.
+
+45:58 - Ashutosh Tiwari (cosmostrategy)
+  Balaji, only one. One on the previous one that you were showing, think this is really brilliant, frankly. It's just sounds good, it's quite brilliant, the way this is coming across.  think, so two smaller things that I wanted to mention, maybe they don't impact the design right now. See, those different modules, DIY consulting, or management process, or capability building, etc.  Eventually, they will be marketed by us as distinct products.
+
+46:25 - Balaji Rajan
+  The fact that they are variants of the same product is something that is only back-ended, right?
+
+46:31 - Ashutosh Tiwari (cosmostrategy)
+  No, it is only known to you.
+
+46:33 - Balaji Rajan
+  So this rule that is there is only for Cosmos.
+
+46:36 - Ashutosh Tiwari (cosmostrategy)
+  Okay, so I just wanted to mention that in that sense.
+
+46:40 - Balaji Rajan
+  So when you are, see, the way I am thinking is, like when you set up a product, right, for a company, obviously your commercials would have dictated what kind of administration will be needed, right?  So the platform is same. In that platform, it can take different path, basis, how you set it.
+
+46:55 - Ashutosh Tiwari (cosmostrategy)
+  This internal console, in a way, the management console, right?
+
+46:58 - Balaji Rajan
+  It's not something that customer is using. Yeah, yeah.
+
+47:01 - Ashutosh Tiwari (cosmostrategy)
+  So I think that was kind of one. Yeah, fair enough. That question that you showed on that thing that was going on the left-hand side, AIM, SWOT, CAPET.  So where has this come from? The left-hand side menu.
+
+47:16 - Balaji Rajan
+  This came from the various dimensions on which we are going to administer this. So this came from here. So when we set up our call, this thing, meeting, right?  We said, you know, our stage one will be AIM, discovery, and, you know, a discovery.
+
+47:31 - Ashutosh Tiwari (cosmostrategy)
+  Second will be prepared insights and identity.
+
+47:34 - Balaji Rajan
+  Third will be prepared strategic formulations. So it came in when we were setting up the project for DIY.
+
+47:40 - Ashutosh Tiwari (cosmostrategy)
+  Oh, okay. Fair enough. So SWOT is the only word that doesn't belong there. That's why I was just...
+
+47:46 - Balaji Rajan
+  we'll fine tune it. Right now what is happening is like now I'm still, you know, there's a lot of junk in there, right?
+
+47:52 - Ashutosh Tiwari (cosmostrategy)
+  So I'll clean up all the junk. Sure. Fair enough. So sounds good.
+
+47:57 - Balaji Rajan
+  Okay. So when you get a... You know, get the transcripts, right, Ash? I will request you to send it to me.
+
+48:08 - Shiv Subramaniam
+  Cool. Anything else?
+
+48:12 - Balaji Rajan
+  No, not all good. All good. This is good.
+
+48:15 - Shiv Subramaniam
+  Okay, fine. See you.
+
+48:20 - Balaji Rajan
+  That's what I was saying. Now I have enough information. So I will start doing the version 2 of it.  I'll set up something for next week to show what the version looks like.
+
+48:31 - Shiv Subramaniam
+  Sure. Perfect. Okay. Thanks, guys. Okay. Bye.
+
+48:36 - Ashutosh Tiwari (cosmostrategy)
+  Bye.
