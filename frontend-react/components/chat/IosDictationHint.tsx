@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "@/app/client/case/[caseId]/chat/chat.module.css";
 
 const DISMISS_KEY = "cosmos_ios_dictation_hint_dismissed";
@@ -16,19 +16,27 @@ function isIosWebKit(): boolean {
  * Inline tip for iOS users — Apple WebKit doesn't expose
  * SpeechRecognition, so we point them at the native keyboard
  * dictation. Dismissible; dismissal persists in localStorage.
+ *
+ * `visible` starts false so server-rendered output and the client's
+ * first hydration render match exactly (window/localStorage aren't
+ * available during SSR) — the real eligibility/dismissal state is
+ * computed post-mount in the effect below.
  */
 export default function IosDictationHint() {
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") return true;
-    try {
-      return localStorage.getItem(DISMISS_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
+  const [visible, setVisible] = useState(false);
 
-  if (dismissed) return null;
-  if (!isIosWebKit()) return null;
+  useEffect(() => {
+    if (!isIosWebKit()) return;
+    try {
+      if (localStorage.getItem(DISMISS_KEY) === "1") return;
+    } catch {
+      // Storage read failed (private mode, etc.) - fall through and
+      // treat as "not dismissed" rather than hiding the tip forever.
+    }
+    setVisible(true);
+  }, []);
+
+  if (!visible) return null;
 
   const handleDismiss = () => {
     try {
@@ -36,7 +44,7 @@ export default function IosDictationHint() {
     } catch {
       // ignore (private mode etc.)
     }
-    setDismissed(true);
+    setVisible(false);
   };
 
   return (
