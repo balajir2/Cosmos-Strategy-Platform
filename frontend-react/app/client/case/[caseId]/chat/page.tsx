@@ -9,6 +9,8 @@ import {
 } from "@/lib/api-client";
 import ChatMessageBubble, { SelfEvalLevel } from "@/components/ChatMessageBubble";
 import StageSidebar from "@/components/chat/StageSidebar";
+import MicButton from "@/components/chat/MicButton";
+import IosDictationHint from "@/components/chat/IosDictationHint";
 import styles from "./chat.module.css";
 
 const LEVEL_TO_STATUS: Record<SelfEvalLevel, string> = {
@@ -188,28 +190,35 @@ export default function ChatPage() {
               </button>
             </div>
           ) : (
-            <div className={styles.composer}>
-              <label className={styles.fieldLabel} htmlFor="chat-input">
-                {isSelfRatingReply ? "Add a note on why (optional)" : "Your Response"}
-              </label>
-              <textarea
-                id="chat-input"
-                className={styles.textarea}
-                rows={4}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={isSelfRatingReply ? "Add a note on why (optional)..." : "Type your response here..."}
-              />
-              <div className={styles.actionsRow}>
-                <button
-                  className={styles.sendBtn}
-                  onClick={handleSend}
-                  disabled={sending || (isSelfRatingReply ? !selfEvalStatus : !input.trim())}
-                >
-                  <i className="fa-solid fa-paper-plane"></i> {sending ? "Sending..." : "Send"}
-                </button>
+            <>
+              <IosDictationHint />
+              <div className={styles.composer}>
+                <label className={styles.fieldLabel} htmlFor="chat-input">
+                  {isSelfRatingReply ? "Add a note on why (optional)" : "Your Response"}
+                </label>
+                <textarea
+                  id="chat-input"
+                  className={styles.textarea}
+                  rows={4}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={isSelfRatingReply ? "Add a note on why (optional)..." : "Type your response here..."}
+                />
+                <div className={styles.actionsRow}>
+                  <MicButton
+                    onTranscript={(text) => setInput((prev) => (prev ? `${prev} ${text}` : text))}
+                    disabled={sending}
+                  />
+                  <button
+                    className={styles.sendBtn}
+                    onClick={handleSend}
+                    disabled={sending || (isSelfRatingReply ? !selfEvalStatus : !input.trim())}
+                  >
+                    <i className="fa-solid fa-paper-plane"></i> {sending ? "Sending..." : "Send"}
+                  </button>
+                </div>
               </div>
-            </div>
+            </>
           )}
           {error && <p className={styles.errorText}>{error}</p>}
         </div>
