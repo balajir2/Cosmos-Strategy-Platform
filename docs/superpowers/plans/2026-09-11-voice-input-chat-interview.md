@@ -29,7 +29,7 @@
 **Interfaces:**
 - Produces: `export interface UseSpeechRecognition { isSupported: boolean; isListening: boolean; transcript: string; error: string | null; start: () => void; stop: () => void; reset: () => void; }` and `export function useSpeechRecognition(): UseSpeechRecognition`. Consumed by Task 3 (`MicButton`).
 
-- [ ] **Step 1: Create the hook**
+- [x] **Step 1: Create the hook**
 
 Create `frontend-react/hooks/useSpeechRecognition.ts`:
 
@@ -208,12 +208,12 @@ export function useSpeechRecognition(): UseSpeechRecognition {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds with no TypeScript errors. Nothing imports this hook yet, so this only confirms the file itself (including the ambient `Window` interface augmentation) type-checks correctly under this project's `strict` config.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-react/hooks/useSpeechRecognition.ts
@@ -231,7 +231,7 @@ git commit -m "feat: add useSpeechRecognition hook wrapping the browser Web Spee
 - Produces new classes: `micBtn`, `micBtnListening`, `micStatus`, `iosHint`, `iosHintDismiss`. Consumed by Tasks 3 and 4.
 - Modifies the existing `.actionsRow` rule to add a gap between the (upcoming) mic button and the Send button.
 
-- [ ] **Step 1: Add a gap to the existing `.actionsRow` rule**
+- [x] **Step 1: Add a gap to the existing `.actionsRow` rule**
 
 In `frontend-react/app/client/case/[caseId]/chat/chat.module.css`, find:
 
@@ -255,7 +255,7 @@ Replace with:
 }
 ```
 
-- [ ] **Step 2: Append the new classes to the end of the file**
+- [x] **Step 2: Append the new classes to the end of the file**
 
 Append to `frontend-react/app/client/case/[caseId]/chat/chat.module.css`:
 
@@ -330,12 +330,12 @@ Append to `frontend-react/app/client/case/[caseId]/chat/chat.module.css`:
 }
 ```
 
-- [ ] **Step 3: Verify it compiles**
+- [x] **Step 3: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds. None of these classes are consumed yet (Tasks 3-4 do), so this only confirms no syntax error was introduced and nothing else regressed.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add "frontend-react/app/client/case/[caseId]/chat/chat.module.css"
@@ -353,7 +353,7 @@ git commit -m "feat: add mic button and iOS dictation hint styles"
 - Consumes: `useSpeechRecognition` (Task 1); `.micBtn`/`.micBtnListening`/`.micStatus` classes and the existing `.errorText` class (Task 2, and Task 4 of the original chat redesign plan respectively).
 - Produces: default export `MicButton(props: { onTranscript: (text: string) => void; disabled?: boolean })`. Consumed by Task 5.
 
-- [ ] **Step 1: Create the component**
+- [x] **Step 1: Create the component**
 
 Create `frontend-react/components/chat/MicButton.tsx`:
 
@@ -421,12 +421,12 @@ export default function MicButton({ onTranscript, disabled }: MicButtonProps) {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds. `MicButton` isn't imported anywhere yet, so this confirms the file itself is syntactically and type-correct with no other regression.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-react/components/chat/MicButton.tsx
@@ -444,7 +444,7 @@ git commit -m "feat: add MicButton press-and-hold voice input component"
 - Consumes: `.iosHint`/`.iosHintDismiss` classes (Task 2).
 - Produces: default export `IosDictationHint()` — a self-contained component with no props, reading `navigator.userAgent` and `localStorage` internally. Renders `null` unless the browser has no `SpeechRecognition` support and looks like iOS. Consumed by Task 5.
 
-- [ ] **Step 1: Create the component**
+- [x] **Step 1: Create the component**
 
 Create `frontend-react/components/chat/IosDictationHint.tsx`:
 
@@ -503,12 +503,12 @@ export default function IosDictationHint() {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds. Not imported anywhere yet — confirms the file itself is correct with no other regression.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-react/components/chat/IosDictationHint.tsx
@@ -526,7 +526,7 @@ git commit -m "feat: add IosDictationHint component for unsupported iOS Safari"
 - Consumes: default export `MicButton` (Task 3); default export `IosDictationHint` (Task 4).
 - Produces: the chat page with voice input wired in. No other file consumes this one.
 
-- [ ] **Step 1: Replace the file's content**
+- [x] **Step 1: Replace the file's content**
 
 Replace the ENTIRE contents of `frontend-react/app/client/case/[caseId]/chat/page.tsx` with exactly this:
 
@@ -761,12 +761,12 @@ export default function ChatPage() {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds with no TypeScript errors.
 
-- [ ] **Step 3: Manual verification**
+- [x] **Step 3: Manual verification**
 
 Run the app locally (`python backend/main.py` and `npm run dev` in `frontend-react/`, per the Quick Start guide) and, logged in as a `ClientUser` on a real `Active` project, in a browser that supports the Web Speech API (Chrome/Edge desktop):
 
@@ -779,7 +779,7 @@ Run the app locally (`python backend/main.py` and `npm run dev` in `frontend-rea
 7. In a browser without Web Speech API support (or by temporarily commenting out `window.SpeechRecognition`/`webkitSpeechRecognition` in devtools), reload the page and confirm the mic button doesn't render at all, and typing/sending is completely unaffected.
 8. If practical, test with a browser user agent spoofed to an iPhone (Chrome DevTools device toolbar, or an actual iOS device) with no Web Speech API support — confirm the "iPhone? Tap the microphone on your keyboard..." hint appears above the composer, and that dismissing it (clicking the × button) hides it and it stays hidden after a page reload.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add "frontend-react/app/client/case/[caseId]/chat/page.tsx"
