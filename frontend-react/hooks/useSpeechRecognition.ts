@@ -71,9 +71,10 @@ function getCtor(): SpeechRecognitionConstructorLite | null {
 }
 
 export function useSpeechRecognition(): UseSpeechRecognition {
-  const Ctor = getCtor();
-  const isSupported = Ctor !== null;
-
+  // Starts false so server-rendered output and the client's first
+  // hydration render match exactly (window is undefined during SSR).
+  // Flips to the real value post-mount via the effect below.
+  const [isSupported, setIsSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +82,15 @@ export function useSpeechRecognition(): UseSpeechRecognition {
   const recognitionRef = useRef<SpeechRecognitionLite | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finalTranscriptRef = useRef("");
+  // Bumped on every start() call; a recognition instance's callbacks
+  // check this against the generation they were created under so a
+  // superseded instance's late-firing onend/onresult/onerror become
+  // no-ops instead of clobbering a newer session's state.
+  const generationRef = useRef(0);
+
+  useEffect(() => {
+    setIsSupported(getCtor() !== null);
+  }, []);
 
   const clearSafety = useCallback(() => {
     if (timeoutRef.current) {
@@ -102,8 +112,25 @@ export function useSpeechRecognition(): UseSpeechRecognition {
   }, [clearSafety]);
 
   const start = useCallback(() => {
+    const Ctor = getCtor();
     if (!Ctor) return;
-    if (recognitionRef.current) return; // idempotent: already listening
+
+    // Supersede any in-flight recognition instance rather than silently
+    // no-op'ing — a quick release-then-repress on a press-and-hold mic
+    // button must not be a dead click.
+    generationRef.current += 1;
+    const myGeneration = generationRef.current;
+
+    const stale = recognitionRef.current;
+    if (stale) {
+      try {
+        stale.abort();
+      } catch {
+        // ignore
+      }
+    }
+    recognitionRef.current = null;
+    clearSafety();
 
     setError(null);
     finalTranscriptRef.current = "";
@@ -115,13 +142,20 @@ export function useSpeechRecognition(): UseSpeechRecognition {
     r.interimResults = true;
     r.maxAlternatives = 1;
 
-    r.onstart = () => setIsListening(true);
+    const isCurrent = () => generationRef.current === myGeneration;
+
+    r.onstart = () => {
+      if (!isCurrent()) return;
+      setIsListening(true);
+    };
     r.onend = () => {
+      if (!isCurrent()) return;
       setIsListening(false);
       recognitionRef.current = null;
       clearSafety();
     };
     r.onresult = (ev: SpeechRecognitionEventLite) => {
+      if (!isCurrent()) return;
       for (let i = ev.resultIndex; i < ev.results.length; i++) {
         if (ev.results[i].isFinal) {
           finalTranscriptRef.current += ev.results[i][0].transcript;
@@ -130,6 +164,7 @@ export function useSpeechRecognition(): UseSpeechRecognition {
       setTranscript(finalTranscriptRef.current);
     };
     r.onerror = (ev: SpeechRecognitionErrorEventLite) => {
+      if (!isCurrent()) return;
       if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
         setError("Microphone blocked — check browser settings to enable voice.");
       } else if (ev.error === "no-speech") {
@@ -140,12 +175,19 @@ export function useSpeechRecognition(): UseSpeechRecognition {
     };
 
     recognitionRef.current = r;
-    r.start();
+    try {
+      r.start();
+    } catch {
+      recognitionRef.current = null;
+      setIsListening(false);
+      setError("Voice error: could not start listening.");
+      return;
+    }
 
     timeoutRef.current = setTimeout(() => {
       stop();
     }, SAFETY_TIMEOUT_MS);
-  }, [Ctor, clearSafety, stop]);
+  }, [clearSafety, stop]);
 
   const reset = useCallback(() => {
     finalTranscriptRef.current = "";
