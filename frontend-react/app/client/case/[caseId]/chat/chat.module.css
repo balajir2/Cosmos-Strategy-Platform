@@ -317,7 +317,9 @@
 
 .actionsRow {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 10px;
   margin-top: 12px;
 }
 
@@ -351,4 +353,72 @@
 .errorText {
   color: var(--error);
   margin-top: 12px;
+}
+
+.micBtn {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.micBtn:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.micBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.micBtnListening {
+  background: var(--error);
+  border-color: var(--error);
+  color: #ffffff;
+  animation: micPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(194, 59, 59, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(194, 59, 59, 0); }
+}
+
+.micStatus {
+  font-size: 0.75rem;
+  color: var(--error);
+  font-weight: 600;
+  margin-right: auto;
+  white-space: nowrap;
+}
+
+.iosHint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--accent-primary-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.iosHintDismiss {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  margin-left: auto;
 }
