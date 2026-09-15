@@ -30,7 +30,7 @@
 **Interfaces:**
 - Produces: every class name currently in this file, unchanged, with new declarations. No new classes, no removed classes, except `.glow-bg` and its `::before` (an ambient dark-mode background effect with no light-mode equivalent, and confirmed during brainstorming to be dropped, not retinted).
 
-- [ ] **Step 1: Replace the file's content**
+- [x] **Step 1: Replace the file's content**
 
 Replace the ENTIRE contents of `frontend-react/app/globals.css` with exactly this:
 
@@ -1398,12 +1398,12 @@ body {
 .framework-guidance { font-size: 0.85rem; color: var(--text-tertiary); margin-top: 4px; }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds with no errors (this is a CSS-only change; a failure here would most likely mean a typo like an unclosed brace).
 
-- [ ] **Step 3: Verify no dark-theme tokens remain**
+- [x] **Step 3: Verify no dark-theme tokens remain**
 
 Run: `grep -nE -- '--bg-main|--bg-card|--border-card|--accent-blue|--accent-green|--text-muted|--shadow-premium' frontend-react/app/globals.css`
 Expected: no output (no matches) — every reference to a removed token has been replaced.
@@ -1411,7 +1411,7 @@ Expected: no output (no matches) — every reference to a removed token has been
 Run: `grep -nE "rgba\(255, ?255, ?255|#fff" frontend-react/app/globals.css`
 Expected: exactly 2 matches — `--bg-surface: #ffffff;` (the token definition itself, legitimate) and `.btn-primary { ... color: #fff; }` (button label text on a solid dark fill, also legitimate). No `rgba(255, 255, 255, ...)` translucent-white-overlay usage should remain anywhere. If any other match appears, it's a missed dark-mode remnant and must be fixed before proceeding.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add frontend-react/app/globals.css
@@ -1426,11 +1426,11 @@ git commit -m "feat: retheme globals.css to Light Professional app-wide"
 
 **Files:** none (verification only; fix-forward in `frontend-react/app/globals.css` if this task finds a real defect)
 
-- [ ] **Step 1: Run the app locally**
+- [x] **Step 1: Run the app locally**
 
 Per the Quick Start guide: `python backend/main.py` (from `backend/`) and `npm run dev` (from `frontend-react/`).
 
-- [ ] **Step 2: Walk through every affected page and confirm Light Professional rendering**
+- [x] **Step 2: Walk through every affected page and confirm Light Professional rendering**
 
 Logged in as a `SystemAdmin`/`Consultant` and separately as a `ClientUser`, visit each of the following and confirm: bright `--bg-page`/`--bg-surface` backgrounds (no dark backgrounds anywhere), dark text on light backgrounds (no invisible white-on-white or unreadable text), no leftover blur/glow/gradient-text effects, hover/focus states read as a border/color change (not a colored glow), and status badges/pills render in the level-1/2/3 or success/error colors as appropriate:
 
@@ -1441,15 +1441,15 @@ Logged in as a `SystemAdmin`/`Consultant` and separately as a `ClientUser`, visi
 5. `/admin` — all three tabs (Users, Projects, Framework Knowledge): the tinted sidebar (per the approved mockup) against the white main content area, admin tabs, table rows, role/status pills.
 6. A project's setup page (`/admin/project/{id}`, or wherever the Consultant setup page lives) — project header/status badge, the artifacts dropzone and artifact list with purpose/status pills, the assign-member row, and both `FrameworkEditor` (stage/question tree, including the `.framework-question`'s left accent border) and `CalibrationEditor`.
 
-- [ ] **Step 3: Regression-check the chat interview screen**
+- [x] **Step 3: Regression-check the chat interview screen**
 
 Visit a `ClientUser`'s chat interview screen (`/client/case/{id}/chat`) and confirm it renders exactly as it did before this plan — its own `chat.module.css` is untouched, so this should be a no-op visually. This is the canary for any accidental leakage from the `globals.css` rewrite.
 
-- [ ] **Step 4: Fix forward if anything is wrong**
+- [x] **Step 4: Fix forward if anything is wrong**
 
 If Step 2 or Step 3 finds a real defect (a missed token, a broken layout, an unreadable color combination), fix it directly in `frontend-react/app/globals.css`, re-run `npm run build`, and re-check the specific page that had the issue. If no defects are found, no code change is needed for this step.
 
-- [ ] **Step 5: Commit (only if Step 4 made changes)**
+- [x] **Step 5: Commit (only if Step 4 made changes)**
 
 ```bash
 git add frontend-react/app/globals.css
