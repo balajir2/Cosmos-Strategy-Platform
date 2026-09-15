@@ -46,7 +46,7 @@ export default function RegisterPage() {
             <input id="register-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           <div className="actions-row">
-            <Link href="/login" style={{ color: "var(--accent-blue)", fontSize: "0.9rem", textDecoration: "none" }}>
+            <Link href="/login" style={{ color: "var(--accent-primary)", fontSize: "0.9rem", textDecoration: "none" }}>
               Already have an account?
             </Link>
             <button className="btn btn-primary" type="submit" disabled={submitting}>
@@ -54,8 +54,8 @@ export default function RegisterPage() {
             </button>
           </div>
         </form>
-        {error && <p style={{ color: "var(--level-1)", marginTop: 12 }}>{error}</p>}
-        <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: 16 }}>
+        {error && <p style={{ color: "var(--error)", marginTop: 12 }}>{error}</p>}
+        <p style={{ color: "var(--text-tertiary)", fontSize: "0.8rem", marginTop: 16 }}>
           New accounts have no project access until a Consultant assigns you to a project, or a SystemAdmin
           promotes you via the Neon console.
         </p>

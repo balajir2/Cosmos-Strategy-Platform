@@ -333,7 +333,7 @@ export default function ProjectSetupPage() {
                 </div>
               );
             })}
-            {artifacts.length === 0 && <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No documents uploaded yet.</p>}
+            {artifacts.length === 0 && <p style={{ color: "var(--text-tertiary)", fontSize: "0.85rem" }}>No documents uploaded yet.</p>}
           </div>
         </div>
       </div>
@@ -350,7 +350,7 @@ export default function ProjectSetupPage() {
           <i className="fa-solid fa-bolt"></i> {activating ? "Activating..." : project?.status === "Active" ? "Active" : "Activate Project"}
         </button>
       </div>
-      {error && <p style={{ color: "var(--level-1)", marginTop: 12 }}>{error}</p>}
+      {error && <p style={{ color: "var(--error)", marginTop: 12 }}>{error}</p>}
     </div>
   );
 }

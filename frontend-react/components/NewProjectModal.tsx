@@ -90,7 +90,7 @@ export default function NewProjectModal({ onClose, onCreated }: { onClose: () =>
             </button>
           </div>
         </form>
-        {error && <p style={{ color: "var(--level-1)", marginTop: 12 }}>{error}</p>}
+        {error && <p style={{ color: "var(--error)", marginTop: 12 }}>{error}</p>}
       </div>
     </div>
   );

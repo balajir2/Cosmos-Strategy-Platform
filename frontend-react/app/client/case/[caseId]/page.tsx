@@ -92,7 +92,7 @@ export default function CaseHubPage() {
             <p>Client Workspace</p>
           </div>
         </header>
-        <div className="glass-card" style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
+        <div className="glass-card" style={{ padding: 32, textAlign: "center", color: "var(--text-tertiary)" }}>
           <p>Not yet activated by your consultant</p>
         </div>
       </div>
@@ -121,14 +121,14 @@ export default function CaseHubPage() {
                 style={{
                   width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: "0.8rem", fontWeight: 700,
-                  background: i < currentLevel || isComplete ? "var(--accent-green)" : i === currentLevel ? "var(--accent-blue)" : "rgba(255,255,255,0.05)",
-                  color: i <= currentLevel || isComplete ? "#fff" : "var(--text-muted)",
+                  background: i < currentLevel || isComplete ? "var(--success)" : i === currentLevel ? "var(--accent-primary)" : "var(--bg-page)",
+                  color: i <= currentLevel || isComplete ? "#fff" : "var(--text-tertiary)",
                 }}
               >
                 {i < currentLevel || isComplete ? <i className="fa-solid fa-check"></i> : i + 1}
               </div>
               {i < totalLevels - 1 && (
-                <div style={{ width: 24, height: 2, background: i < currentLevel ? "var(--accent-green)" : "rgba(255,255,255,0.1)" }}></div>
+                <div style={{ width: 24, height: 2, background: i < currentLevel ? "var(--success)" : "var(--border)" }}></div>
               )}
             </div>
           ))}
@@ -145,7 +145,7 @@ export default function CaseHubPage() {
           </button>
         )}
       </div>
-      {error && <p style={{ color: "var(--level-1)", marginTop: 12 }}>{error}</p>}
+      {error && <p style={{ color: "var(--error)", marginTop: 12 }}>{error}</p>}
     </div>
   );
 }

@@ -53,14 +53,14 @@ export default function ClientProjectList() {
                 <i className="fa-solid fa-arrow-right"></i>
               </Link>
             ) : (
-              <div className="case-card-footer" style={{ color: "var(--text-muted)" }}>
+              <div className="case-card-footer" style={{ color: "var(--text-tertiary)" }}>
                 <span>Not yet activated by your consultant</span>
               </div>
             )}
           </div>
         ))}
         {projects.length === 0 && (
-          <p style={{ color: "var(--text-muted)" }}>No engagements assigned to you yet.</p>
+          <p style={{ color: "var(--text-tertiary)" }}>No engagements assigned to you yet.</p>
         )}
       </div>
     </>

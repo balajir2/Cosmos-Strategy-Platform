@@ -130,10 +130,10 @@ export default function ProjectsTab() {
 
   return (
     <div>
-      {error && <p style={{ color: "var(--level-1)", marginBottom: 12 }}>{error}</p>}
+      {error && <p style={{ color: "var(--error)", marginBottom: 12 }}>{error}</p>}
 
       {projects.length === 0 && !error && (
-        <p style={{ color: "var(--text-muted)", marginBottom: 12 }}>
+        <p style={{ color: "var(--text-tertiary)", marginBottom: 12 }}>
           No projects yet. Create one from the Projects dashboard, then it will appear here.
         </p>
       )}

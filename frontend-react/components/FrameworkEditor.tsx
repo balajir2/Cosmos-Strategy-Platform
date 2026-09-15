@@ -149,7 +149,7 @@ export default function FrameworkEditor({ projectId }: { projectId: number }) {
         </div>
       ))}
 
-      {error && <p style={{ color: "var(--level-1)", marginTop: 12 }}>{error}</p>}
+      {error && <p style={{ color: "var(--error)", marginTop: 12 }}>{error}</p>}
     </div>
   );
 }

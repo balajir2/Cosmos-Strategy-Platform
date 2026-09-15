@@ -42,7 +42,7 @@ export default function LoginPage() {
             <input id="login-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           <div className="actions-row">
-            <Link href="/register" style={{ color: "var(--accent-blue)", fontSize: "0.9rem", textDecoration: "none" }}>
+            <Link href="/register" style={{ color: "var(--accent-primary)", fontSize: "0.9rem", textDecoration: "none" }}>
               Need an account?
             </Link>
             <button className="btn btn-primary" type="submit" disabled={submitting}>
@@ -50,7 +50,7 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
-        {error && <p style={{ color: "var(--level-1)", marginTop: 12 }}>{error}</p>}
+        {error && <p style={{ color: "var(--error)", marginTop: 12 }}>{error}</p>}
       </div>
     </div>
   );

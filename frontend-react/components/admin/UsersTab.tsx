@@ -100,10 +100,10 @@ export default function UsersTab() {
         </form>
       </div>
 
-      {error && <p style={{ color: "var(--level-1)", marginBottom: 12 }}>{error}</p>}
+      {error && <p style={{ color: "var(--error)", marginBottom: 12 }}>{error}</p>}
 
       {users.length === 0 && !error && (
-        <p style={{ color: "var(--text-muted)", marginBottom: 12 }}>No users yet.</p>
+        <p style={{ color: "var(--text-tertiary)", marginBottom: 12 }}>No users yet.</p>
       )}
 
       <div className="admin-list">

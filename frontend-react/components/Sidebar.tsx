@@ -51,7 +51,7 @@ export default function Sidebar() {
           )}
         </nav>
       </div>
-      <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--border-card)" }}>
+      <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--border)" }}>
         {user ? (
           <>
             <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", padding: "0 14px", marginBottom: 8 }}>

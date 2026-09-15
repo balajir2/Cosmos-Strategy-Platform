@@ -64,10 +64,10 @@ export default function FrameworkKnowledgeTab() {
         </label>
       </div>
 
-      {error && <p style={{ color: "var(--level-1)", marginBottom: 12 }}>{error}</p>}
+      {error && <p style={{ color: "var(--error)", marginBottom: 12 }}>{error}</p>}
 
       {sources.length === 0 && !error && (
-        <p style={{ color: "var(--text-muted)", marginBottom: 12 }}>No Cosmos Knowledge sources uploaded yet.</p>
+        <p style={{ color: "var(--text-tertiary)", marginBottom: 12 }}>No Cosmos Knowledge sources uploaded yet.</p>
       )}
 
       <div className="admin-list">

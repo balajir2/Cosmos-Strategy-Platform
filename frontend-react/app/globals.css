@@ -18,6 +18,7 @@
     --level-1-bg: #ece9f7; --level-1-fg: #5b4d8a;
     --level-2-bg: #fdeedb; --level-2-fg: #a8631a;
     --level-3-bg: #dff3e7; --level-3-fg: #1f8a55;
+    --error-bg: #f9e3e3;
 
     --success: #1f8a55;
     --error: #c23b3b;
@@ -409,7 +410,7 @@ body {
 }
 
 .level-item.completed {
-    border-color: var(--level-3-bg);
+    border-color: var(--level-3-fg);
     background: var(--level-3-bg);
 }
 
@@ -477,7 +478,7 @@ body {
     display: inline-block;
     padding: 6px 12px;
     background: var(--accent-primary-soft);
-    border: 1px solid var(--accent-primary-soft);
+    border: 1px solid var(--accent-primary);
     border-radius: 8px;
     font-size: 0.75rem;
     font-weight: 700;
@@ -911,13 +912,13 @@ body {
     letter-spacing: 0.5px;
     background: var(--level-2-bg);
     color: var(--level-2-fg);
-    border: 1px solid var(--level-2-bg);
+    border: 1px solid var(--level-2-fg);
 }
 
 .project-status-badge.active {
     background: var(--level-3-bg);
     color: var(--success);
-    border-color: var(--level-3-bg);
+    border-color: var(--success);
 }
 
 .project-setup-grid {
@@ -1000,7 +1001,7 @@ body {
     letter-spacing: 0.5px;
     color: var(--accent-primary);
     background: var(--accent-primary-soft);
-    border: 1px solid var(--accent-primary-soft);
+    border: 1px solid var(--accent-primary);
     padding: 3px 8px;
     border-radius: 6px;
 }
@@ -1125,7 +1126,7 @@ body {
 
 .status-pill.transcript-needed {
     color: var(--error);
-    background: var(--level-1-bg);
+    background: var(--error-bg);
 }
 
 .project-actions-row {

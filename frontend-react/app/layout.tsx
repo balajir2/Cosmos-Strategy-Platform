@@ -18,8 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
       </head>
-      <body className="dark-theme">
-        <div className="glow-bg"></div>
+      <body>
         <div className="app-shell">
           <Sidebar />
           <main className="app-main">{children}</main>
