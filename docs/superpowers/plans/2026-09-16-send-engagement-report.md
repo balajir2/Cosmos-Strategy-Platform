@@ -1,6 +1,6 @@
 # Send Engagement Report Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a manual "Send Report" action, available to any project member on an `Active` project, that emails a fully-compiled HTML report — including the AI-generated Level 1/2/3 comparative benchmark text per question — to every member of the project, via the existing Resend integration.
 
@@ -29,7 +29,7 @@
 **Interfaces:**
 - Produces: three new nullable `TEXT` columns on `responses` — `benchmark_level_1`, `benchmark_level_2`, `benchmark_level_3`. Consumed by Task 2 (`responses_db.py`).
 
-- [ ] **Step 1: Add the migration**
+- [x] **Step 1: Add the migration**
 
 In `backend/database.py`, find the end of the `responses` table's `CREATE TABLE IF NOT EXISTS` block:
 
@@ -63,17 +63,17 @@ Immediately after that closing `""")`, insert:
     cursor.execute("ALTER TABLE responses ADD COLUMN IF NOT EXISTS benchmark_level_3 TEXT;")
 ```
 
-- [ ] **Step 2: Run the migration against the test/dev database**
+- [x] **Step 2: Run the migration against the test/dev database**
 
 Run: `cd backend && python database.py`
 Expected: `Database initialisation completed successfully.` (idempotent — safe to run against a database that already has these columns from a prior run of this same step).
 
-- [ ] **Step 3: Run the full backend suite**
+- [x] **Step 3: Run the full backend suite**
 
 Run: `pytest`
 Expected: PASS (458 passed) — this step is purely additive DDL, nothing should break yet since no code reads/writes the new columns until Task 2.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/database.py
@@ -95,7 +95,7 @@ git commit -m "feat: add benchmark_level_1/2/3 columns to responses"
 - Modifies: `get_responses_for_project(project_id) -> list` — each returned dict now also includes `benchmark_level_1`, `benchmark_level_2`, `benchmark_level_3`.
 - Consumed by Task 3 (`chat_engine.py`, new keyword arguments) and Task 4 (`brief.py`, reads the three new dict keys).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Replace the ENTIRE contents of `tests/test_responses_db.py` with:
 
@@ -250,12 +250,12 @@ def test_get_responses_for_project_returns_joined_rows(mock_get_conn):
     }]
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pytest tests/test_responses_db.py -v`
 Expected: multiple FAILs — `params` assertions won't match the current 6-element tuples, `_RESPONSE_DICT` won't have `benchmark_level_1/2/3` keys, and `test_save_response_stores_benchmark_levels` will fail with a `TypeError` (unexpected keyword argument).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Replace the ENTIRE contents of `backend/responses_db.py` with:
 
@@ -353,17 +353,17 @@ def get_responses_for_project(project_id: int) -> list:
     return results
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `pytest tests/test_responses_db.py -v`
 Expected: PASS (10 tests)
 
-- [ ] **Step 5: Run the full backend suite**
+- [x] **Step 5: Run the full backend suite**
 
 Run: `pytest`
 Expected: PASS — check specifically for any OTHER test file that asserts an exact `save_response` call signature or an exact response-dict shape (e.g. `tests/test_response_save_endpoint.py`, `tests/test_project_evaluation_endpoint.py`) and fix any that now fail because they don't expect the three new keys/params. If any such test fails, update its expected dict/call to include `benchmark_level_1: None, benchmark_level_2: None, benchmark_level_3: None` (or the equivalent call kwargs), matching the pattern in this task's own updated fixtures.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/responses_db.py tests/test_responses_db.py
@@ -383,7 +383,7 @@ git commit -m "feat: persist and return benchmark_level_1/2/3 in responses_db"
 **Interfaces:**
 - Modifies: the `awaiting_self_rating` branch in `advance_session` now also parses `level_messages[-3]` (the benchmark message, one position before the `-4]` answer message already read there) as JSON and passes its `level_1`/`level_2`/`level_3` values to `responses_db.save_response` as the three new keyword arguments from Task 2.
 
-- [ ] **Step 1: Update the two existing tests that assert an exact `save_response` call**
+- [x] **Step 1: Update the two existing tests that assert an exact `save_response` call**
 
 In `tests/test_chat_engine.py`, find `test_advance_session_project_scoped_saves_response_when_status_given` (currently ending with):
 
@@ -437,7 +437,7 @@ Replace the `mock_save_response.assert_called_once_with(...)` block with:
     )
 ```
 
-- [ ] **Step 2: Add a new test for the malformed/legacy-benchmark fallback**
+- [x] **Step 2: Add a new test for the malformed/legacy-benchmark fallback**
 
 Append to `tests/test_chat_engine.py` (after the two tests just modified, before `test_advance_session_case_based_ignores_self_evaluation_status`):
 
@@ -487,12 +487,12 @@ def test_advance_session_project_scoped_passes_none_benchmarks_when_not_valid_js
     )
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `pytest tests/test_chat_engine.py -v`
 Expected: the two modified tests FAIL (current code doesn't pass `benchmark_level_1/2/3` at all, so the mock call won't match); the new test FAILS with an `IndexError` or similar, since the current code doesn't attempt to read `level_messages[-3]` at all yet.
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 In `backend/chat_engine.py`, find the `awaiting_self_rating` branch:
 
@@ -568,17 +568,17 @@ Replace it with:
             )
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `pytest tests/test_chat_engine.py -v`
 Expected: PASS (all tests in the file)
 
-- [ ] **Step 6: Run the full backend suite**
+- [x] **Step 6: Run the full backend suite**
 
 Run: `pytest`
 Expected: PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/chat_engine.py tests/test_chat_engine.py
@@ -598,7 +598,7 @@ git commit -m "feat: capture benchmark text into responses at self-evaluation ti
 **Interfaces:**
 - Produces: `compile_brief_html(project: dict, responses: list) -> str`. Consumed by Task 6 (`main.py`'s new endpoint).
 
-- [ ] **Step 1: Extend the shared fixture and write the failing tests**
+- [x] **Step 1: Extend the shared fixture and write the failing tests**
 
 In `tests/test_brief.py`, replace the `_RESPONSES` fixture:
 
@@ -695,12 +695,12 @@ def test_compile_brief_html_escapes_user_supplied_text():
     assert "&lt;script&gt;" in result
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pytest tests/test_brief.py -v`
 Expected: the existing markdown tests still PASS (fixture gained new keys they don't look at); the new `compile_brief_html` tests FAIL with `AttributeError: module 'brief' has no attribute 'compile_brief_html'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Append to `backend/brief.py`:
 
@@ -774,17 +774,17 @@ def compile_brief_html(project: dict, responses: list) -> str:
     return "".join(parts)
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `pytest tests/test_brief.py -v`
 Expected: PASS (all tests in the file)
 
-- [ ] **Step 5: Run the full backend suite**
+- [x] **Step 5: Run the full backend suite**
 
 Run: `pytest`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/brief.py tests/test_brief.py
@@ -804,7 +804,7 @@ git commit -m "feat: add compile_brief_html for the Send Report feature"
 **Interfaces:**
 - Produces: `send_report_email(to_email: str, project_name: str, html_report: str) -> bool`. Consumed by Task 6 (`main.py`'s new endpoint).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_email_provider.py`:
 
@@ -844,12 +844,12 @@ def test_send_report_email_returns_false_on_request_failure(mock_post, monkeypat
     assert result is False
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pytest tests/test_email_provider.py -v`
 Expected: the three new tests FAIL with `AttributeError: module 'email_provider' has no attribute 'send_report_email'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Append to `backend/email_provider.py`:
 
@@ -889,17 +889,17 @@ def send_report_email(to_email: str, project_name: str, html_report: str) -> boo
         return False
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `pytest tests/test_email_provider.py -v`
 Expected: PASS (all tests in the file)
 
-- [ ] **Step 5: Run the full backend suite**
+- [x] **Step 5: Run the full backend suite**
 
 Run: `pytest`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/email_provider.py tests/test_email_provider.py
@@ -920,7 +920,7 @@ git commit -m "feat: add send_report_email to email_provider"
 - Consumes: `responses_db.get_responses_for_project` (Task 2), `brief.compile_brief_html` (Task 4), `projects_db.list_project_members`, `email_provider.send_report_email` (Task 5).
 - Produces: `POST /api/projects/{project_id}/send-report` → `{"sent": true, "recipients": [...]}` on at least one successful send, or `{"sent": false, "recipients": [...], "html": "..."}` if none succeeded (e.g. `RESEND_API_KEY` unset). Gated identically to `/evaluate`/`/responses`/`/brief`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_send_report_endpoint.py`:
 
@@ -1024,12 +1024,12 @@ def test_send_report_returns_html_fallback_when_no_recipient_sent(
         main.app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_send_report_endpoint.py -v`
 Expected: FAIL — `404 Not Found` for all four (the route doesn't exist yet)
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 In `backend/main.py`, find:
 
@@ -1068,17 +1068,17 @@ def send_project_report(
     return {"sent": True, "recipients": recipients}
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pytest tests/test_send_report_endpoint.py -v`
 Expected: PASS (all 4 tests)
 
-- [ ] **Step 5: Run the full backend suite**
+- [x] **Step 5: Run the full backend suite**
 
 Run: `pytest`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/main.py tests/test_send_report_endpoint.py
@@ -1097,7 +1097,7 @@ git commit -m "feat: add POST /api/projects/{id}/send-report endpoint"
 **Interfaces:**
 - Produces: `export interface SendReportResult { sent: boolean; recipients: string[]; html?: string; }` and `export async function sendReport(projectId: number): Promise<SendReportResult>`. Consumed by Tasks 8 and 9.
 
-- [ ] **Step 1: Add the type and function**
+- [x] **Step 1: Add the type and function**
 
 In `frontend-react/lib/api-client.ts`, find:
 
@@ -1128,12 +1128,12 @@ export async function sendReport(projectId: number): Promise<SendReportResult> {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds with no new TypeScript errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-react/lib/api-client.ts
@@ -1153,7 +1153,7 @@ git commit -m "feat: add sendReport API client function"
 - Consumes: `sendReport`, `SendReportResult` (Task 7).
 - Produces: a "Send Report" button and feedback area inside the existing `completeCard`, alongside the unchanged "Download Brief" button.
 
-- [ ] **Step 1: Replace the file's content**
+- [x] **Step 1: Replace the file's content**
 
 Replace the ENTIRE contents of `frontend-react/app/client/case/[caseId]/chat/page.tsx` with exactly this:
 
@@ -1425,12 +1425,12 @@ export default function ChatPage() {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds with no TypeScript errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add "frontend-react/app/client/case/[caseId]/chat/page.tsx"
@@ -1450,7 +1450,7 @@ git commit -m "feat: add Send Report button to the chat completion screen"
 - Consumes: `sendReport`, `SendReportResult` (Task 7).
 - Produces: a "Send Report" button and feedback area in the project-actions area, visible whenever the project is `Active`.
 
-- [ ] **Step 1: Add the import**
+- [x] **Step 1: Add the import**
 
 In `frontend-react/app/admin/project/[caseId]/page.tsx`, find:
 
@@ -1470,7 +1470,7 @@ import {
 } from "@/lib/api-client";
 ```
 
-- [ ] **Step 2: Add state**
+- [x] **Step 2: Add state**
 
 Find:
 
@@ -1489,7 +1489,7 @@ Insert immediately after it:
   const [sendReportResult, setSendReportResult] = useState<SendReportResult | null>(null);
 ```
 
-- [ ] **Step 3: Add the handler**
+- [x] **Step 3: Add the handler**
 
 Find:
 
@@ -1516,7 +1516,7 @@ Insert immediately before it:
 
 ```
 
-- [ ] **Step 4: Add the button and feedback area**
+- [x] **Step 4: Add the button and feedback area**
 
 Find:
 
@@ -1572,12 +1572,12 @@ Replace with:
 }
 ```
 
-- [ ] **Step 5: Verify it compiles**
+- [x] **Step 5: Verify it compiles**
 
 Run: `cd frontend-react && npm run build`
 Expected: build succeeds with no TypeScript errors.
 
-- [ ] **Step 6: Manual verification**
+- [x] **Step 6: Manual verification**
 
 Run the app locally (`python backend/main.py` and `npm run dev` in `frontend-react/`) and, on a real `Active` project with at least one answered-and-self-evaluated question:
 
@@ -1586,12 +1586,12 @@ Run the app locally (`python backend/main.py` and `npm run dev` in `frontend-rea
 3. Confirm clicking "Send Report" on a project with NO responses yet doesn't error — the report should render with "No responses have been submitted for this project yet."
 4. Confirm the existing "Download Brief" button still works unchanged (still downloads the plain markdown, no benchmark content — this button was deliberately not touched by this plan).
 
-- [ ] **Step 7: Run the full backend suite one more time**
+- [x] **Step 7: Run the full backend suite one more time**
 
 Run: `pytest`
 Expected: PASS (this task made no backend changes, but this confirms nothing in the working tree broke it)
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add "frontend-react/app/admin/project/[caseId]/page.tsx"
