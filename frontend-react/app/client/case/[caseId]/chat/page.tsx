@@ -217,6 +217,7 @@ export default function ChatPage() {
                     <p className={styles.errorText}>Email isn&apos;t configured — copy the report below and send it yourself:</p>
                     <textarea
                       readOnly
+                      aria-label="Compiled report HTML"
                       value={sendReportResult.html}
                       className={styles.textarea}
                       rows={6}
