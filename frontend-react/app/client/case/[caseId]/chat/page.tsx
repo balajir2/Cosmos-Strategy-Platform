@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   createChatSession, postChatMessage, getChatSession, getBrief, getProject, getStageProgress,
+  sendReport, SendReportResult,
   getCachedChatSessionId, setCachedChatSessionId,
   ChatMessage as ChatMessageType, StageProgress,
 } from "@/lib/api-client";
@@ -40,6 +41,8 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sendingReport, setSendingReport] = useState(false);
+  const [sendReportResult, setSendReportResult] = useState<SendReportResult | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -131,6 +134,19 @@ export default function ChatPage() {
     }
   }
 
+  async function handleSendReport() {
+    setSendingReport(true);
+    setError(null);
+    try {
+      const result = await sendReport(projectId);
+      setSendReportResult(result);
+    } catch {
+      setError("Could not send the report. Is the backend running?");
+    } finally {
+      setSendingReport(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="loading-spinner">
@@ -188,6 +204,27 @@ export default function ChatPage() {
               <button className={styles.sendBtn} onClick={handleDownloadBrief} style={{ marginTop: 16 }}>
                 <i className="fa-solid fa-download"></i> Download Brief
               </button>
+              <button className={styles.sendBtn} onClick={handleSendReport} disabled={sendingReport} style={{ marginTop: 16, marginLeft: 12 }}>
+                <i className="fa-solid fa-paper-plane"></i> {sendingReport ? "Sending..." : "Send Report"}
+              </button>
+              {sendReportResult && (
+                sendReportResult.sent ? (
+                  <p style={{ color: "var(--success)", marginTop: 12 }}>
+                    Report sent to: {sendReportResult.recipients.join(", ")}
+                  </p>
+                ) : (
+                  <div style={{ marginTop: 12, textAlign: "left" }}>
+                    <p className={styles.errorText}>Email isn&apos;t configured — copy the report below and send it yourself:</p>
+                    <textarea
+                      readOnly
+                      value={sendReportResult.html}
+                      className={styles.textarea}
+                      rows={6}
+                      onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                    />
+                  </div>
+                )
+              )}
             </div>
           ) : (
             <>
