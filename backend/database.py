@@ -190,6 +190,14 @@ def init_db():
     );
     """)
 
+    # Send Engagement Report (added 2026-09-16) - captures the AI-generated
+    # Level 1/2/3 benchmark text per response at self-evaluation time, so a
+    # compiled report can include it without reconstructing it from
+    # chat_messages history later. Nullable, no backfill for pre-existing rows.
+    cursor.execute("ALTER TABLE responses ADD COLUMN IF NOT EXISTS benchmark_level_1 TEXT;")
+    cursor.execute("ALTER TABLE responses ADD COLUMN IF NOT EXISTS benchmark_level_2 TEXT;")
+    cursor.execute("ALTER TABLE responses ADD COLUMN IF NOT EXISTS benchmark_level_3 TEXT;")
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS calibration_responses (
         id BIGSERIAL PRIMARY KEY,
