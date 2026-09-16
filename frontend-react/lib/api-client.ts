@@ -684,6 +684,20 @@ export async function getBrief(projectId: number): Promise<Brief> {
   return res.json();
 }
 
+export interface SendReportResult {
+  sent: boolean;
+  recipients: string[];
+  html?: string;
+}
+
+export async function sendReport(projectId: number): Promise<SendReportResult> {
+  const res = await authFetch(`/api/projects/${projectId}/send-report`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to send report: ${res.status}`));
+  return res.json();
+}
+
 // --- Chat interview (extended for project-scoped sessions) -------------------
 
 export interface ChatMessage {
