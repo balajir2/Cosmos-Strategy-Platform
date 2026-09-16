@@ -464,6 +464,7 @@ def test_advance_session_project_scoped_saves_response_when_status_given(
     mock_save_response.assert_called_once_with(
         FAKE_PROJECT_ID, 100, submitted_text="my original answer",
         self_evaluation_notes="I think this is Strong because...", self_evaluation_status="Strong",
+        benchmark_level_1="l1", benchmark_level_2="l2", benchmark_level_3="l3",
     )
 
 
@@ -512,6 +513,52 @@ def test_advance_session_project_scoped_passes_none_not_empty_string_for_blank_n
     mock_save_response.assert_called_once_with(
         FAKE_PROJECT_ID, 100, submitted_text="my original answer",
         self_evaluation_notes=None, self_evaluation_status="Strong",
+        benchmark_level_1="l1", benchmark_level_2="l2", benchmark_level_3="l3",
+    )
+
+
+@patch("chat_engine.responses_db.save_response")
+@patch("chat_engine.process_db.get_process_detail", return_value=FAKE_PROCESS_DETAIL)
+@patch("chat_engine.projects_db.get_project_by_id", return_value=FAKE_PROJECT)
+@patch("chat_engine.add_message")
+@patch("chat_engine.get_level_messages")
+@patch("chat_engine.get_messages")
+@patch("chat_engine.update_session")
+@patch("chat_engine.get_session")
+def test_advance_session_project_scoped_passes_none_benchmarks_when_not_valid_json(
+    mock_get_session, mock_update_session, mock_get_messages, mock_get_level_messages, mock_add_message,
+    mock_get_project, mock_get_process, mock_save_response,
+):
+    # Defensive fallback: if the message at the benchmark's expected position
+    # isn't valid JSON (unexpected/corrupted data - every real project-scoped
+    # session's _generate_benchmarks always writes valid JSON there), save
+    # the response with all three benchmark columns as None rather than
+    # raising, matching this codebase's graceful-degradation philosophy.
+    mock_get_session.return_value = {"id": 1, "case_id": None, "project_id": FAKE_PROJECT_ID, "current_level_index": 0, "phase": "awaiting_self_rating"}
+    mock_get_messages.return_value = [
+        {"id": 1, "role": "assistant", "content": "q", "message_type": "question", "level_index": 0, "created_at": "t"},
+        {"id": 5, "role": "assistant", "content": "q", "message_type": "question", "level_index": 0, "created_at": "t"},
+        {"id": 9, "role": "assistant", "content": "q", "message_type": "question", "level_index": 0, "created_at": "t"},
+    ]
+    mock_get_level_messages.return_value = [
+        {"role": "assistant", "content": "Project question one?"},
+        {"role": "user", "content": "my original answer"},
+        {"role": "assistant", "content": "not valid json, a plain-text legacy benchmark"},
+        {"role": "assistant", "content": "Where does your answer fall, and why?"},
+        {"role": "user", "content": "I think this is Strong because..."},
+    ]
+    mock_add_message.side_effect = [
+        {"id": 30, "role": "user", "content": "I think this is Strong because...", "message_type": "chat", "level_index": 0, "created_at": "t"},
+        {"id": 31, "role": "assistant", "content": "Project question two?", "message_type": "question", "level_index": 1, "created_at": "t"},
+    ]
+
+    result = chat_engine.advance_session(_fake_rag(), 1, "I think this is Strong because...", self_evaluation_status="Strong")
+
+    assert result["phase"] == "awaiting_answer"
+    mock_save_response.assert_called_once_with(
+        FAKE_PROJECT_ID, 100, submitted_text="my original answer",
+        self_evaluation_notes="I think this is Strong because...", self_evaluation_status="Strong",
+        benchmark_level_1=None, benchmark_level_2=None, benchmark_level_3=None,
     )
 
 

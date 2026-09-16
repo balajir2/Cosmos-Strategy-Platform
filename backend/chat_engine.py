@@ -273,6 +273,23 @@ def advance_session(rag, session_id: int, user_content: str, self_evaluation_sta
             # runs, now 3 positions further back since the benchmark message, the
             # self-rating prompt, and this self-eval reply have since been appended.
             submitted_text = level_messages[-4]["content"] if len(level_messages) >= 4 else ""
+            # The benchmark message itself sits one position later than the answer
+            # (sequence: answer, benchmark, self_rating_prompt, this reply) - parse
+            # it here, while it's already in scope, so the Send Report feature
+            # (backend/brief.py's compile_brief_html) doesn't need to reconstruct
+            # it from chat_messages history later. A non-JSON message here means a
+            # legacy plain-text benchmark (old case-based sessions don't reach this
+            # project_id-gated branch at all, so this is purely defensive) - fall
+            # back to None for all three rather than raising.
+            benchmark_level_1 = benchmark_level_2 = benchmark_level_3 = None
+            if len(level_messages) >= 3:
+                try:
+                    benchmark_payload = json.loads(level_messages[-3]["content"])
+                    benchmark_level_1 = benchmark_payload.get("level_1")
+                    benchmark_level_2 = benchmark_payload.get("level_2")
+                    benchmark_level_3 = benchmark_payload.get("level_3")
+                except (json.JSONDecodeError, AttributeError):
+                    pass
             # An empty note must be passed through as None, not "" - responses_db's
             # upsert uses COALESCE(EXCLUDED.self_evaluation_notes, responses.self_evaluation_notes)
             # to preserve a previously-saved note when the new value is SQL NULL, but
@@ -284,6 +301,7 @@ def advance_session(rag, session_id: int, user_content: str, self_evaluation_sta
             responses_db.save_response(
                 project_id, question["id"], submitted_text=submitted_text,
                 self_evaluation_notes=(user_content or None), self_evaluation_status=self_evaluation_status,
+                benchmark_level_1=benchmark_level_1, benchmark_level_2=benchmark_level_2, benchmark_level_3=benchmark_level_3,
             )
 
         question_count = _question_count_for_level(session_id, level_index)
