@@ -525,6 +525,26 @@ def get_project_stage_progress(
 ):
     return {"stages": process_db.get_stage_summary(project["process_id"])}
 
+@app.post("/api/projects/{project_id}/send-report")
+def send_project_report(
+    project_id: int,
+    member: dict = Depends(require_project_member),
+    project: dict = Depends(require_active_project),
+):
+    responses = responses_db.get_responses_for_project(project_id)
+    html_report = brief.compile_brief_html(project, responses)
+    members = projects_db.list_project_members(project_id)
+    recipients = [m["email"] for m in members]
+
+    sent_to_anyone = False
+    for email in recipients:
+        if email_provider.send_report_email(email, project["name"], html_report):
+            sent_to_anyone = True
+
+    if not sent_to_anyone:
+        return {"sent": False, "recipients": recipients, "html": html_report}
+    return {"sent": True, "recipients": recipients}
+
 
 def _reject_blank(value, field: str):
     if value is not None and not value.strip():
