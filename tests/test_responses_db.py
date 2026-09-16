@@ -17,11 +17,12 @@ def _fake_conn(fetchone_result=None, fetchall_result=None):
     return conn, cursor
 
 
-_RESPONSE_ROW = (1, 100, 10, "my answer", None, None, "Submitted", datetime.datetime(2026, 8, 28, 9, 0, 0))
+_RESPONSE_ROW = (1, 100, 10, "my answer", None, None, "Submitted", datetime.datetime(2026, 8, 28, 9, 0, 0), None, None, None)
 _RESPONSE_DICT = {
     "id": 1, "question_id": 100, "project_id": 10, "submitted_text": "my answer",
     "self_evaluation_notes": None, "self_evaluation_status": None, "status": "Submitted",
     "updated_at": "2026-08-28T09:00:00",
+    "benchmark_level_1": None, "benchmark_level_2": None, "benchmark_level_3": None,
 }
 
 
@@ -36,7 +37,7 @@ def test_save_response_inserts_and_returns_row_with_submitted_status(mock_get_co
     sql, params = cursor.execute.call_args[0]
     assert "INSERT INTO responses" in sql
     assert "ON CONFLICT (question_id, project_id) DO UPDATE" in sql
-    assert params == (100, 10, "my answer", None, None, "Submitted")
+    assert params == (100, 10, "my answer", None, None, "Submitted", None, None, None)
     conn.commit.assert_called_once()
 
 
@@ -51,11 +52,32 @@ def test_save_response_preserves_prior_columns_on_conflict_via_coalesce(mock_get
     assert "submitted_text = COALESCE(EXCLUDED.submitted_text, responses.submitted_text)" in sql
     assert "self_evaluation_notes = COALESCE(EXCLUDED.self_evaluation_notes, responses.self_evaluation_notes)" in sql
     assert "self_evaluation_status = COALESCE(EXCLUDED.self_evaluation_status, responses.self_evaluation_status)" in sql
+    assert "benchmark_level_1 = COALESCE(EXCLUDED.benchmark_level_1, responses.benchmark_level_1)" in sql
+    assert "benchmark_level_2 = COALESCE(EXCLUDED.benchmark_level_2, responses.benchmark_level_2)" in sql
+    assert "benchmark_level_3 = COALESCE(EXCLUDED.benchmark_level_3, responses.benchmark_level_3)" in sql
+
+
+@patch("responses_db.get_db_connection")
+def test_save_response_stores_benchmark_levels(mock_get_conn):
+    row = (1, 100, 10, "my answer", None, None, "Submitted", datetime.datetime(2026, 8, 28, 9, 0, 0), "l1 text", "l2 text", "l3 text")
+    conn, cursor = _fake_conn(fetchone_result=row)
+    mock_get_conn.return_value = conn
+
+    result = responses_db.save_response(
+        10, 100, submitted_text="my answer",
+        benchmark_level_1="l1 text", benchmark_level_2="l2 text", benchmark_level_3="l3 text",
+    )
+
+    assert result["benchmark_level_1"] == "l1 text"
+    assert result["benchmark_level_2"] == "l2 text"
+    assert result["benchmark_level_3"] == "l3 text"
+    _, params = cursor.execute.call_args[0]
+    assert params == (100, 10, "my answer", None, None, "Submitted", "l1 text", "l2 text", "l3 text")
 
 
 @patch("responses_db.get_db_connection")
 def test_save_response_sets_self_evaluated_status_when_status_given(mock_get_conn):
-    row = (1, 100, 10, "my answer", "solid reasoning", "Strong", "Self-Evaluated", datetime.datetime(2026, 8, 28, 9, 0, 0))
+    row = (1, 100, 10, "my answer", "solid reasoning", "Strong", "Self-Evaluated", datetime.datetime(2026, 8, 28, 9, 0, 0), None, None, None)
     conn, cursor = _fake_conn(fetchone_result=row)
     mock_get_conn.return_value = conn
 
@@ -65,12 +87,12 @@ def test_save_response_sets_self_evaluated_status_when_status_given(mock_get_con
 
     assert result["status"] == "Self-Evaluated"
     _, params = cursor.execute.call_args[0]
-    assert params == (100, 10, "my answer", "solid reasoning", "Strong", "Self-Evaluated")
+    assert params == (100, 10, "my answer", "solid reasoning", "Strong", "Self-Evaluated", None, None, None)
 
 
 @patch("responses_db.get_db_connection")
 def test_save_response_defaults_to_draft_status_with_no_text_or_evaluation(mock_get_conn):
-    row = (1, 100, 10, None, None, None, "Draft", datetime.datetime(2026, 8, 28, 9, 0, 0))
+    row = (1, 100, 10, None, None, None, "Draft", datetime.datetime(2026, 8, 28, 9, 0, 0), None, None, None)
     conn, cursor = _fake_conn(fetchone_result=row)
     mock_get_conn.return_value = conn
 
