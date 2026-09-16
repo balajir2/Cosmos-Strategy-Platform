@@ -41,3 +41,36 @@ def send_invite_email(to_email: str, full_name: str, setup_link: str) -> bool:
     except Exception as e:
         print(f"Error sending invite email via Resend to {to_email}: {e}")
         return False
+
+
+def send_report_email(to_email: str, project_name: str, html_report: str) -> bool:
+    """Sends a compiled engagement report via Resend. Returns True if the
+    email was actually sent, False if RESEND_API_KEY isn't configured
+    (local dev/CI - the caller falls back to returning the HTML directly,
+    mirroring send_invite_email's graceful-degradation pattern) or if the
+    Resend API call itself failed for any reason. Never raises past this
+    boundary. Unlike send_invite_email, the caller has already built the
+    full HTML body (backend/brief.py's compile_brief_html) - this function
+    just sends it, it doesn't construct any markup itself."""
+    api_key = os.environ.get("RESEND_API_KEY")
+    if not api_key:
+        print(f"RESEND_API_KEY is not set. Skipping report email to {to_email}.")
+        return False
+
+    try:
+        response = requests.post(
+            RESEND_API_URL,
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={
+                "from": FROM_ADDRESS,
+                "to": [to_email],
+                "subject": f"Strategic Brief: {project_name}",
+                "html": html_report,
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+        return True
+    except Exception as e:
+        print(f"Error sending report email via Resend to {to_email}: {e}")
+        return False
