@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   getProject, updateProject, activateProject, listArtifacts, uploadArtifact, deleteArtifact,
-  addProjectMember, inviteClient, Project, ProjectArtifact, DeliveryMode, InviteClientResult,
+  addProjectMember, inviteClient, sendReport, Project, ProjectArtifact, DeliveryMode, InviteClientResult, SendReportResult,
 } from "@/lib/api-client";
 import FrameworkEditor from "@/components/FrameworkEditor";
 import CalibrationEditor from "@/components/CalibrationEditor";
@@ -54,6 +54,9 @@ export default function ProjectSetupPage() {
   const [inviteFullName, setInviteFullName] = useState("");
   const [inviting, setInviting] = useState(false);
   const [inviteResult, setInviteResult] = useState<InviteClientResult | null>(null);
+
+  const [sendingReport, setSendingReport] = useState(false);
+  const [sendReportResult, setSendReportResult] = useState<SendReportResult | null>(null);
 
   function reloadArtifacts() {
     listArtifacts(projectId).then(setArtifactsState).catch(() => setError("Could not load artifacts."));
@@ -157,6 +160,20 @@ export default function ProjectSetupPage() {
       setError(err instanceof Error ? err.message : "Could not invite this customer.");
     } finally {
       setInviting(false);
+    }
+  }
+
+  async function handleSendReport() {
+    setSendingReport(true);
+    setError(null);
+    setSendReportResult(null);
+    try {
+      const result = await sendReport(projectId);
+      setSendReportResult(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send the report.");
+    } finally {
+      setSendingReport(false);
     }
   }
 
@@ -350,6 +367,26 @@ export default function ProjectSetupPage() {
           <i className="fa-solid fa-bolt"></i> {activating ? "Activating..." : project?.status === "Active" ? "Active" : "Activate Project"}
         </button>
       </div>
+      {project?.status === "Active" && (
+        <div className="project-actions-row" style={{ marginTop: 16 }}>
+          <span className="activate-hint">
+            <i className="fa-solid fa-envelope"></i> Emails the compiled strategic brief (answers, self-evaluations, and benchmark comparisons) to every Consultant and Client User on this project.
+          </span>
+          <button className="btn btn-secondary" onClick={handleSendReport} disabled={sendingReport}>
+            <i className="fa-solid fa-paper-plane"></i> {sendingReport ? "Sending..." : "Send Report"}
+          </button>
+        </div>
+      )}
+      {sendReportResult && (
+        sendReportResult.sent ? (
+          <p style={{ color: "var(--success)", marginTop: 8 }}>Report sent to: {sendReportResult.recipients.join(", ")}</p>
+        ) : (
+          <div style={{ marginTop: 8 }}>
+            <p>Email not configured — copy the report below and send it yourself:</p>
+            <textarea readOnly aria-label="Compiled report HTML" value={sendReportResult.html} style={{ width: "100%", height: 120 }} onClick={(e) => (e.target as HTMLTextAreaElement).select()} />
+          </div>
+        )
+      )}
       {error && <p style={{ color: "var(--error)", marginTop: 12 }}>{error}</p>}
     </div>
   );
