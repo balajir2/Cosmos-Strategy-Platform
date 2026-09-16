@@ -36,6 +36,9 @@ def compile_brief_markdown(project: dict, responses: list) -> str:
     return "\n".join(lines)
 
 
+# Hardcoded (email HTML can't reference CSS custom properties) - must stay in
+# sync with the --level-1/2/3-bg/fg Light Professional tokens in
+# frontend-react/app/client/case/[caseId]/chat/chat.module.css.
 _BENCHMARK_LEVELS = [
     ("Level 1 - Superficial", "#ece9f7", "#5b4d8a", "benchmark_level_1"),
     ("Level 2 - Needs-Based", "#fdeedb", "#a8631a", "benchmark_level_2"),
