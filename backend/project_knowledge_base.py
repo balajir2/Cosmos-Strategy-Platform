@@ -219,14 +219,30 @@ def _insert_chunks(project_id: int, artifact_id: int, chunks: list, embeddings) 
         conn.commit()
 
 
+def _finalize_text(rag, artifact: dict, text: str) -> dict:
+    """Shared tail of the ingestion pipeline: chunk, embed, insert into
+    project_kb_chunks, and update the artifact's status. Used by both the
+    automatic pipeline (ingest_artifact) and the manual-transcript-paste
+    path (ingest_manual_transcript) - the only difference between the two
+    callers is how `text` was obtained."""
+    chunks = chunk_text(text)
+    if not chunks:
+        print(f"Artifact {artifact['id']} produced no extractable text.")
+        return project_artifacts_db.update_artifact_status(artifact["id"], "Failed")
+
+    embeddings = rag.embedding_model.encode(chunks)
+    _insert_chunks(artifact["project_id"], artifact["id"], chunks, embeddings)
+
+    transcript_text = text if artifact["source_format"] == "audio" else None
+    return project_artifacts_db.update_artifact_status(artifact["id"], "Indexed", transcript_text=transcript_text)
+
+
 def ingest_artifact(rag, artifact_id: int, file_bytes: bytes) -> dict:
     """Synchronous ingestion pipeline: parses or transcribes the uploaded
-    artifact, chunks the resulting text, embeds each chunk with the same
-    SentenceTransformer rag_engine.py already uses for the Framework
-    Knowledge Base (via rag.embedding_model - loaded once, not duplicated),
-    and inserts rows into project_kb_chunks. Updates project_artifacts.status
-    to reflect the outcome: 'Indexed' on success, 'Transcript Needed' for
-    audio when AWS Transcribe isn't available (never 'Failed' for that case -
+    artifact, then hands the resulting text to _finalize_text to chunk,
+    embed, and index. Updates project_artifacts.status to reflect the
+    outcome: 'Indexed' on success, 'Transcript Needed' for audio when
+    automatic transcription isn't available (never 'Failed' for that case -
     see transcribe_audio's docstring), 'Failed' on any other parse/embedding
     error OR when extraction produced no usable text (an artifact marked
     'Indexed' with zero project_kb_chunks rows would silently never surface
@@ -248,16 +264,7 @@ def ingest_artifact(rag, artifact_id: int, file_bytes: bytes) -> dict:
         else:
             text = extract_text(file_bytes, artifact["source_format"])
 
-        chunks = chunk_text(text)
-        if not chunks:
-            print(f"Artifact {artifact_id} produced no extractable text.")
-            return project_artifacts_db.update_artifact_status(artifact_id, "Failed")
-
-        embeddings = rag.embedding_model.encode(chunks)
-        _insert_chunks(artifact["project_id"], artifact_id, chunks, embeddings)
-
-        transcript_text = text if artifact["source_format"] == "audio" else None
-        return project_artifacts_db.update_artifact_status(artifact_id, "Indexed", transcript_text=transcript_text)
+        return _finalize_text(rag, artifact, text)
     except Exception as e:
         print(f"Error ingesting artifact {artifact_id}: {e}")
         return project_artifacts_db.update_artifact_status(artifact_id, "Failed")

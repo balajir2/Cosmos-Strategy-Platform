@@ -294,6 +294,53 @@ def _fake_rag():
     return rag
 
 
+@patch("project_knowledge_base._insert_chunks")
+@patch("project_knowledge_base.chunk_text", return_value=["chunk one", "chunk two"])
+@patch(
+    "project_knowledge_base.project_artifacts_db.update_artifact_status",
+    return_value={**_DOCUMENT_ARTIFACT, "status": "Indexed"},
+)
+def test_finalize_text_chunks_embeds_and_indexes_on_success(mock_update, mock_chunk, mock_insert):
+    rag = _fake_rag()
+
+    result = pkb._finalize_text(rag, _DOCUMENT_ARTIFACT, "some parsed text")
+
+    assert result["status"] == "Indexed"
+    mock_chunk.assert_called_once_with("some parsed text")
+    mock_insert.assert_called_once_with(10, 1, ["chunk one", "chunk two"], [[0.1, 0.2], [0.3, 0.4]])
+    mock_update.assert_called_once_with(1, "Indexed", transcript_text=None)
+
+
+@patch("project_knowledge_base._insert_chunks")
+@patch("project_knowledge_base.chunk_text", return_value=["chunk one"])
+@patch(
+    "project_knowledge_base.project_artifacts_db.update_artifact_status",
+    return_value={**_AUDIO_ARTIFACT, "status": "Indexed", "transcript_text": "hello"},
+)
+def test_finalize_text_stores_transcript_text_for_audio(mock_update, mock_chunk, mock_insert):
+    rag = _fake_rag()
+
+    result = pkb._finalize_text(rag, _AUDIO_ARTIFACT, "hello")
+
+    assert result["transcript_text"] == "hello"
+    mock_update.assert_called_once_with(2, "Indexed", transcript_text="hello")
+
+
+@patch("project_knowledge_base._insert_chunks")
+@patch(
+    "project_knowledge_base.project_artifacts_db.update_artifact_status",
+    return_value={**_DOCUMENT_ARTIFACT, "status": "Failed"},
+)
+def test_finalize_text_marks_failed_on_empty_text(mock_update, mock_insert):
+    rag = _fake_rag()
+
+    result = pkb._finalize_text(rag, _DOCUMENT_ARTIFACT, "   ")
+
+    assert result["status"] == "Failed"
+    mock_update.assert_called_once_with(1, "Failed")
+    mock_insert.assert_not_called()
+
+
 @patch("project_knowledge_base.get_db_connection")
 def test_insert_chunks_inserts_one_row_per_chunk(mock_get_conn):
     conn, cursor = _fake_conn()
