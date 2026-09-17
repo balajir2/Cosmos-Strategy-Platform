@@ -46,7 +46,6 @@ Earlier versions of this document described a "pre-migration API contract" test 
 
 - Guided Learning Flow, remaining items (baseline calibration and adaptive question difficulty are already built and tested — see above): keyword-agnostic answer mapping, case-study reveal, corpus-relative depth signal, Start/Stop/Continue — not built yet, so nothing to test. See `documentation/product/roadmap.md` and `documentation/product/stakeholder-clarifications-2026-09.md` for open questions that may reshape this list before it's built.
 - Production deployment infrastructure (`/healthz`, Dockerfile, deploy workflow) — only the CI test workflow itself exists today; the rest of the GCP deployment plan isn't built, so there's no deploy pipeline to test yet. The async ingestion pipeline's Terraform module is checked separately (`terraform validate`/`fmt -check`, not part of the pytest suite or CI) and has never been applied to a real GCP project, so nothing exercises it end-to-end against real GCS/Eventarc.
-- A manual-transcript-paste endpoint (completing the `'Transcript Needed'` fallback loop) doesn't exist yet.
 
 ## Manual Verification
 
