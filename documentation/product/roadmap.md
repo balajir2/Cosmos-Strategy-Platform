@@ -56,7 +56,7 @@ Full design: [Functional Spec §2.3](functional-spec.md#23-guided-learning-flow-
 - [ ] **Task 1 — `/healthz` health check endpoint**: not built.
 - [ ] **Task 2 — Dockerfile + `.dockerignore`**: not built.
 - [ ] **Task 3 — GCP project bootstrap**: Artifact Registry repo, `cosmos-run-sa`/`cosmos-deploy-sa` service accounts — not built (nor verifiable from the repo, since it's infrastructure rather than code; any manual GCP setup done ad hoc outside this plan doesn't count as this task complete).
-- [ ] **Task 4 — Secret Manager secrets + Workload Identity Federation**: not built. Note: `ADMIN_API_TOKEN` is no longer a secret this task needs to provision — `/api/admin/settings` moved off that stopgap gate onto the real `require_admin` dependency 2026-09-17 (see the Known Gaps Cleanup entry above); `docs/superpowers/plans/2026-08-25-gcp-deployment-infrastructure.md`'s references to it are historical plan text, left as-is per that document's own convention.
+- [ ] **Task 4 — Secret Manager secrets + Workload Identity Federation**: not built. Note: `ADMIN_API_TOKEN` is no longer a secret this task needs to provision — `/api/admin/settings` moved off that stopgap gate onto the real `require_admin` dependency 2026-09-17 (see the Known Gaps Cleanup entry below); `docs/superpowers/plans/2026-08-25-gcp-deployment-infrastructure.md`'s references to it are historical plan text, left as-is per that document's own convention.
 - [ ] **Task 6 — GitHub Actions build/migrate/deploy workflow**: `.github/workflows/deploy.yml` — not built.
 - [ ] **Task 7 — Cloud Monitoring alert policies**: not built.
 - [x] **Task 8 — documentation updates**: this section (done 2026-09-01, later than the plan intended).
