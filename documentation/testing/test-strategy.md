@@ -11,7 +11,7 @@ Test what exists, honestly. Tests document *current* behavior so regressions are
 Location: `tests/` at the repo root, run with `pytest` from the repo root.
 
 - **Framework**: `pytest` + FastAPI's `TestClient` (via `httpx`).
-- **Scope**: 474 tests covering essentially every backend module — see "What's Covered" below.
+- **Scope**: 484 tests covering essentially every backend module — see "What's Covered" below.
 - **CI**: `.github/workflows/ci.yml` runs the full suite on every push/PR to `main`.
 - **No network dependency required to pass**: `backend/rag_engine.py` degrades gracefully — no active LLM provider credentials configured means evaluation falls back to a local heuristic critique (`fallback_local_critique`); if the archive PDFs were ever missing, vector indexing falls back to a synthetic in-memory dataset. The tests exercise these fallback paths rather than mocking around them.
 - **First-run cost**: `RagEngine.__init__` always loads the `all-MiniLM-L6-v2` SentenceTransformer model (downloaded once, ~80MB, cached locally after) and, if the `framework_kb_chunks` table (Neon Postgres) is empty, ingests the `archives/` PDFs into it. This is the same cost the app already pays on every startup — the test bed doesn't add to it.
@@ -22,9 +22,9 @@ Location: `tests/` at the repo root, run with `pytest` from the repo root.
 | Area | Test files |
 |---|---|
 | LLM Provider Abstraction / admin settings | `test_settings.py`, `test_admin_settings_endpoint.py`, `test_rag_engine_generate_evaluation.py` |
-| Auth (Phase A) | `test_users_db.py`, `test_auth.py`, `test_auth_endpoints.py`, `test_admin_auth.py` |
+| Auth (Phase A) | `test_users_db.py`, `test_auth.py`, `test_auth_endpoints.py` |
 | Projects (Phase B) | `test_projects_db.py`, `test_project_endpoints.py`, `test_project_members_endpoint.py` |
-| Engagement Knowledge Base (Phase C) | `test_project_artifacts_db.py`, `test_project_artifact_endpoints.py`, `test_project_knowledge_base.py` (incl. Google Speech-to-Text transcription) |
+| Engagement Knowledge Base (Phase C) | `test_project_artifacts_db.py`, `test_project_artifact_endpoints.py`, `test_project_knowledge_base.py` (incl. Google Speech-to-Text transcription and manual transcript paste), `test_transcript_paste_endpoint.py` |
 | Backend API Integration | `test_process_db.py`, `test_process_endpoints.py`, `test_responses_db.py`, `test_response_save_endpoint.py`, `test_brief.py`, `test_brief_endpoint.py`, `test_project_evaluation_endpoint.py`, `test_rag_engine_search_merged.py`, `test_rag_engine_comparative_benchmarks.py` |
 | Chat-style interview (the live, frontend-facing evaluation path) | `test_chat_sessions.py`, `test_chat_engine.py`, `test_chat_endpoints.py` |
 | Framework Authoring Mode | `test_framework_db.py`, `test_framework_endpoints.py` |
