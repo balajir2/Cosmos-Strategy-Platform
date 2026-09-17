@@ -12,7 +12,6 @@ from google.api_core.exceptions import NotFound
 # Import RAG Engine
 from rag_engine import RagEngine
 import settings as platform_settings
-from admin_auth import require_admin_token
 import chat_engine
 import chat_sessions as chat_sessions_module
 import projects_db
@@ -685,12 +684,12 @@ def delete_calibration_concept(project_id: int, concept_id: int, member: dict = 
     return {"deleted": True}
 
 @app.get("/api/admin/settings")
-def get_settings(_: None = Depends(require_admin_token)):
+def get_settings(admin: dict = Depends(require_admin)):
     return {"active_llm_provider": platform_settings.get_active_provider()}
 
 
 @app.patch("/api/admin/settings")
-def update_settings(payload: ProviderSettingUpdate, _: None = Depends(require_admin_token)):
+def update_settings(payload: ProviderSettingUpdate, admin: dict = Depends(require_admin)):
     try:
         platform_settings.set_active_provider(payload.active_llm_provider)
     except ValueError as e:
