@@ -404,6 +404,16 @@ export async function deleteArtifact(projectId: number, artifactId: number): Pro
   if (!res.ok) throw new Error(`Failed to delete artifact: ${res.status}`);
 }
 
+export async function pasteTranscript(projectId: number, artifactId: number, transcriptText: string): Promise<ProjectArtifact> {
+  const res = await authFetch(`/api/projects/${projectId}/artifacts/${artifactId}/transcript`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ transcript_text: transcriptText }),
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, `Failed to save transcript: ${res.status}`));
+  return res.json();
+}
+
 // --- Process (shared framework content) --------------------------------------
 
 export interface Guidance {

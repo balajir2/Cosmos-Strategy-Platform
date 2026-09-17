@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  getProject, updateProject, activateProject, listArtifacts, uploadArtifact, deleteArtifact,
+  getProject, updateProject, activateProject, listArtifacts, uploadArtifact, deleteArtifact, pasteTranscript,
   addProjectMember, inviteClient, sendReport, Project, ProjectArtifact, DeliveryMode, InviteClientResult, SendReportResult,
 } from "@/lib/api-client";
 import FrameworkEditor from "@/components/FrameworkEditor";
@@ -40,6 +40,9 @@ export default function ProjectSetupPage() {
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("consultant_guided_async");
   const [artifacts, setArtifactsState] = useState<ProjectArtifact[]>([]);
   const [uploadPurpose, setUploadPurpose] = useState("reference");
+  const [expandedTranscriptId, setExpandedTranscriptId] = useState<number | null>(null);
+  const [transcriptDrafts, setTranscriptDrafts] = useState<Record<number, string>>({});
+  const [savingTranscriptId, setSavingTranscriptId] = useState<number | null>(null);
   const [activating, setActivating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -128,6 +131,27 @@ export default function ProjectSetupPage() {
       reloadArtifacts();
     } catch {
       setError("Could not delete the artifact.");
+    }
+  }
+
+  function handleToggleTranscriptRow(artifactId: number) {
+    setExpandedTranscriptId((prev) => (prev === artifactId ? null : artifactId));
+    setTranscriptDrafts((prev) => ({ ...prev, [artifactId]: prev[artifactId] ?? "" }));
+  }
+
+  async function handleSubmitTranscript(artifactId: number) {
+    const text = (transcriptDrafts[artifactId] || "").trim();
+    if (!text) return;
+    setSavingTranscriptId(artifactId);
+    setError(null);
+    try {
+      const updated = await pasteTranscript(projectId, artifactId, text);
+      setArtifactsState((prev) => prev.map((a) => (a.id === artifactId ? updated : a)));
+      setExpandedTranscriptId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save the transcript.");
+    } finally {
+      setSavingTranscriptId(null);
     }
   }
 
@@ -339,14 +363,44 @@ export default function ProjectSetupPage() {
                 : a.status === "Transcript Needed" ? "transcript-needed"
                 : "";
               return (
-                <div className="artifact-item" key={a.id}>
-                  <i className={`artifact-icon fa-solid ${a.source_format === "audio" ? "fa-microphone" : "fa-file-lines"}`}></i>
-                  <span className="artifact-name">{a.filename}</span>
-                  <span className={`purpose-tag purpose-${a.purpose}`}>{PURPOSE_LABELS[a.purpose]}</span>
-                  <span className={`status-pill ${statusClass}`}>{a.status}</span>
-                  <button className="btn btn-secondary" onClick={() => handleDeleteArtifact(a.id)} style={{ padding: "6px 10px" }}>
-                    <i className="fa-solid fa-trash"></i>
-                  </button>
+                <div key={a.id}>
+                  <div className="artifact-item">
+                    <i className={`artifact-icon fa-solid ${a.source_format === "audio" ? "fa-microphone" : "fa-file-lines"}`}></i>
+                    <span className="artifact-name">{a.filename}</span>
+                    <span className={`purpose-tag purpose-${a.purpose}`}>{PURPOSE_LABELS[a.purpose]}</span>
+                    <span className={`status-pill ${statusClass}`}>{a.status}</span>
+                    {a.status === "Transcript Needed" && (
+                      <button className="btn btn-secondary" onClick={() => handleToggleTranscriptRow(a.id)} style={{ padding: "6px 10px" }}>
+                        <i className="fa-solid fa-file-pen"></i> Paste Transcript
+                      </button>
+                    )}
+                    <button className="btn btn-secondary" onClick={() => handleDeleteArtifact(a.id)} style={{ padding: "6px 10px" }}>
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
+                  </div>
+                  {expandedTranscriptId === a.id && (
+                    <div className="answer-wrapper" style={{ marginTop: 8, marginBottom: 8 }}>
+                      <label htmlFor={`transcript-input-${a.id}`}>Paste the transcript for {a.filename}</label>
+                      <textarea
+                        id={`transcript-input-${a.id}`}
+                        rows={4}
+                        value={transcriptDrafts[a.id] || ""}
+                        onChange={(e) => setTranscriptDrafts((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                      />
+                      <div className="assign-row" style={{ marginTop: 8 }}>
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => handleSubmitTranscript(a.id)}
+                          disabled={savingTranscriptId === a.id || !(transcriptDrafts[a.id] || "").trim()}
+                        >
+                          {savingTranscriptId === a.id ? "Saving..." : "Submit"}
+                        </button>
+                        <button className="btn btn-secondary" onClick={() => setExpandedTranscriptId(null)}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
