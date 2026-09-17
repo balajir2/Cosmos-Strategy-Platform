@@ -268,3 +268,16 @@ def ingest_artifact(rag, artifact_id: int, file_bytes: bytes) -> dict:
     except Exception as e:
         print(f"Error ingesting artifact {artifact_id}: {e}")
         return project_artifacts_db.update_artifact_status(artifact_id, "Failed")
+
+
+def ingest_manual_transcript(rag, artifact_id: int, transcript_text: str) -> dict:
+    """Completes the 'Transcript Needed' fallback loop: a Consultant supplies
+    the transcript by hand when automatic transcription wasn't available or
+    failed. Only valid on an artifact currently in that exact status - not a
+    general-purpose transcript-correction endpoint."""
+    artifact = project_artifacts_db.get_artifact_by_id(artifact_id)
+    if artifact is None:
+        raise ValueError(f"Unknown artifact_id '{artifact_id}'")
+    if artifact["status"] != "Transcript Needed":
+        raise ValueError(f"Artifact {artifact_id} is not awaiting a manual transcript (status: '{artifact['status']}').")
+    return _finalize_text(rag, artifact, transcript_text)

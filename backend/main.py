@@ -151,6 +151,9 @@ class ResponseSaveRequest(BaseModel):
     self_evaluation_notes: Optional[str] = None
     self_evaluation_status: Optional[str] = None
 
+class TranscriptPasteRequest(BaseModel):
+    transcript_text: str
+
 class AdminUserCreate(BaseModel):
     email: str
     password: str
@@ -385,6 +388,23 @@ def delete_project_artifact(project_id: int, artifact_id: int, member: dict = De
     if not deleted:
         raise HTTPException(status_code=404, detail="Artifact not found.")
     return {"deleted": True}
+
+@app.post("/api/projects/{project_id}/artifacts/{artifact_id}/transcript")
+async def paste_artifact_transcript(
+    project_id: int,
+    artifact_id: int,
+    payload: TranscriptPasteRequest,
+    member: dict = Depends(require_consultant),
+):
+    artifact = project_artifacts_db.get_artifact_by_id(artifact_id)
+    if artifact is None or artifact["project_id"] != project_id:
+        raise HTTPException(status_code=404, detail="Artifact not found.")
+    if not payload.transcript_text.strip():
+        raise HTTPException(status_code=400, detail="transcript_text cannot be blank.")
+    try:
+        return await run_in_threadpool(project_knowledge_base.ingest_manual_transcript, rag, artifact_id, payload.transcript_text)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/projects/{project_id}/members")
 def add_member_to_project(

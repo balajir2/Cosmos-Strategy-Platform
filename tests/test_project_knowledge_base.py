@@ -451,6 +451,39 @@ def test_ingest_artifact_raises_value_error_for_unknown_artifact():
             pkb.ingest_artifact(_fake_rag(), 999, b"bytes")
 
 
+@patch(
+    "project_knowledge_base._finalize_text",
+    return_value={**_AUDIO_ARTIFACT, "status": "Indexed", "transcript_text": "pasted transcript"},
+)
+@patch(
+    "project_knowledge_base.project_artifacts_db.get_artifact_by_id",
+    return_value={**_AUDIO_ARTIFACT, "status": "Transcript Needed"},
+)
+def test_ingest_manual_transcript_finalizes_on_success(mock_get, mock_finalize):
+    rag = _fake_rag()
+
+    result = pkb.ingest_manual_transcript(rag, 2, "pasted transcript")
+
+    assert result["status"] == "Indexed"
+    assert result["transcript_text"] == "pasted transcript"
+    mock_finalize.assert_called_once_with(rag, {**_AUDIO_ARTIFACT, "status": "Transcript Needed"}, "pasted transcript")
+
+
+def test_ingest_manual_transcript_raises_for_unknown_artifact():
+    with patch("project_knowledge_base.project_artifacts_db.get_artifact_by_id", return_value=None):
+        with pytest.raises(ValueError, match="999"):
+            pkb.ingest_manual_transcript(_fake_rag(), 999, "some text")
+
+
+@patch(
+    "project_knowledge_base.project_artifacts_db.get_artifact_by_id",
+    return_value={**_AUDIO_ARTIFACT, "status": "Indexed"},
+)
+def test_ingest_manual_transcript_rejects_wrong_status(mock_get):
+    with pytest.raises(ValueError, match="not awaiting a manual transcript"):
+        pkb.ingest_manual_transcript(_fake_rag(), 2, "some text")
+
+
 def test_extract_text_from_xlsx_renders_rows_as_column_value_pairs():
     file_bytes = _xlsx_bytes({
         "Sheet1": [
