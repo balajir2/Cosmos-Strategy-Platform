@@ -6,9 +6,12 @@ RUN npm ci
 COPY frontend-react/ ./
 # NEXT_PUBLIC_* values are inlined into the JS bundle at build time, not read
 # at runtime - a static export has no server to substitute them later. Empty
-# string means same-origin relative API calls (api-client.ts's `?? ""` picks
-# this up), which is exactly right for this single-service deployment: FastAPI
-# serves this same export, so /api/* already resolves against the same host.
+# string means same-origin relative API calls (api-client.ts reads this via
+# `process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000"` - the `??`,
+# not `||`, so this empty string is used as-is instead of falling through to
+# that fallback), which is exactly right for this single-service deployment:
+# FastAPI serves this same export, so /api/* already resolves against the
+# same host.
 # Left unset, api-client.ts's own fallback bakes in http://localhost:8000,
 # which is only reachable from whoever happens to be running the backend
 # locally - found and fixed after the first deploy shipped with that bug.

@@ -63,11 +63,16 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          # Only DATABASE_URL access is needed here, not the full backend
-          # stack - installing sentence-transformers' torch wheel on every
-          # deploy just to run a migration wastes minutes and disk on the
-          # runner for something this step never uses.
-          pip install psycopg2-binary pgvector python-dotenv
+          # Not the full backend stack - installing sentence-transformers'
+          # torch wheel on every deploy just to run a migration wastes
+          # minutes and disk on the runner for something this step never
+          # uses. But database.py's own migration does transitively reach
+          # backend/llm_providers/__init__.py (via framework_db.py's
+          # migrate_existing_projects, called unconditionally from
+          # database.py's init_db()), which eagerly imports all three
+          # provider SDKs at module load - so those three are still
+          # required even though nothing here calls an LLM.
+          pip install psycopg2-binary pgvector python-dotenv anthropic openai google-cloud-aiplatform
           python backend/database.py
           # Deliberately NOT setting active_llm_provider here on every
           # deploy: that one-time seed (-> 'gemini') already happened by
