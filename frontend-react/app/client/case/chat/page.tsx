@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   createChatSession, postChatMessage, getChatSession, getBrief, getProject, getStageProgress,
   sendReport, SendReportResult,
@@ -26,9 +26,17 @@ const STATUS_TO_LEVEL: Record<string, SelfEvalLevel> = {
 };
 
 export default function ChatPage() {
-  const params = useParams();
+  return (
+    <Suspense fallback={<div className="loading-spinner"><i className="fa-solid fa-circle-notch fa-spin"></i> Loading your workshop...</div>}>
+      <ChatPageContent />
+    </Suspense>
+  );
+}
+
+function ChatPageContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const projectId = Number(params.caseId);
+  const projectId = Number(searchParams.get("id"));
 
   const [projectStatus, setProjectStatus] = useState<string | null>(null);
   const [sessionId, setLocalSessionId] = useState<number | null>(null);
@@ -159,7 +167,7 @@ export default function ChatPage() {
     return (
       <div className={styles.chatRoot}>
         <header className={styles.topBar}>
-          <button className={styles.backBtn} onClick={() => router.push(`/client/case/${projectId}`)}>
+          <button className={styles.backBtn} onClick={() => router.push(`/client/case?id=${projectId}`)}>
             <i className="fa-solid fa-arrow-left"></i> Back to Progress
           </button>
         </header>
@@ -176,7 +184,7 @@ export default function ChatPage() {
   return (
     <div className={styles.chatRoot}>
       <header className={styles.topBar}>
-        <button className={styles.backBtn} onClick={() => router.push(`/client/case/${projectId}`)}>
+        <button className={styles.backBtn} onClick={() => router.push(`/client/case?id=${projectId}`)}>
           <i className="fa-solid fa-arrow-left"></i> Back to Progress
         </button>
       </header>

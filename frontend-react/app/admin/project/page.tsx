@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   getProject, updateProject, activateProject, listArtifacts, uploadArtifact, deleteArtifact, pasteTranscript,
   addProjectMember, inviteClient, sendReport, Project, ProjectArtifact, DeliveryMode, InviteClientResult, SendReportResult,
@@ -31,9 +31,17 @@ const DELIVERY_MODE_LABELS: Record<DeliveryMode, string> = {
 const DELIVERY_MODE_OPTIONS = Object.keys(DELIVERY_MODE_LABELS) as DeliveryMode[];
 
 export default function ProjectSetupPage() {
-  const params = useParams();
+  return (
+    <Suspense fallback={<div className="loading-spinner"><i className="fa-solid fa-circle-notch fa-spin"></i> Loading...</div>}>
+      <ProjectSetupPageContent />
+    </Suspense>
+  );
+}
+
+function ProjectSetupPageContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const projectId = Number(params.caseId);
+  const projectId = Number(searchParams.get("id"));
 
   const [project, setProject] = useState<Project | null>(null);
   const [industryContext, setIndustryContext] = useState("");
@@ -69,7 +77,7 @@ export default function ProjectSetupPage() {
     getProject(projectId)
       .then((p) => {
         if (p.role === "ClientUser") {
-          router.replace(`/client/case/${projectId}`);
+          router.replace(`/client/case?id=${projectId}`);
           return;
         }
         setProject(p);
