@@ -2,6 +2,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 from fastapi import FastAPI, HTTPException, Body, Depends, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from typing import List, Dict, Optional
@@ -778,6 +779,21 @@ def get_process(process_id: int, current_user: dict = Depends(get_current_user))
     if process is None:
         raise HTTPException(status_code=404, detail="Process not found.")
     return process
+
+def mount_frontend_if_built(app: FastAPI, directory: str) -> bool:
+    """Serves the Next.js static export from `directory` at "/", if it was
+    built. Doesn't exist in local dev (the frontend runs separately via
+    `npm run dev`) or in CI/tests (which never build it) - must be a no-op
+    there, not a crash, since every test file imports this module. Returns
+    whether the mount was added, for testability."""
+    if not os.path.isdir(directory):
+        return False
+    app.mount("/", StaticFiles(directory=directory, html=True), name="frontend")
+    return True
+
+
+FRONTEND_DIST = os.path.join(BASE_DIR, "frontend-react", "out")
+mount_frontend_if_built(app, FRONTEND_DIST)
 
 if __name__ == "__main__":
     import uvicorn
