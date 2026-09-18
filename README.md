@@ -83,7 +83,7 @@ Revised 2026-08-24 from an earlier four-role draft (Admin/Consultant, Owner, Rev
 
 ## Project Status
 
-**As of 2026-09-18: the full stack is feature-complete for the Insights POC's core loop through Known Gaps Cleanup, including two of nine Guided Learning Flow items. What's left is the rest of the Guided Learning Flow and production deployment — not the foundation.**
+**As of 2026-09-18: the full stack is feature-complete for the Insights POC's core loop through Known Gaps Cleanup, including two of nine Guided Learning Flow items — and a development deployment is now live on GCP. What's left is the rest of the Guided Learning Flow, a pre-activation readiness check, and hardening the dev deployment toward a real pilot — not the foundation.**
 
 The business case, functional spec, technical spec, and architecture describe a target design — a configurable, DB-driven "Framework Factory" generating Level 1/2/3 comparative benchmarks, with real Users, Projects, a per-project Engagement Knowledge Base, and a Neon Postgres storage platform. **All of that is now built and live**, not just specified:
 
@@ -94,16 +94,17 @@ The business case, functional spec, technical spec, and architecture describe a 
 - **Framework Authoring Mode**: each project owns its own cloned copy of the framework — a Consultant can add/edit/reorder/delete stages and questions rather than being stuck with the seeded Brand Compass configuration.
 - **Baseline concept calibration and adaptive question difficulty** (two of the nine Guided Learning Flow items): a Consultant-authored calibration step before the first question, and a probe-then-escalate follow-up loop on every question that keeps drilling until the answer shows sufficient depth.
 - An admin console (`/admin`): user management and a cross-project admin view, on top of the per-project Consultant/ClientUser roles above.
-- An **async artifact-ingestion pipeline** (built in code, not deployed): a dual-mode upload path, a second Eventarc-invoked processor service, `.md`/`.xlsx` support, and the repo's first Terraform module — see Roadmap below.
+- An **async artifact-ingestion pipeline**, live on GCP since 2026-09-18: a dual-mode upload path, a second Eventarc-invoked processor service (`cosmos-artifact-processor`), `.md`/`.xlsx` support, and the repo's first Terraform module — see Roadmap below.
+- A **live development deployment** on GCP Cloud Run since 2026-09-18 (`cosmos-dev`, **https://cosmos-dev-378946324391.us-central1.run.app**) — see Roadmap below for what that is and isn't.
 - **Voice input** on the chat interview: a press-and-hold mic button using only the browser's native Web Speech API, no backend involvement.
 - The chat interview screen and, since 2026-09-15, the entire app run on a single "Light Professional" theme — no dark mode, no toggle, by explicit design decision.
 - **Send Engagement Report**: emails the full compiled brief, including the Level 1/2/3 benchmark comparison, to every project member.
-- 487 automated tests (`pytest`) and a CI workflow running them on every push/PR.
+- 491 automated tests (`pytest`) and a CI workflow running them on every push/PR.
 
 **What's genuinely not built yet:**
 - The rest of the **Guided Learning Flow** — keyword-agnostic answer mapping, an actionability check, the two-case-study resolution flow with a hidden reveal (the artifact-tagging and retrieval-exclusion plumbing exists in code, but no interview step, endpoint, or seeded provocations do), a corpus-relative self-evaluation depth signal, and a module-end Start/Stop/Continue reflection. A 2026-09-02 stakeholder call raised open questions about this flow's direction, mostly resolved at a 2026-09-11 planning session — see [Stakeholder Clarifications](documentation/product/stakeholder-clarifications-2026-09.md).
-- **A readiness check before activating a project.** A Consultant can activate a project — unlocking it for ClientUsers — with an empty framework, no calibration concepts, or no assigned ClientUsers; there's no pre-activation checklist today.
-- **Production deployment.** A GCP Cloud Run architecture was decided and specced (see below), but only its CI test workflow has actually been built — there is no live or automated deployment; the app runs locally only. A narrower dev-only deployment spec (2026-09-17/18) now supersedes that plan but hasn't been executed either.
+- **A pre-activation readiness checklist exists but doesn't block anything.** The Consultant's project setup page now shows pass/warning badges for an empty framework or no assigned ClientUsers on a `Draft` project — informational only, not yet reviewed/hardened, and a Consultant can still activate past the warnings.
+- **Hardening the live dev deployment toward a real pilot.** A development deployment is live (see below) — but it's explicitly not production-ready: no custom domain, no monitoring alert policies, no staging environment. Two post-launch follow-ups landed the same day (Neon connection pooling, a billed Gemini API key in place of Vertex AI/IAM), with more re-evaluation needed before real pilot traffic.
 
 See the Roadmap below and [documentation/product/roadmap.md](documentation/product/roadmap.md) for the full, continuously-updated checklist.
 
@@ -117,11 +118,11 @@ See the Roadmap below and [documentation/product/roadmap.md](documentation/produ
 
 Full design: [Users/Projects/Engagement KB Spec](docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md).
 
-**Also done**: Backend API Integration (Level 1/2/3 benchmark generation, response persistence, brief compilation), Frontend GUI Overhaul (the full UI described above, and retirement of the old hardcoded cases), Admin UI, Framework Authoring Mode, the async artifact-ingestion pipeline (built, not deployed — see below), voice input on the chat interview (2026-09-11), the Chat Interview Screen UI/UX Redesign (2026-09-10), the App-Wide Light Professional Retheme (2026-09-15), Send Engagement Report (2026-09-16), and Known Gaps Cleanup (2026-09-17).
+**Also done**: Backend API Integration (Level 1/2/3 benchmark generation, response persistence, brief compilation), Frontend GUI Overhaul (the full UI described above, and retirement of the old hardcoded cases), Admin UI, Framework Authoring Mode, the async artifact-ingestion pipeline (live on GCP since 2026-09-18 — see below), voice input on the chat interview (2026-09-11), the Chat Interview Screen UI/UX Redesign (2026-09-10), the App-Wide Light Professional Retheme (2026-09-15), Send Engagement Report (2026-09-16), and Known Gaps Cleanup (2026-09-17).
 
 **Guided Learning Flow** (from the 2026-08-24 stakeholder review meeting — **two of nine items done**): baseline calibration and adaptive question difficulty are built; keyword-agnostic answer mapping, an actionability check, the two-case-study resolution flow, corpus-relative self-evaluation, and Start/Stop/Continue reflection are not. See "How It Works" above and `documentation/product/functional-spec.md` for full detail. The corpus-relative depth signal specifically needs a data-model addition not yet designed — flagged as an open gap, not solved. A 2026-09-02 stakeholder call raised open questions about this flow's direction (calibration's position, document-upload scope, product-vs-consulting-aid targeting), mostly resolved at a 2026-09-11 planning session (moved from an original 2026-09-09 date) — see [documentation/product/stakeholder-clarifications-2026-09.md](documentation/product/stakeholder-clarifications-2026-09.md).
 
-**Production Deployment Infrastructure**: a two-service, Terraform-provisioned GCP Cloud Run design was decided and specced 2026-08-25, but that literal plan was never built. **A development deployment is live as of 2026-09-18** instead — a single Cloud Run service (`cosmos-dev`, **https://cosmos-dev-378946324391.us-central1.run.app**) serving both the FastAPI backend and the Next.js frontend's static export, provisioned via `gcloud` CLI rather than Terraform for this pass, Gemini as the only provisioned LLM provider, `min-instances=0`/`max-instances=2` scaling, and a ₹500/month GCP Billing Budget alert. `.github/workflows/deploy.yml` auto-deploys on push to `main`. This is explicitly a **development** deployment, not a production pilot — no custom domain, no monitoring alert policies, no staging environment. See `documentation/product/roadmap.md`'s "Production Deployment Infrastructure" section and `CLAUDE.md` Part 6 for the full account.
+**Production Deployment Infrastructure**: a two-service, Terraform-provisioned GCP Cloud Run design was decided and specced 2026-08-25, but that literal plan was never built. **A development deployment is live as of 2026-09-18** instead — a single Cloud Run service (`cosmos-dev`, **https://cosmos-dev-378946324391.us-central1.run.app**) serving both the FastAPI backend and the Next.js frontend's static export, provisioned via `gcloud` CLI rather than Terraform for this pass, Gemini as the only provisioned LLM provider (via a billed Developer API key, not Vertex AI/IAM — switched the same day usage tracking/capping mattered more than avoiding a stored key), `min-instances=0`/`max-instances=2` scaling, and a ₹500/month GCP Billing Budget alert. `.github/workflows/deploy.yml` auto-deploys on push to `main`. This is explicitly a **development** deployment, not a production pilot — no custom domain, no monitoring alert policies, no staging environment. See `documentation/product/roadmap.md`'s "Production Deployment Infrastructure" section and `CLAUDE.md` Part 6 for the full account.
 
 **Beyond the POC** (not yet designed):
 - SSO / enterprise identity — the near-term auth design is deliberately simple (built-in email/password).
@@ -148,13 +149,13 @@ Full detail, checklists with live status, and success criteria: [documentation/p
 ```
 Cosmos Strategy Platform/
 ├── backend/         # Python FastAPI server, Neon Postgres + pgvector, RAG evaluation pipeline (multi-provider LLM)
-│   └── processor_main.py  # 2nd deployable service — Eventarc-invoked artifact processor (built, not deployed)
+│   └── processor_main.py  # 2nd deployable service — Eventarc-invoked artifact processor (cosmos-artifact-processor, live on GCP)
 ├── frontend-react/    # Next.js (React, TypeScript) client
 ├── infra/terraform/   # Infrastructure-as-code (artifact-pipeline/ — bucket, Eventarc, Cloud Run, IAM)
 ├── archives/          # Source PDFs + meeting transcripts for RAG ingestion / design source material
 ├── documentation/     # Full knowledge base — see documentation/README.md
 ├── docs/superpowers/  # Design specs & implementation plans (e.g. Users/Projects/Engagement KB)
-├── tests/             # pytest suite — 487 tests
+├── tests/             # pytest suite — 491 tests
 ├── CLAUDE.md          # Consolidated project reference
 └── CHANGELOG.md       # Version history
 ```
