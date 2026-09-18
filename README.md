@@ -98,7 +98,7 @@ The business case, functional spec, technical spec, and architecture describe a 
 - **Voice input** on the chat interview: a press-and-hold mic button using only the browser's native Web Speech API, no backend involvement.
 - The chat interview screen and, since 2026-09-15, the entire app run on a single "Light Professional" theme — no dark mode, no toggle, by explicit design decision.
 - **Send Engagement Report**: emails the full compiled brief, including the Level 1/2/3 benchmark comparison, to every project member.
-- 484 automated tests (`pytest`) and a CI workflow running them on every push/PR.
+- 487 automated tests (`pytest`) and a CI workflow running them on every push/PR.
 
 **What's genuinely not built yet:**
 - The rest of the **Guided Learning Flow** — keyword-agnostic answer mapping, an actionability check, the two-case-study resolution flow with a hidden reveal (the artifact-tagging and retrieval-exclusion plumbing exists in code, but no interview step, endpoint, or seeded provocations do), a corpus-relative self-evaluation depth signal, and a module-end Start/Stop/Continue reflection. A 2026-09-02 stakeholder call raised open questions about this flow's direction, mostly resolved at a 2026-09-11 planning session — see [Stakeholder Clarifications](documentation/product/stakeholder-clarifications-2026-09.md).
@@ -121,7 +121,7 @@ Full design: [Users/Projects/Engagement KB Spec](docs/superpowers/specs/2026-08-
 
 **Guided Learning Flow** (from the 2026-08-24 stakeholder review meeting — **two of nine items done**): baseline calibration and adaptive question difficulty are built; keyword-agnostic answer mapping, an actionability check, the two-case-study resolution flow, corpus-relative self-evaluation, and Start/Stop/Continue reflection are not. See "How It Works" above and `documentation/product/functional-spec.md` for full detail. The corpus-relative depth signal specifically needs a data-model addition not yet designed — flagged as an open gap, not solved. A 2026-09-02 stakeholder call raised open questions about this flow's direction (calibration's position, document-upload scope, product-vs-consulting-aid targeting), mostly resolved at a 2026-09-11 planning session (moved from an original 2026-09-09 date) — see [documentation/product/stakeholder-clarifications-2026-09.md](documentation/product/stakeholder-clarifications-2026-09.md).
 
-**Production Deployment Infrastructure** (decided 2026-08-25: GCP Cloud Run, not AWS — **not yet built**, only its CI test workflow exists): Dockerfile, `/healthz` route, GCP project bootstrap, Secret Manager + Workload Identity Federation, the deploy workflow, and Cloud Monitoring alerts are all still plan steps, not running infrastructure. The async ingestion pipeline (2026-09-02) added the repo's first Terraform module (`infra/terraform/artifact-pipeline/`) — written and validated, but never applied to a real GCP project. **That plan is now superseded, not executed, by a narrower dev-only deployment spec** (2026-09-17, revised 2026-09-18): one Cloud Run service via `gcloud` CLI provisioning rather than Terraform, Gemini as the only LLM provider — 0 of 44 plan steps done. See `documentation/product/roadmap.md`'s "Production Deployment Infrastructure" section for the task-by-task status.
+**Production Deployment Infrastructure**: a two-service, Terraform-provisioned GCP Cloud Run design was decided and specced 2026-08-25, but that literal plan was never built. **A development deployment is live as of 2026-09-18** instead — a single Cloud Run service (`cosmos-dev`, **https://cosmos-dev-378946324391.us-central1.run.app**) serving both the FastAPI backend and the Next.js frontend's static export, provisioned via `gcloud` CLI rather than Terraform for this pass, Gemini as the only provisioned LLM provider, `min-instances=0`/`max-instances=2` scaling, and a ₹500/month GCP Billing Budget alert. `.github/workflows/deploy.yml` auto-deploys on push to `main`. This is explicitly a **development** deployment, not a production pilot — no custom domain, no monitoring alert policies, no staging environment. See `documentation/product/roadmap.md`'s "Production Deployment Infrastructure" section and `CLAUDE.md` Part 6 for the full account.
 
 **Beyond the POC** (not yet designed):
 - SSO / enterprise identity — the near-term auth design is deliberately simple (built-in email/password).
@@ -154,7 +154,7 @@ Cosmos Strategy Platform/
 ├── archives/          # Source PDFs + meeting transcripts for RAG ingestion / design source material
 ├── documentation/     # Full knowledge base — see documentation/README.md
 ├── docs/superpowers/  # Design specs & implementation plans (e.g. Users/Projects/Engagement KB)
-├── tests/             # pytest suite — 484 tests
+├── tests/             # pytest suite — 487 tests
 ├── CLAUDE.md          # Consolidated project reference
 └── CHANGELOG.md       # Version history
 ```

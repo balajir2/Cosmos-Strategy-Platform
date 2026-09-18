@@ -11,7 +11,7 @@ Test what exists, honestly. Tests document *current* behavior so regressions are
 Location: `tests/` at the repo root, run with `pytest` from the repo root.
 
 - **Framework**: `pytest` + FastAPI's `TestClient` (via `httpx`).
-- **Scope**: 484 tests covering essentially every backend module — see "What's Covered" below.
+- **Scope**: 487 tests covering essentially every backend module — see "What's Covered" below.
 - **CI**: `.github/workflows/ci.yml` runs the full suite on every push/PR to `main`.
 - **No network dependency required to pass**: `backend/rag_engine.py` degrades gracefully — no active LLM provider credentials configured means evaluation falls back to a local heuristic critique (`fallback_local_critique`); if the archive PDFs were ever missing, vector indexing falls back to a synthetic in-memory dataset. The tests exercise these fallback paths rather than mocking around them.
 - **First-run cost**: `RagEngine.__init__` always loads the `all-MiniLM-L6-v2` SentenceTransformer model (downloaded once, ~80MB, cached locally after) and, if the `framework_kb_chunks` table (Neon Postgres) is empty, ingests the `archives/` PDFs into it. This is the same cost the app already pays on every startup — the test bed doesn't add to it.
