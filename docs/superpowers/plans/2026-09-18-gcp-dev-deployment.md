@@ -37,7 +37,7 @@
 
 There is no frontend test framework in this repo — verification is `npm run build` succeeding (which for `output: "export"` actually *executes* prerendering, so a broken `useSearchParams()`/Suspense setup fails the build, not just type-checks it) plus a manual read-through, consistent with every prior UI change in this codebase.
 
-- [ ] **Step 1: Add `output: "export"` to `next.config.ts`**
+- [ ] **Step 1: Add `output: "export"` and `trailingSlash: true` to `next.config.ts`**
 
 Replace the entire contents of `frontend-react/next.config.ts`:
 
@@ -46,10 +46,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "export",
+  trailingSlash: true,
 };
 
 export default nextConfig;
 ```
+
+`trailingSlash: true` is required, not optional: without it, Next.js's static export emits flat files for nested routes (`admin/project.html`) instead of `admin/project/index.html`. Starlette's `StaticFiles(html=True)` (which Task 2 mounts) only resolves a directory to its `index.html` — it has no logic to append `.html` to an extensionless clean-URL request. Verified directly: without `trailingSlash: true`, a built export's `/admin/project`, `/client/case`, and `/client/case/chat` all 404 against `StaticFiles(html=True)`; with it, all return `200`.
 
 - [ ] **Step 2: Move and rewrite the three dynamic-route pages**
 
@@ -1054,6 +1057,7 @@ with patch("rag_engine.RagEngine.__init__", return_value=None):
     import main
 
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 
 def test_mount_frontend_if_built_skips_when_directory_missing(tmp_path):
@@ -1071,6 +1075,29 @@ def test_mount_frontend_if_built_mounts_when_directory_exists(tmp_path):
     mounted = main.mount_frontend_if_built(app, str(build_dir))
     assert mounted is True
     assert len(app.routes) == 1
+
+
+def test_mount_frontend_serves_clean_url_for_nested_static_export_route(tmp_path):
+    """Regression test: Next.js's static export with trailingSlash: true emits
+    admin/project/index.html for the /admin/project route (not the flat
+    admin/project.html it would emit without that setting). StaticFiles(html=True)
+    can only resolve the nested-index-html shape, not the flat one - it has no
+    logic to append ".html" to an extensionless request path. This test builds
+    the nested shape directly and confirms a clean-URL GET actually resolves,
+    catching the exact bug a flat-file build would silently reintroduce."""
+    build_dir = tmp_path / "out"
+    (build_dir / "admin" / "project").mkdir(parents=True)
+    (build_dir / "index.html").write_text("<html>home</html>")
+    (build_dir / "admin" / "project" / "index.html").write_text("<html>project</html>")
+
+    app = FastAPI()
+    main.mount_frontend_if_built(app, str(build_dir))
+    client = TestClient(app)
+
+    response = client.get("/admin/project", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert "project" in response.text
 ```
 
 - [ ] **Step 2: Run the new tests to verify they fail**
@@ -1127,7 +1154,7 @@ if __name__ == "__main__":
 
 Run: `pytest tests/test_static_frontend_mount.py -v`
 
-Expected: PASS, both tests.
+Expected: PASS, all three tests.
 
 - [ ] **Step 5: Run the full backend suite**
 
