@@ -46,7 +46,7 @@ Cosmos Strategy Platform/
 * **Database (current)**: Neon Postgres with the `pgvector` extension (`psycopg2-binary` driver, `pgvector` Python package for the vector type, `DATABASE_URL` environment variable). Covers `processes`/`stages`/`questions`/`guidance` and the Framework Knowledge Base (`framework_kb_chunks`) — migrated off SQLite + a flat-file vector JSON in Phase 0 (2026-08-24). See the Neon spec.
 * **Database (target)**: the same Neon Postgres database additionally holds `users`, `projects`, `project_members`, `responses`, `project_artifacts`, and `project_kb_chunks` (Engagement Knowledge Base) once Phases A/B/C land — see Section 3.2.
 * **Embeddings Model**: `SentenceTransformer("all-MiniLM-L6-v2")` (local execution) — unchanged by the Neon move; only the storage/query backend for the resulting vectors changed.
-* **LLM Engine**: pluggable multi-provider layer (`backend/llm_providers/`) — Anthropic direct API (default), OpenAI direct API, or Gemini via Vertex AI, admin-switchable at runtime; local heuristic fallback when no provider is configured/available.
+* **LLM Engine**: pluggable multi-provider layer (`backend/llm_providers/`) — Anthropic direct API (default), OpenAI direct API, or Gemini via the Generative Language API (`google-genai`, a billed `GEMINI_API_KEY`), admin-switchable at runtime; local heuristic fallback when no provider is configured/available.
 * **Frontend**: HTML5, Vanilla JavaScript (ES6+), and custom CSS.
 * **Auth (planned, Phase A)**: `passlib[bcrypt]` for password hashing, `python-jose` (or `PyJWT`) for JWT issuance/verification.
 * **Document parsing (planned, Phase C)**: `pypdf` (already in use), plus new `python-docx` and `python-pptx` dependencies for Engagement Knowledge Base document uploads.

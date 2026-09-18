@@ -53,6 +53,6 @@ documentation/
 - **Guided Learning Flow**: two of nine items done (baseline concept calibration, adaptive question difficulty); the rest (keyword-agnostic answer mapping, case study resolution, corpus-relative depth signal, Start/Stop/Continue) are not built — see [Functional Spec](./product/functional-spec.md) and [Roadmap](./product/roadmap.md). The 2026-09-02 stakeholder call's open questions were largely resolved at the 2026-09-11 planning session (calibration stays pre-question, master questions stay human-authored, all three delivery modes stay in scope) — document upload/case-study scope was substantially but not fully resolved. See [Stakeholder Clarifications](./product/stakeholder-clarifications-2026-09.md).
 - **Async artifact-ingestion pipeline** (2026-09-02): built in code — a dual-mode upload path, a second Eventarc-invoked processor service, and the repo's first Terraform module — but never applied to a real GCP project. See [Roadmap](./product/roadmap.md).
 - **Voice input** (2026-09-11): a press-and-hold microphone button on the chat interview, browser-only via the native Web Speech API — no backend involvement. See [Roadmap](./product/roadmap.md).
-- **Test bed**: `pytest`, 487 tests, run via CI on every push/PR to `main` — see [Test Strategy](./testing/test-strategy.md).
+- **Test bed**: `pytest`, 491 tests, run via CI on every push/PR to `main` — see [Test Strategy](./testing/test-strategy.md).
 
 Full detail: [Roadmap](./product/roadmap.md).

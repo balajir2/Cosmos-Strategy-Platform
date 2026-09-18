@@ -51,7 +51,7 @@ Three-tier architecture: a Client Interface, an API Application Layer, and a sin
 - Routing Controller: auth, project, artifact, framework-authoring, chat-interview, and admin endpoints — see `CLAUDE.md` Part 4 for the full, current list.
 - Database Manager (`backend/database.py`): Neon Postgres connection, DDL, seeding, and idempotent schema migrations.
 - RAG Orchestrator (`backend/rag_engine.py`): `pgvector` search (merged across the Framework and Engagement Knowledge Bases), PDF extraction/ingestion, cosine-distance query via SQL, Level 1/2/3 comparative-benchmark prompting.
-- Generative Gateway (`backend/llm_providers/`): pluggable multi-provider layer — Anthropic direct API (default), OpenAI direct API, or Gemini via Vertex AI, admin-switchable at runtime — with a local heuristic fallback when no provider is configured/available.
+- Generative Gateway (`backend/llm_providers/`): pluggable multi-provider layer — Anthropic direct API (default), OpenAI direct API, or Gemini via the Generative Language API (`google-genai`, a billed `GEMINI_API_KEY` — switched off Vertex AI/IAM 2026-09-18), admin-switchable at runtime — with a local heuristic fallback when no provider is configured/available.
 - A second deployable service, `backend/processor_main.py` (built, not deployed — see Section 5 and `documentation/product/roadmap.md`'s Async Artifact Ingestion Pipeline section): the Eventarc-invoked target for GCS-staged artifact processing in a deployed environment.
 
 **Storage Layer**: one Neon Postgres database (`DATABASE_URL`), `pgvector` extension enabled:
