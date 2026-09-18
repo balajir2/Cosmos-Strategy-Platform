@@ -24,4 +24,8 @@ ENV PORT=8080
 ENV HF_HUB_OFFLINE=1
 EXPOSE 8080
 
-CMD uvicorn processor_main:app --host 0.0.0.0 --port ${PORT}
+# exec form via `sh -c ... exec` - see the root Dockerfile's identical
+# comment. Harmless in the actual deployed environment (the artifact-pipeline
+# Terraform module's exec-form `command`/`args` already override this CMD),
+# but matters for a plain `docker run` against this image directly.
+CMD ["sh", "-c", "exec uvicorn processor_main:app --host 0.0.0.0 --port ${PORT}"]

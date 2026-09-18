@@ -1,4 +1,7 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+// `??` not `||`: an intentional empty string (same-origin, set at build time
+// for the single-service deployment) must survive - `||` would fall through
+// to the localhost default since "" is falsy.
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
 // --- Auth token storage (Decision 5: localStorage, not an httpOnly cookie) ---
 

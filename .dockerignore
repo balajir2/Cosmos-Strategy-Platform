@@ -1,5 +1,6 @@
 .git
 .env
+frontend-react/.env*
 .venv
 venv/
 __pycache__/

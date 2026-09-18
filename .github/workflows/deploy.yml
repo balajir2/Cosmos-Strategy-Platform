@@ -8,8 +8,30 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest
+
+      - name: Run tests
+        run: pytest tests/ -v
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -33,20 +55,28 @@ jobs:
           docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
-      - name: Run database migrations and set the active provider
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run database migrations
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          python -m pip install -r backend/requirements.txt
+          # Only DATABASE_URL access is needed here, not the full backend
+          # stack - installing sentence-transformers' torch wheel on every
+          # deploy just to run a migration wastes minutes and disk on the
+          # runner for something this step never uses.
+          pip install psycopg2-binary pgvector python-dotenv
           python backend/database.py
-          python -c "
-          import psycopg2, os
-          conn = psycopg2.connect(os.environ['DATABASE_URL'])
-          with conn.cursor() as cur:
-              cur.execute(\"UPDATE platform_settings SET active_llm_provider = 'gemini' WHERE id = 1;\")
-          conn.commit()
-          conn.close()
-          "
+          # Deliberately NOT setting active_llm_provider here on every
+          # deploy: that one-time seed (-> 'gemini') already happened by
+          # hand during the initial deployment. platform_settings.
+          # active_llm_provider is NOT NULL, so there's no reliable
+          # "never configured" condition to gate a recurring UPDATE on -
+          # doing it unconditionally would silently revert any deliberate
+          # admin choice made via PATCH /api/admin/settings on every future
+          # merge. Re-run manually if the DB is ever recreated from scratch.
 
       - name: Deploy cosmos-dev
         run: |

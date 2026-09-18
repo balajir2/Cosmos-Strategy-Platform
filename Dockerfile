@@ -4,6 +4,15 @@ WORKDIR /app/frontend-react
 COPY frontend-react/package.json frontend-react/package-lock.json ./
 RUN npm ci
 COPY frontend-react/ ./
+# NEXT_PUBLIC_* values are inlined into the JS bundle at build time, not read
+# at runtime - a static export has no server to substitute them later. Empty
+# string means same-origin relative API calls (api-client.ts's `?? ""` picks
+# this up), which is exactly right for this single-service deployment: FastAPI
+# serves this same export, so /api/* already resolves against the same host.
+# Left unset, api-client.ts's own fallback bakes in http://localhost:8000,
+# which is only reachable from whoever happens to be running the backend
+# locally - found and fixed after the first deploy shipped with that bug.
+ENV NEXT_PUBLIC_API_BASE=""
 RUN npm run build
 
 # Stage 2: Python runtime, serving both the API and the static export
@@ -16,8 +25,8 @@ COPY backend/requirements.txt backend/requirements.txt
 # plus the triton GPU kernel compiler (~900MB), even though nothing in this
 # image ever runs on a GPU. Installing the CPU-only build first satisfies
 # that dependency before requirements.txt would otherwise pull in the CUDA
-# one - this alone cut the built image from ~10.1GB to a few GB smaller,
-# meaningfully faster Cloud Run cold starts at min-instances=0.
+# one - this alone cut the built image from ~10.1GB to ~2.49GB, meaningfully
+# faster Cloud Run cold starts at min-instances=0.
 RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch && \
     pip install --no-cache-dir -r backend/requirements.txt
 
@@ -41,4 +50,8 @@ ENV PORT=8080
 ENV HF_HUB_OFFLINE=1
 EXPOSE 8080
 
-CMD uvicorn main:app --app-dir /app/backend --host 0.0.0.0 --port ${PORT}
+# exec form via `sh -c ... exec` so uvicorn is PID 1's direct child and
+# actually receives SIGTERM - Cloud Run's shutdown signal - instead of it
+# being swallowed by a shell that doesn't forward it, which would otherwise
+# kill in-flight requests at the grace-period deadline rather than draining.
+CMD ["sh", "-c", "exec uvicorn main:app --app-dir /app/backend --host 0.0.0.0 --port ${PORT}"]
