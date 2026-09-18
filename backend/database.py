@@ -1,9 +1,49 @@
 import os
 from dotenv import load_dotenv
 import psycopg2
+import psycopg2.pool
 from pgvector.psycopg2 import register_vector
 
 load_dotenv()
+
+# Cloud Run's cross-cloud hop to Neon (GCP us-central1 -> AWS us-east-2) makes a
+# fresh TCP+TLS handshake per connection expensive, and every *_db.py module
+# opens a new one per call via get_db_connection() - a single chat message can
+# trigger 8-10 of these serially. Pooling amortizes that cost across requests.
+_pool = None
+
+
+class _PooledConnection(psycopg2.extensions.connection):
+    """Registers pgvector's type adapter once per physical connection - the
+    pool's connection_factory constructs exactly one of these per real
+    socket, regardless of how many times it's later borrowed and returned."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        register_vector(self)
+
+
+class _ConnectionHandle:
+    """Wraps a pooled connection so application code's close() returns it to
+    the pool instead of destroying the socket. Deliberately NOT done by
+    overriding close() on the connection class itself: psycopg2's own pool
+    internals sometimes call the real conn.close() directly to discard a
+    connection it doesn't want back (e.g. once it already has `minconn` idle
+    connections sitting in the pool) - if that real close() redirected back
+    into the pool, it would try to re-acquire the pool's own (non-reentrant)
+    lock while already holding it, deadlocking every time a connection is
+    checked back in while another is still checked out. Wrapping keeps the
+    pool's internal bookkeeping operating on the real, unwrapped connection
+    at all times; only this outer handle's close() is redirected."""
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    def close(self):
+        _pool.putconn(self._conn)
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
 
 
 def _require_database_url():
@@ -16,11 +56,21 @@ def _require_database_url():
     return database_url
 
 
+def _get_pool():
+    global _pool
+    if _pool is None:
+        database_url = _require_database_url()
+        # minconn=1/maxconn=5 per instance, x2 max Cloud Run instances = 10
+        # connections at worst - comfortably within Neon's connection limit
+        # for a dev-scale deployment.
+        _pool = psycopg2.pool.ThreadedConnectionPool(
+            1, 5, database_url, connection_factory=_PooledConnection
+        )
+    return _pool
+
+
 def get_db_connection():
-    database_url = _require_database_url()
-    conn = psycopg2.connect(database_url)
-    register_vector(conn)
-    return conn
+    return _ConnectionHandle(_get_pool().getconn())
 
 
 def init_db():
