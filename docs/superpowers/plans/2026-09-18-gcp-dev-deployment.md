@@ -1328,6 +1328,121 @@ EOF
 
 ---
 
+### Task 4b: Shrink Both Docker Images with CPU-Only PyTorch
+
+**Added mid-plan**: after Tasks 3 and 4 landed, inspecting the built images (`docker history`) found the `cosmos-dev` and `cosmos-artifact-processor` images were both ~10.1GB. `pip install`'s layer alone was 6.58GB, and `docker run ... python -c "import torch; print(torch.__version__)"` showed `2.14.0+cu130` — `sentence-transformers`' default `torch` dependency pulls in the full CUDA-enabled wheel, which bundles ~3.2GB of NVIDIA CUDA runtime libraries (`nvidia/`) plus 897MB of `triton` (a GPU kernel compiler) — none of which ever executes, since neither service runs on a GPU. Installing the CPU-only PyTorch build instead (a well-documented pattern via PyTorch's own CPU wheel index) removes this entirely, expected to shrink both images from ~10.1GB to roughly 2-3GB — directly relevant to this plan's own cost/scaling discipline, since a smaller image means faster Cloud Run cold starts at `min-instances=0`.
+
+**Files:**
+- Modify: `Dockerfile` (repo root)
+- Modify: `backend/processor.Dockerfile`
+
+**Interfaces:** none (build artifacts only) — no change to either image's runtime behavior, only its size.
+
+- [ ] **Step 1: Update the root `Dockerfile`**
+
+Change:
+```dockerfile
+COPY backend/requirements.txt backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
+```
+to:
+```dockerfile
+COPY backend/requirements.txt backend/requirements.txt
+# CPU-only torch: sentence-transformers pulls in torch as a dependency, and
+# pip's default wheel for it bundles the full NVIDIA CUDA runtime (~3.2GB)
+# plus the triton GPU kernel compiler (~900MB), even though nothing in this
+# image ever runs on a GPU. Installing the CPU-only build first satisfies
+# that dependency before requirements.txt would otherwise pull in the CUDA
+# one - this alone cut the built image from ~10.1GB to a few GB smaller,
+# meaningfully faster Cloud Run cold starts at min-instances=0.
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch && \
+    pip install --no-cache-dir -r backend/requirements.txt
+```
+
+- [ ] **Step 2: Update `backend/processor.Dockerfile`**
+
+Change:
+```dockerfile
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+```
+to:
+```dockerfile
+COPY requirements.txt requirements.txt
+# See the root Dockerfile's identical comment - same fix, same reason.
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch && \
+    pip install --no-cache-dir -r requirements.txt
+```
+
+- [ ] **Step 3: Rebuild both images and compare sizes**
+
+```bash
+docker build -t cosmos-dev:local .
+docker build -f backend/processor.Dockerfile -t cosmos-artifact-processor:local backend/
+docker images | grep -E "cosmos-dev|cosmos-artifact-processor"
+```
+
+Expected: both images meaningfully smaller than their prior ~10.1GB (roughly 2-3GB is the expectation, but report whatever the actual numbers are — don't force a specific target).
+
+- [ ] **Step 4: Re-run both images' functional verification**
+
+For `cosmos-dev` (same checks as Task 3's Step 3, plus the `/admin/project` clean-URL check):
+```bash
+docker run --rm -d -p 8080:8080 -e PORT=8080 -e DATABASE_URL="postgresql://fake:fake@localhost/fake" -e JWT_SECRET_KEY="test" --name cosmos-dev-verify cosmos-dev:local
+sleep 3
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/
+curl -s -o /dev/null -w "%{http_code}\n" -L http://localhost:8080/admin/project
+docker stop cosmos-dev-verify
+```
+Expected: both `200`.
+
+For `cosmos-artifact-processor` (same check as Task 4's Step 2):
+```bash
+docker run --rm -d -p 8081:8080 --name cosmos-processor-verify cosmos-artifact-processor:local
+sleep 20
+curl -s -X POST http://localhost:8081/ -H "Content-Type: application/json" -d '{"bucket":"x","name":"not-raw/whatever"}'
+docker stop cosmos-processor-verify
+```
+Expected: `{"status":"skipped",...}`.
+
+Also confirm the CPU-only torch actually loads correctly (no silent breakage from the swap):
+```bash
+docker run --rm cosmos-artifact-processor:local python -c "
+import torch
+from sentence_transformers import SentenceTransformer
+print('torch:', torch.__version__)
+model = SentenceTransformer('all-MiniLM-L6-v2')
+print('embedding shape:', model.encode(['test sentence']).shape)
+"
+```
+Expected: `torch:` prints a version with `+cpu` (not `+cu...`), and the embedding shape prints without error — confirms the CPU-only build still produces correct embeddings, not just that it installs.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add Dockerfile backend/processor.Dockerfile
+git commit -m "$(cat <<'EOF'
+perf: install CPU-only PyTorch to shrink both Docker images
+
+sentence-transformers' default torch dependency pulls in the full
+CUDA-enabled wheel (~3.2GB of NVIDIA runtime libraries + ~900MB of
+triton, a GPU kernel compiler) even though neither cosmos-dev nor
+cosmos-artifact-processor ever runs on a GPU - Cloud Run has none, and
+this app only does CPU embedding inference. Installing PyTorch's
+CPU-only build first (before the rest of requirements.txt, so
+sentence-transformers' own torch dependency is already satisfied)
+removes that dead weight entirely. Found by inspecting `docker history`
+after Task 3/4 both produced ~10.1GB images - directly relevant to this
+plan's cost/scaling discipline, since a smaller image means faster
+Cloud Run cold starts at min-instances=0.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
 ### Task 5: Cost-Safety Scaling on the Processor's Terraform Resource
 
 **Files:**
