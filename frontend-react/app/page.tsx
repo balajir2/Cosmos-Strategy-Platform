@@ -53,7 +53,7 @@ export default function AdminProjectList() {
         {projects.map((p) => (
           <Link
             key={p.id}
-            href={`/admin/project/${p.id}`}
+            href={`/admin/project?id=${p.id}`}
             className="glass-card case-card animate-slide-up"
             style={{ display: "block", textDecoration: "none", color: "inherit" }}
           >

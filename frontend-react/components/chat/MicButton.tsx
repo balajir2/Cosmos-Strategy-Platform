@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
-import styles from "@/app/client/case/[caseId]/chat/chat.module.css";
+import styles from "@/app/client/case/chat/chat.module.css";
 
 interface MicButtonProps {
   onTranscript: (text: string) => void;

@@ -48,7 +48,7 @@ export default function ClientProjectList() {
             <div className="case-subtitle">{p.customer_name}</div>
             <p>{p.description || p.industry_context || "No description yet."}</p>
             {p.status === "Active" ? (
-              <Link href={`/client/case/${p.id}`} className="case-card-footer" style={{ textDecoration: "none" }}>
+              <Link href={`/client/case?id=${p.id}`} className="case-card-footer" style={{ textDecoration: "none" }}>
                 <span>Begin Strategy Workshop</span>
                 <i className="fa-solid fa-arrow-right"></i>
               </Link>

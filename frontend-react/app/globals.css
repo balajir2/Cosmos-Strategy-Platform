@@ -2,7 +2,7 @@
 
 :root {
     /* Light Professional palette - shared with the chat interview screen
-       (frontend-react/app/client/case/[caseId]/chat/chat.module.css) */
+       (frontend-react/app/client/case/chat/chat.module.css) */
     --bg-page: #f7f6f3;
     --bg-surface: #ffffff;
     --border: #e6e3dd;

@@ -37,7 +37,7 @@
 
 There is no frontend test framework in this repo — verification is `npm run build` succeeding (which for `output: "export"` actually *executes* prerendering, so a broken `useSearchParams()`/Suspense setup fails the build, not just type-checks it) plus a manual read-through, consistent with every prior UI change in this codebase.
 
-- [ ] **Step 1: Add `output: "export"` to `next.config.ts`**
+- [ ] **Step 1: Add `output: "export"` and `trailingSlash: true` to `next.config.ts`**
 
 Replace the entire contents of `frontend-react/next.config.ts`:
 
@@ -46,10 +46,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "export",
+  trailingSlash: true,
 };
 
 export default nextConfig;
 ```
+
+`trailingSlash: true` is required, not optional: without it, Next.js's static export emits flat files for nested routes (`admin/project.html`) instead of `admin/project/index.html`. Starlette's `StaticFiles(html=True)` (which Task 2 mounts) only resolves a directory to its `index.html` — it has no logic to append `.html` to an extensionless clean-URL request. Verified directly: without `trailingSlash: true`, a built export's `/admin/project`, `/client/case`, and `/client/case/chat` all 404 against `StaticFiles(html=True)`; with it, all return `200`.
 
 - [ ] **Step 2: Move and rewrite the three dynamic-route pages**
 
@@ -1054,6 +1057,7 @@ with patch("rag_engine.RagEngine.__init__", return_value=None):
     import main
 
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 
 def test_mount_frontend_if_built_skips_when_directory_missing(tmp_path):
@@ -1071,6 +1075,29 @@ def test_mount_frontend_if_built_mounts_when_directory_exists(tmp_path):
     mounted = main.mount_frontend_if_built(app, str(build_dir))
     assert mounted is True
     assert len(app.routes) == 1
+
+
+def test_mount_frontend_serves_clean_url_for_nested_static_export_route(tmp_path):
+    """Regression test: Next.js's static export with trailingSlash: true emits
+    admin/project/index.html for the /admin/project route (not the flat
+    admin/project.html it would emit without that setting). StaticFiles(html=True)
+    can only resolve the nested-index-html shape, not the flat one - it has no
+    logic to append ".html" to an extensionless request path. This test builds
+    the nested shape directly and confirms a clean-URL GET actually resolves,
+    catching the exact bug a flat-file build would silently reintroduce."""
+    build_dir = tmp_path / "out"
+    (build_dir / "admin" / "project").mkdir(parents=True)
+    (build_dir / "index.html").write_text("<html>home</html>")
+    (build_dir / "admin" / "project" / "index.html").write_text("<html>project</html>")
+
+    app = FastAPI()
+    main.mount_frontend_if_built(app, str(build_dir))
+    client = TestClient(app)
+
+    response = client.get("/admin/project", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert "project" in response.text
 ```
 
 - [ ] **Step 2: Run the new tests to verify they fail**
@@ -1127,7 +1154,7 @@ if __name__ == "__main__":
 
 Run: `pytest tests/test_static_frontend_mount.py -v`
 
-Expected: PASS, both tests.
+Expected: PASS, all three tests.
 
 - [ ] **Step 5: Run the full backend suite**
 
@@ -1293,6 +1320,121 @@ build: add a Dockerfile for the artifact processor service
 
 backend/processor_main.py has never had one - infra/terraform/artifact-pipeline
 has been unappliable without an existing processor_image to point at.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
+### Task 4b: Shrink Both Docker Images with CPU-Only PyTorch
+
+**Added mid-plan**: after Tasks 3 and 4 landed, inspecting the built images (`docker history`) found the `cosmos-dev` and `cosmos-artifact-processor` images were both ~10.1GB. `pip install`'s layer alone was 6.58GB, and `docker run ... python -c "import torch; print(torch.__version__)"` showed `2.14.0+cu130` — `sentence-transformers`' default `torch` dependency pulls in the full CUDA-enabled wheel, which bundles ~3.2GB of NVIDIA CUDA runtime libraries (`nvidia/`) plus 897MB of `triton` (a GPU kernel compiler) — none of which ever executes, since neither service runs on a GPU. Installing the CPU-only PyTorch build instead (a well-documented pattern via PyTorch's own CPU wheel index) removes this entirely, expected to shrink both images from ~10.1GB to roughly 2-3GB — directly relevant to this plan's own cost/scaling discipline, since a smaller image means faster Cloud Run cold starts at `min-instances=0`.
+
+**Files:**
+- Modify: `Dockerfile` (repo root)
+- Modify: `backend/processor.Dockerfile`
+
+**Interfaces:** none (build artifacts only) — no change to either image's runtime behavior, only its size.
+
+- [ ] **Step 1: Update the root `Dockerfile`**
+
+Change:
+```dockerfile
+COPY backend/requirements.txt backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
+```
+to:
+```dockerfile
+COPY backend/requirements.txt backend/requirements.txt
+# CPU-only torch: sentence-transformers pulls in torch as a dependency, and
+# pip's default wheel for it bundles the full NVIDIA CUDA runtime (~3.2GB)
+# plus the triton GPU kernel compiler (~900MB), even though nothing in this
+# image ever runs on a GPU. Installing the CPU-only build first satisfies
+# that dependency before requirements.txt would otherwise pull in the CUDA
+# one - this alone cut the built image from ~10.1GB to a few GB smaller,
+# meaningfully faster Cloud Run cold starts at min-instances=0.
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch && \
+    pip install --no-cache-dir -r backend/requirements.txt
+```
+
+- [ ] **Step 2: Update `backend/processor.Dockerfile`**
+
+Change:
+```dockerfile
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+```
+to:
+```dockerfile
+COPY requirements.txt requirements.txt
+# See the root Dockerfile's identical comment - same fix, same reason.
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch && \
+    pip install --no-cache-dir -r requirements.txt
+```
+
+- [ ] **Step 3: Rebuild both images and compare sizes**
+
+```bash
+docker build -t cosmos-dev:local .
+docker build -f backend/processor.Dockerfile -t cosmos-artifact-processor:local backend/
+docker images | grep -E "cosmos-dev|cosmos-artifact-processor"
+```
+
+Expected: both images meaningfully smaller than their prior ~10.1GB (roughly 2-3GB is the expectation, but report whatever the actual numbers are — don't force a specific target).
+
+- [ ] **Step 4: Re-run both images' functional verification**
+
+For `cosmos-dev` (same checks as Task 3's Step 3, plus the `/admin/project` clean-URL check):
+```bash
+docker run --rm -d -p 8080:8080 -e PORT=8080 -e DATABASE_URL="postgresql://fake:fake@localhost/fake" -e JWT_SECRET_KEY="test" --name cosmos-dev-verify cosmos-dev:local
+sleep 3
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/
+curl -s -o /dev/null -w "%{http_code}\n" -L http://localhost:8080/admin/project
+docker stop cosmos-dev-verify
+```
+Expected: both `200`.
+
+For `cosmos-artifact-processor` (same check as Task 4's Step 2):
+```bash
+docker run --rm -d -p 8081:8080 --name cosmos-processor-verify cosmos-artifact-processor:local
+sleep 20
+curl -s -X POST http://localhost:8081/ -H "Content-Type: application/json" -d '{"bucket":"x","name":"not-raw/whatever"}'
+docker stop cosmos-processor-verify
+```
+Expected: `{"status":"skipped",...}`.
+
+Also confirm the CPU-only torch actually loads correctly (no silent breakage from the swap):
+```bash
+docker run --rm cosmos-artifact-processor:local python -c "
+import torch
+from sentence_transformers import SentenceTransformer
+print('torch:', torch.__version__)
+model = SentenceTransformer('all-MiniLM-L6-v2')
+print('embedding shape:', model.encode(['test sentence']).shape)
+"
+```
+Expected: `torch:` prints a version with `+cpu` (not `+cu...`), and the embedding shape prints without error — confirms the CPU-only build still produces correct embeddings, not just that it installs.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add Dockerfile backend/processor.Dockerfile
+git commit -m "$(cat <<'EOF'
+perf: install CPU-only PyTorch to shrink both Docker images
+
+sentence-transformers' default torch dependency pulls in the full
+CUDA-enabled wheel (~3.2GB of NVIDIA runtime libraries + ~900MB of
+triton, a GPU kernel compiler) even though neither cosmos-dev nor
+cosmos-artifact-processor ever runs on a GPU - Cloud Run has none, and
+this app only does CPU embedding inference. Installing PyTorch's
+CPU-only build first (before the rest of requirements.txt, so
+sentence-transformers' own torch dependency is already satisfied)
+removes that dead weight entirely. Found by inspecting `docker history`
+after Task 3/4 both produced ~10.1GB images - directly relevant to this
+plan's cost/scaling discipline, since a smaller image means faster
+Cloud Run cold starts at min-instances=0.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 EOF
@@ -1575,6 +1717,16 @@ Expected: prints the created budget's resource name. If this fails with a permis
 - Log in with an existing account (or register a new one) and confirm a project loads at `/admin/project?id=<id>` or `/client/case?id=<id>` (confirms the query-string routing refactor works end-to-end, not just in isolation).
 - `gcloud run services describe cosmos-dev --region=us-central1 --format='value(status.url)'` and `gcloud run services describe cosmos-artifact-processor --region=us-central1 --format='value(spec.template.spec.containers[0].resources)'` both reflect the expected scaling/sizing.
 
+**Task 6 status: complete.** `cosmos-dev` is live at `https://cosmos-dev-378946324391.us-central1.run.app` (verified: `/` → 200 real HTML, `/admin/project` → 200 via redirect, `/api/status` → real JSON). `cosmos-artifact-processor`, its Eventarc trigger, and the `cosmos-artifacts-dev` bucket are all live via `terraform apply`.
+
+**What actually happened, differently from the steps above** (all real, all found and fixed during live execution, not hypothetical):
+
+1. **Step 5's first push (`processor:v1`) deployed but failed to start** — Cloud Run logs showed an `HTTP 429` from Hugging Face Hub (the container tries to download `all-MiniLM-L6-v2` at startup) whose 244s retry backoff exceeded Cloud Run's startup probe timeout. Root-caused, fixed, and verified (see the standalone commit below) by baking the model into both Dockerfiles at build time **and** setting `HF_HUB_OFFLINE=1` (baking the weights in alone wasn't sufficient — `huggingface_hub` still makes a runtime update-check HEAD request unless told not to). Rebuilt and pushed as `processor:v2`; `cosmos-dev` was built fresh with the fix already in place, so it only ever needed `v1`. This fix is its own commit (`b43df3a`, reviewed and approved separately from this plan's numbered tasks, since it was discovered mid-deployment rather than planned) — not a numbered "Task 6b", since it's execution-notes-only, tightly coupled to this task's own steps rather than a separable unit of work.
+2. **Step 6's Terraform apply hit a transient `Permission denied while using the Eventarc Service Agent`** on the Eventarc trigger specifically — a well-known IAM-propagation delay right after first enabling Eventarc on a project (the `roles/eventarc.serviceAgent` binding was already correctly present when checked; retrying ~3 minutes later succeeded with no other change).
+3. **Step 9's first deploy attempt crash-looped on `psycopg2.ProgrammingError: invalid dsn`** — the `DATABASE_URL`/`JWT_SECRET_KEY` secret values (Step 3) were written via a PowerShell `[System.IO.File]::WriteAllText(..., [System.Text.Encoding]::UTF8)` call, which silently prepends a UTF-8 BOM; the BOM corrupted the DSN psycopg2 tried to parse. Fixed by rewriting with a BOM-less `UTF8Encoding($false)` and adding new secret versions (`gcloud secrets versions add`, not `create` — same secret, corrected value); the broken v1 versions were disabled, not deleted, for the audit trail. **Security note:** the crash briefly printed the (corrupted but still credential-bearing) `DATABASE_URL` into Cloud Logging in plaintext before this was caught — flagged to the user; Cloud Logging access on this project is currently restricted to the owner account, so the practical exposure was judged low, and no credential rotation was requested.
+4. **Step 11's exact command failed twice**, for two different reasons: first, `billingbudgets.googleapis.com` wasn't enabled yet (not listed in the plan's Step 1 API-enable list, since Task 6 was drafted before this specific requirement was known); second, and more substantively, **`gcloud billing budgets create` can only denominate a budget in the billing account's own currency** — this billing account is INR, not USD, so the plan's literal `--budget-amount=5USD` was never achievable, and a first corrected attempt (`--budget-amount=5.00` with no currency qualifier) silently created a **₹5** budget (deleted immediately once caught) instead of a USD-equivalent one. Clarified with the user and created a **₹500** budget instead (`--filter-projects` also needed the project *number*, not the project ID, to be accepted).
+5. **The Bash tool's worktree-isolation guard false-positived on the literal word "enable"** in `gcloud services enable ...` (unrelated to git, but matched an overly broad heuristic) — every `gcloud`/PowerShell-only step in this task ran via the PowerShell tool instead, which wasn't subject to the same guard.
+
 ---
 
 ### Task 7: CI/CD Deploy Workflow
@@ -1784,6 +1936,28 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 EOF
 )"
 ```
+
+## Final Whole-Branch Review Fix Wave (2026-09-18)
+
+The final review (opus) found one Critical, five Important, and ten Minor issues. Summary of what was fixed, executed directly by the controller (not a subagent, given real redeploys were required):
+
+- **Critical, found and independently confirmed before fixing**: `NEXT_PUBLIC_API_BASE` was never set at build time. Next.js inlines `NEXT_PUBLIC_*` values into the JS bundle at build time for a static export (no runtime substitution) — the deployed frontend's compiled JS called `http://localhost:8000` for every API request, unreachable for any real visitor. Confirmed via `grep -rl "localhost:8000" frontend-react/out/_next/static/chunks/` locally (found it), then against the live service's every served JS chunk (also found it) before fixing. Fixed: `ENV NEXT_PUBLIC_API_BASE=""` at build time (same-origin relative paths, correct for this single-service architecture) + `api-client.ts`'s `||` → `??` (an intentional empty string is falsy, so `||` would have silently kept the broken default). Rebuilt both images, redeployed (`cosmos-dev:v2`, `cosmos-artifact-processor:v3`), and re-verified against the LIVE service: `curl`ing every served JS chunk for `localhost:8000` now returns nothing, and the login chunk's actual bytes show `fetch("/api/auth/login", ...)` with no host prefix.
+- **Important, fixed**: `deploy.yml` gained a `test` job + `needs: test` on `deploy` (previously could ship a red build); the migration step's dependency list slimmed to `psycopg2-binary`/`pgvector`/`python-dotenv` instead of the full backend stack (was pulling the CUDA torch wheel Task 4b just removed from the runtime images, onto the CI runner, for a step that never uses it); the recurring `UPDATE ... SET active_llm_provider = 'gemini'` was removed from the workflow entirely, not just guarded — `platform_settings.active_llm_provider` is `NOT NULL`, so there was no reliable "never configured" SQL condition to gate a one-time seed on, and an unconditional `UPDATE` on every deploy would silently revert any admin's deliberate choice made via `PATCH /api/admin/settings`; the one-time seed already happened by hand in Task 6 Step 10.
+- **Important, accepted as documented tradeoffs, not fixed**: `DATABASE_URL` living in both Secret Manager and GitHub Actions secrets (the plan's Step 3/Task 7 already named this explicitly); the pre-existing `allow_origins=["*"]` CORS setting (not introduced by this branch, now more materially relevant since the service is internet-facing — noted for a pre-pilot pass, not this dev-scale one).
+- **Minor, fixed**: both Dockerfiles switched to exec-form `CMD ["sh", "-c", "exec uvicorn ..."]` so uvicorn is PID 1 and receives `SIGTERM` for graceful shutdown (confirmed via `docker logs`: "Started server process [1]", previously "[7]"); `.dockerignore` now excludes `frontend-react/.env*` (prevents a non-reproducible image if a developer has a local env file); a `concurrency` group added to `deploy.yml`; the root `Dockerfile`'s torch-savings comment now cites the actual measured numbers (10.1GB → 2.49GB) instead of "a few GB smaller"; a conflated bug description in `CLAUDE.md` (mixed up the `trailingSlash` routing bug with the unrelated HF rate-limit bug) corrected to match Part 6's accurate wording; `quick-start.md`'s stale "458 tests" corrected to 487.
+- **Minor, deferred (noted, not fixed)**: `HF_HUB_OFFLINE=1`'s implicit coupling to running as root (both Dockerfiles cache the model under `/root/`); `mount_frontend_if_built`'s environment-dependent route count (latent, not currently affecting any test); unmatched `/api/*` paths now returning a StaticFiles 404 instead of FastAPI's JSON 404 body (cosmetic, changes the error contract).
+
+`pytest tests/ -q` → 487 passed after the fix wave. Full account of the live redeploy verification, including the exact `grep`/`curl` commands used to confirm the fix against the running service, is in the SDD ledger.
+
+### Scoped Re-Review of the Fix Wave (2026-09-18)
+
+A scoped re-review (opus) confirmed the Critical fix and 14 of the 16 original findings were correctly addressed, but found one new Important-severity breakage introduced by the fix wave itself:
+
+- **New Breakage #1 (Important), fixed**: `deploy.yml`'s slimmed migration dependency list (`psycopg2-binary`/`pgvector`/`python-dotenv`) omits packages `backend/database.py` needs transitively — `init_db()` unconditionally calls `framework_db.py`'s `migrate_existing_projects`, which imports `backend/llm_providers/__init__.py`, which eagerly imports `anthropic`/`openai`/`vertexai` at module load time even though the migration step never calls an LLM. Left as-is, the automated deploy workflow's migration step would fail with `ImportError` on its next real run, after partially applying DDL. Verified two ways before fixing: direct import-chain tracing through the source, and an empirical test — installing exactly the fixed six-package set into a genuinely isolated Python venv and successfully running `import database` against it. Fixed `deploy.yml`'s pip line to `psycopg2-binary pgvector python-dotenv anthropic openai google-cloud-aiplatform`, with a comment explaining why.
+- **New Breakage #3 (minor), fixed**: `Dockerfile` line 9's comment misdescribed the `??` operator's mechanics (implied the empty string came from `??`'s right-hand side; it actually comes from `process.env.NEXT_PUBLIC_API_BASE`'s own value, which `??` only skips past on `null`/`undefined`, not on empty string). Corrected the wording.
+- New Breakage #2 was documentation-level and rode along with the above, per the scoped re-review's own recommendation.
+
+Both fixes committed together (79c4904), YAML-validated, `pytest tests/ -q` → 487 passed. No further re-review dispatched for this round — both fixes carry direct, independently reproducible verification (source tracing + an isolated empirical venv test; a wording-only correction), consistent with the "no second fix wave" principle.
 
 ## Self-Review Notes
 

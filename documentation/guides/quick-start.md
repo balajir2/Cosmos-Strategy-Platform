@@ -72,7 +72,7 @@ From the repo root (not `backend/`):
 pytest
 ```
 
-484 tests, requiring a reachable `DATABASE_URL` (same as the app itself) but no LLM provider credentials or GCP access — see `documentation/testing/test-strategy.md` for what's covered.
+487 tests, requiring a reachable `DATABASE_URL` (same as the app itself) but no LLM provider credentials or GCP access — see `documentation/testing/test-strategy.md` for what's covered.
 
 ## Troubleshooting
 
@@ -81,3 +81,5 @@ pytest
 - **First `python main.py` run is slow**: it's parsing two large PDFs and computing embeddings for every slide before inserting them into `framework_kb_chunks`. Subsequent runs see the table already populated and skip ingestion, so they're fast.
 - **Logged in but nothing to do**: every project needs a `SystemAdmin` to create it and assign a Consultant before a `ClientUser` can see anything — there's no self-serve project creation. See `CLAUDE.md` Part 4 for the `/api/admin/*` and `/api/projects` endpoints, or use the `/admin` console.
 - **Uploading an artifact just sits at `Uploaded`/never reaches `Indexed`**: expected locally if `GCS_ARTIFACTS_BUCKET` is unset and something in `ingest_artifact` errored — check the backend's console output; local mode processes inline and synchronously, so a stuck status usually means the request itself failed rather than something pending in the background.
+
+For the GCP dev deployment (a single Cloud Run service, `gcloud`-provisioned), see `docs/superpowers/specs/2026-09-17-gcp-dev-deployment-design.md` and `docs/superpowers/plans/2026-09-18-gcp-dev-deployment.md`; this guide covers local development only.

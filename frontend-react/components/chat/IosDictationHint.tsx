@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import styles from "@/app/client/case/[caseId]/chat/chat.module.css";
+import styles from "@/app/client/case/chat/chat.module.css";
 
 const DISMISS_KEY = "cosmos_ios_dictation_hint_dismissed";
 
