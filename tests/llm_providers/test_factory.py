@@ -28,9 +28,7 @@ def test_get_provider_adapter_returns_openai(monkeypatch):
 
 
 def test_get_provider_adapter_returns_gemini(monkeypatch):
-    monkeypatch.setenv("GCP_PROJECT_ID", "test-project")
-    with patch("llm_providers.gemini_provider.vertexai"), patch(
-        "llm_providers.gemini_provider.GenerativeModel"
-    ):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    with patch("llm_providers.gemini_provider.genai.Client"):
         provider = get_provider_adapter("gemini")
     assert isinstance(provider, GeminiProvider)

@@ -78,7 +78,7 @@ jobs:
           # database.py's init_db()), which eagerly imports all three
           # provider SDKs at module load - so those three are still
           # required even though nothing here calls an LLM.
-          pip install psycopg2-binary pgvector python-dotenv anthropic openai google-cloud-aiplatform
+          pip install psycopg2-binary pgvector python-dotenv anthropic openai google-genai
           python backend/database.py
           # Deliberately NOT setting active_llm_provider here on every
           # deploy: that one-time seed (-> 'gemini') already happened by
@@ -95,7 +95,7 @@ jobs:
             --image "$IMAGE" \
             --region us-central1 \
             --service-account cosmos-backend-sa@cosmos-strategy.iam.gserviceaccount.com \
-            --set-secrets "DATABASE_URL=DATABASE_URL:latest,JWT_SECRET_KEY=JWT_SECRET_KEY:latest" \
+            --set-secrets "DATABASE_URL=DATABASE_URL:latest,JWT_SECRET_KEY=JWT_SECRET_KEY:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest" \
             --set-env-vars "GCP_PROJECT_ID=cosmos-strategy,GCP_LOCATION=us-central1,GCS_ARTIFACTS_BUCKET=cosmos-artifacts-dev,GCS_TRANSCRIBE_BUCKET=cosmos-transcribe-dev" \
             --min-instances=0 \
             --max-instances=2 \
