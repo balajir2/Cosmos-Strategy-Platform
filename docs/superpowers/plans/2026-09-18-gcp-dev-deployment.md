@@ -1949,6 +1949,16 @@ The final review (opus) found one Critical, five Important, and ten Minor issues
 
 `pytest tests/ -q` → 487 passed after the fix wave. Full account of the live redeploy verification, including the exact `grep`/`curl` commands used to confirm the fix against the running service, is in the SDD ledger.
 
+### Scoped Re-Review of the Fix Wave (2026-09-18)
+
+A scoped re-review (opus) confirmed the Critical fix and 14 of the 16 original findings were correctly addressed, but found one new Important-severity breakage introduced by the fix wave itself:
+
+- **New Breakage #1 (Important), fixed**: `deploy.yml`'s slimmed migration dependency list (`psycopg2-binary`/`pgvector`/`python-dotenv`) omits packages `backend/database.py` needs transitively — `init_db()` unconditionally calls `framework_db.py`'s `migrate_existing_projects`, which imports `backend/llm_providers/__init__.py`, which eagerly imports `anthropic`/`openai`/`vertexai` at module load time even though the migration step never calls an LLM. Left as-is, the automated deploy workflow's migration step would fail with `ImportError` on its next real run, after partially applying DDL. Verified two ways before fixing: direct import-chain tracing through the source, and an empirical test — installing exactly the fixed six-package set into a genuinely isolated Python venv and successfully running `import database` against it. Fixed `deploy.yml`'s pip line to `psycopg2-binary pgvector python-dotenv anthropic openai google-cloud-aiplatform`, with a comment explaining why.
+- **New Breakage #3 (minor), fixed**: `Dockerfile` line 9's comment misdescribed the `??` operator's mechanics (implied the empty string came from `??`'s right-hand side; it actually comes from `process.env.NEXT_PUBLIC_API_BASE`'s own value, which `??` only skips past on `null`/`undefined`, not on empty string). Corrected the wording.
+- New Breakage #2 was documentation-level and rode along with the above, per the scoped re-review's own recommendation.
+
+Both fixes committed together (79c4904), YAML-validated, `pytest tests/ -q` → 487 passed. No further re-review dispatched for this round — both fixes carry direct, independently reproducible verification (source tracing + an isolated empirical venv test; a wording-only correction), consistent with the "no second fix wave" principle.
+
 ## Self-Review Notes
 
 - **Spec coverage**: Frontend Static Export & Route Refactor → Task 1. StaticFiles serving → Task 2. Multi-stage Dockerfile → Task 3. Processor Dockerfile → Task 4. Cost & Scaling Discipline's Terraform-side changes → Task 5. All of "Provisioning (gcloud CLI)" → Task 6. CI/CD → Task 7. Nothing in the spec's Non-Goals is built (no domain, no Anthropic/OpenAI secrets, no `RESEND_API_KEY`/`FRONTEND_BASE_URL`, no monitoring alert policies, no GCS lifecycle policy).
