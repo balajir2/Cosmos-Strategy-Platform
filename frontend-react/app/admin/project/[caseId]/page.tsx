@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   getProject, updateProject, activateProject, listArtifacts, uploadArtifact, deleteArtifact, pasteTranscript,
-  addProjectMember, inviteClient, sendReport, Project, ProjectArtifact, DeliveryMode, InviteClientResult, SendReportResult,
+  addProjectMember, inviteClient, sendReport, getFramework, listProjectMembers,
+  Project, ProjectArtifact, DeliveryMode, InviteClientResult, SendReportResult,
 } from "@/lib/api-client";
 import FrameworkEditor from "@/components/FrameworkEditor";
 import CalibrationEditor from "@/components/CalibrationEditor";
+import ReadinessChecklist, { ReadinessCheck } from "@/components/ReadinessChecklist";
 
 const PURPOSE_LABELS: Record<string, string> = {
   reference: "Reference",
@@ -61,6 +63,20 @@ export default function ProjectSetupPage() {
   const [sendingReport, setSendingReport] = useState(false);
   const [sendReportResult, setSendReportResult] = useState<SendReportResult | null>(null);
 
+  const [readiness, setReadiness] = useState<ReadinessCheck[]>([]);
+
+  function refreshReadiness() {
+    Promise.all([getFramework(projectId), listProjectMembers(projectId)])
+      .then(([framework, members]) => {
+        const questionCount = framework.stages.reduce((sum, s) => sum + s.questions.length, 0);
+        setReadiness([
+          { label: "At least one question in the framework", passed: questionCount > 0 },
+          { label: "At least one Client User assigned", passed: members.some((m) => m.role === "ClientUser") },
+        ]);
+      })
+      .catch(() => {});
+  }
+
   function reloadArtifacts() {
     listArtifacts(projectId).then(setArtifactsState).catch(() => setError("Could not load artifacts."));
   }
@@ -79,6 +95,7 @@ export default function ProjectSetupPage() {
       .catch(() => setError("Could not load this project. Are you a Consultant on it, and is the backend running?"))
       .finally(() => setLoading(false));
     reloadArtifacts();
+    refreshReadiness();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
@@ -163,6 +180,7 @@ export default function ProjectSetupPage() {
       await addProjectMember(projectId, memberEmail.trim(), memberRole);
       setAssignedEmails((prev) => [...prev, `${memberEmail.trim()} (${memberRole})`]);
       setMemberEmail("");
+      refreshReadiness();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not assign this team member.");
     } finally {
@@ -180,6 +198,7 @@ export default function ProjectSetupPage() {
       setInviteResult(result);
       setInviteEmail("");
       setInviteFullName("");
+      refreshReadiness();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not invite this customer.");
     } finally {
@@ -409,10 +428,11 @@ export default function ProjectSetupPage() {
         </div>
       </div>
 
-      <FrameworkEditor projectId={projectId} />
+      <FrameworkEditor projectId={projectId} onChange={refreshReadiness} />
 
       <CalibrationEditor projectId={projectId} />
 
+      {project?.status === "Draft" && readiness.length > 0 && <ReadinessChecklist checks={readiness} />}
       <div className="project-actions-row">
         <span className="activate-hint">
           <i className="fa-solid fa-circle-info"></i> Activating unlocks the engagement for assigned Client Users.

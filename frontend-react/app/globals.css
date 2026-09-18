@@ -1129,6 +1129,33 @@ body {
     background: var(--error-bg);
 }
 
+.readiness-checklist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.readiness-item {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.readiness-item.passed {
+    color: var(--level-3-fg);
+    background: var(--level-3-bg);
+}
+
+.readiness-item.warning {
+    color: var(--level-2-fg);
+    background: var(--level-2-bg);
+}
+
 .project-actions-row {
     display: flex;
     justify-content: space-between;
@@ -1221,6 +1248,9 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
+    background: var(--accent-primary);
+    border-radius: 8px;
+    padding: 8px 12px;
 }
 
 .sidebar-logo img {

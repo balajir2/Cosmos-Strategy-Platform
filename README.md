@@ -29,7 +29,7 @@ The core loop is **Guided Self-Evaluation**:
 5. After a section's questions, the user solves an external (hypothetical) and an internal (their organization's real, current problem) case study — each with a hidden "what they actually did / should have done" reveal and a short AI-mediated debate.
 6. At the end of a module, the user reflects explicitly: what will they **Start**, **Stop**, and **Continue** doing based on what the module surfaced. All of it compiles into a structured strategic briefing document.
 
-**Live today**: steps 1–4 — baseline calibration, the question → Level 1/2/3 benchmark comparison → self-evaluation loop (including adaptive question difficulty, not numbered separately above), through the chat interview UI, ending in a downloadable brief. **Not built yet**: step 5 (the case-study resolution flow with a hidden reveal) and step 6 (Start/Stop/Continue reflection), plus keyword-agnostic answer mapping and a corpus-relative depth signal — these are the remaining "Guided Learning Flow" items, designed but not yet implemented. A 2026-09-02 stakeholder call raised open questions about this flow's direction (see [Stakeholder Clarifications](documentation/product/stakeholder-clarifications-2026-09.md)) pending a 2026-09-09 planning session; see Project Status and Roadmap below.
+**Live today**: steps 1–4 — baseline calibration, the question → Level 1/2/3 benchmark comparison → self-evaluation loop (including adaptive question difficulty, not numbered separately above), through the chat interview UI, ending in a downloadable brief. **Not built yet**: step 5 (the case-study resolution flow with a hidden reveal — artifact tagging and retrieval-exclusion exist in code, but no actual interview step) and step 6 (Start/Stop/Continue reflection), plus keyword-agnostic answer mapping and a corpus-relative depth signal — these are the remaining "Guided Learning Flow" items, designed but not yet implemented. A 2026-09-02 stakeholder call raised open questions about this flow's direction, mostly resolved at a 2026-09-11 planning session (see [Stakeholder Clarifications](documentation/product/stakeholder-clarifications-2026-09.md)); see Project Status and Roadmap below.
 
 ---
 
@@ -83,7 +83,7 @@ Revised 2026-08-24 from an earlier four-role draft (Admin/Consultant, Owner, Rev
 
 ## Project Status
 
-**As of 2026-09-05: the full stack is feature-complete for the Insights POC's core loop, including two of eight Guided Learning Flow items. What's left is the rest of the Guided Learning Flow and production deployment — not the foundation.**
+**As of 2026-09-18: the full stack is feature-complete for the Insights POC's core loop through Known Gaps Cleanup, including two of nine Guided Learning Flow items. What's left is the rest of the Guided Learning Flow and production deployment — not the foundation.**
 
 The business case, functional spec, technical spec, and architecture describe a target design — a configurable, DB-driven "Framework Factory" generating Level 1/2/3 comparative benchmarks, with real Users, Projects, a per-project Engagement Knowledge Base, and a Neon Postgres storage platform. **All of that is now built and live**, not just specified:
 
@@ -92,14 +92,18 @@ The business case, functional spec, technical spec, and architecture describe a 
 - Level 1/2/3 comparative benchmark generation, merged retrieval across the shared Framework Knowledge Base and each project's own Engagement Knowledge Base, self-evaluation notes/status persisted per response, and a downloadable compiled strategic brief — all reachable through the chat interview UI end to end.
 - A per-project Engagement Knowledge Base: Consultants upload documents and meeting audio (transcribed via Google Speech-to-Text), isolated per project.
 - **Framework Authoring Mode**: each project owns its own cloned copy of the framework — a Consultant can add/edit/reorder/delete stages and questions rather than being stuck with the seeded Brand Compass configuration.
-- **Baseline concept calibration and adaptive question difficulty** (two of the eight Guided Learning Flow items): a Consultant-authored calibration step before the first question, and a probe-then-escalate follow-up loop on every question that keeps drilling until the answer shows sufficient depth.
+- **Baseline concept calibration and adaptive question difficulty** (two of the nine Guided Learning Flow items): a Consultant-authored calibration step before the first question, and a probe-then-escalate follow-up loop on every question that keeps drilling until the answer shows sufficient depth.
 - An admin console (`/admin`): user management and a cross-project admin view, on top of the per-project Consultant/ClientUser roles above.
 - An **async artifact-ingestion pipeline** (built in code, not deployed): a dual-mode upload path, a second Eventarc-invoked processor service, `.md`/`.xlsx` support, and the repo's first Terraform module — see Roadmap below.
-- 458 automated tests (`pytest`) and a CI workflow running them on every push/PR.
+- **Voice input** on the chat interview: a press-and-hold mic button using only the browser's native Web Speech API, no backend involvement.
+- The chat interview screen and, since 2026-09-15, the entire app run on a single "Light Professional" theme — no dark mode, no toggle, by explicit design decision.
+- **Send Engagement Report**: emails the full compiled brief, including the Level 1/2/3 benchmark comparison, to every project member.
+- 484 automated tests (`pytest`) and a CI workflow running them on every push/PR.
 
 **What's genuinely not built yet:**
-- The rest of the **Guided Learning Flow** — keyword-agnostic answer mapping, an actionability check, the two-case-study resolution flow with a hidden reveal, a corpus-relative self-evaluation depth signal, and a module-end Start/Stop/Continue reflection. A 2026-09-02 stakeholder call raised open questions about this flow's direction (see [Stakeholder Clarifications](documentation/product/stakeholder-clarifications-2026-09.md)) pending a 2026-09-09 planning session.
-- **Production deployment.** A GCP Cloud Run architecture was decided and specced (see below), but only its CI test workflow has actually been built — there is no live or automated deployment; the app runs locally only. The async ingestion pipeline's own Terraform module is written and validated but has never been applied to a real GCP project either.
+- The rest of the **Guided Learning Flow** — keyword-agnostic answer mapping, an actionability check, the two-case-study resolution flow with a hidden reveal (the artifact-tagging and retrieval-exclusion plumbing exists in code, but no interview step, endpoint, or seeded provocations do), a corpus-relative self-evaluation depth signal, and a module-end Start/Stop/Continue reflection. A 2026-09-02 stakeholder call raised open questions about this flow's direction, mostly resolved at a 2026-09-11 planning session — see [Stakeholder Clarifications](documentation/product/stakeholder-clarifications-2026-09.md).
+- **A readiness check before activating a project.** A Consultant can activate a project — unlocking it for ClientUsers — with an empty framework, no calibration concepts, or no assigned ClientUsers; there's no pre-activation checklist today.
+- **Production deployment.** A GCP Cloud Run architecture was decided and specced (see below), but only its CI test workflow has actually been built — there is no live or automated deployment; the app runs locally only. A narrower dev-only deployment spec (2026-09-17/18) now supersedes that plan but hasn't been executed either.
 
 See the Roadmap below and [documentation/product/roadmap.md](documentation/product/roadmap.md) for the full, continuously-updated checklist.
 
@@ -113,11 +117,11 @@ See the Roadmap below and [documentation/product/roadmap.md](documentation/produ
 
 Full design: [Users/Projects/Engagement KB Spec](docs/superpowers/specs/2026-08-24-users-projects-engagement-kb-design.md).
 
-**Also done**: Backend API Integration (Level 1/2/3 benchmark generation, response persistence, brief compilation), Frontend GUI Overhaul (the full UI described above, and retirement of the old hardcoded cases), Admin UI, Framework Authoring Mode, and the async artifact-ingestion pipeline (built, not deployed — see below).
+**Also done**: Backend API Integration (Level 1/2/3 benchmark generation, response persistence, brief compilation), Frontend GUI Overhaul (the full UI described above, and retirement of the old hardcoded cases), Admin UI, Framework Authoring Mode, the async artifact-ingestion pipeline (built, not deployed — see below), voice input on the chat interview (2026-09-11), the Chat Interview Screen UI/UX Redesign (2026-09-10), the App-Wide Light Professional Retheme (2026-09-15), Send Engagement Report (2026-09-16), and Known Gaps Cleanup (2026-09-17).
 
-**Guided Learning Flow** (from the 2026-08-24 stakeholder review meeting — **two of eight items done**): baseline calibration and adaptive question difficulty are built; keyword-agnostic answer mapping, an actionability check, the two-case-study resolution flow, corpus-relative self-evaluation, and Start/Stop/Continue reflection are not. See "How It Works" above and `documentation/product/functional-spec.md` for full detail. The corpus-relative depth signal specifically needs a data-model addition not yet designed — flagged as an open gap, not solved. A 2026-09-02 stakeholder call raised open questions about this flow's direction (calibration's position, document-upload scope, product-vs-consulting-aid targeting) — see [documentation/product/stakeholder-clarifications-2026-09.md](documentation/product/stakeholder-clarifications-2026-09.md), pending a 2026-09-09 planning session.
+**Guided Learning Flow** (from the 2026-08-24 stakeholder review meeting — **two of nine items done**): baseline calibration and adaptive question difficulty are built; keyword-agnostic answer mapping, an actionability check, the two-case-study resolution flow, corpus-relative self-evaluation, and Start/Stop/Continue reflection are not. See "How It Works" above and `documentation/product/functional-spec.md` for full detail. The corpus-relative depth signal specifically needs a data-model addition not yet designed — flagged as an open gap, not solved. A 2026-09-02 stakeholder call raised open questions about this flow's direction (calibration's position, document-upload scope, product-vs-consulting-aid targeting), mostly resolved at a 2026-09-11 planning session (moved from an original 2026-09-09 date) — see [documentation/product/stakeholder-clarifications-2026-09.md](documentation/product/stakeholder-clarifications-2026-09.md).
 
-**Production Deployment Infrastructure** (decided 2026-08-25: GCP Cloud Run, not AWS — **not yet built**, only its CI test workflow exists): Dockerfile, `/healthz` route, GCP project bootstrap, Secret Manager + Workload Identity Federation, the deploy workflow, and Cloud Monitoring alerts are all still plan steps, not running infrastructure. The async ingestion pipeline (2026-09-02) added the repo's first Terraform module (`infra/terraform/artifact-pipeline/`) — written and validated, but never applied to a real GCP project. See `documentation/product/roadmap.md`'s "Production Deployment Infrastructure" section for the task-by-task status.
+**Production Deployment Infrastructure** (decided 2026-08-25: GCP Cloud Run, not AWS — **not yet built**, only its CI test workflow exists): Dockerfile, `/healthz` route, GCP project bootstrap, Secret Manager + Workload Identity Federation, the deploy workflow, and Cloud Monitoring alerts are all still plan steps, not running infrastructure. The async ingestion pipeline (2026-09-02) added the repo's first Terraform module (`infra/terraform/artifact-pipeline/`) — written and validated, but never applied to a real GCP project. **That plan is now superseded, not executed, by a narrower dev-only deployment spec** (2026-09-17, revised 2026-09-18): one Cloud Run service via `gcloud` CLI provisioning rather than Terraform, Gemini as the only LLM provider — 0 of 44 plan steps done. See `documentation/product/roadmap.md`'s "Production Deployment Infrastructure" section for the task-by-task status.
 
 **Beyond the POC** (not yet designed):
 - SSO / enterprise identity — the near-term auth design is deliberately simple (built-in email/password).
@@ -150,7 +154,7 @@ Cosmos Strategy Platform/
 ├── archives/          # Source PDFs + meeting transcripts for RAG ingestion / design source material
 ├── documentation/     # Full knowledge base — see documentation/README.md
 ├── docs/superpowers/  # Design specs & implementation plans (e.g. Users/Projects/Engagement KB)
-├── tests/             # pytest suite — 458 tests
+├── tests/             # pytest suite — 484 tests
 ├── CLAUDE.md          # Consolidated project reference
 └── CHANGELOG.md       # Version history
 ```
