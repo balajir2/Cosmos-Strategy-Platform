@@ -1,5 +1,5 @@
 import { ChatMessage } from "@/lib/api-client";
-import styles from "@/app/client/case/[caseId]/chat/chat.module.css";
+import styles from "@/app/client/case/chat/chat.module.css";
 
 interface BenchmarkSourceChunk {
   id: number;

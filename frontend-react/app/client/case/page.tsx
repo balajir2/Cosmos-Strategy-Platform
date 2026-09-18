@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   createChatSession, getChatSession, getProject, getProcess,
   getCachedChatSessionId, setCachedChatSessionId,
@@ -9,9 +9,17 @@ import {
 } from "@/lib/api-client";
 
 export default function CaseHubPage() {
-  const params = useParams();
+  return (
+    <Suspense fallback={<div className="loading-spinner"><i className="fa-solid fa-circle-notch fa-spin"></i> Loading...</div>}>
+      <CaseHubPageContent />
+    </Suspense>
+  );
+}
+
+function CaseHubPageContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const projectId = Number(params.caseId);
+  const projectId = Number(searchParams.get("id"));
 
   const [project, setProject] = useState<Project | null>(null);
   const [totalLevels, setTotalLevels] = useState(0);
@@ -51,7 +59,7 @@ export default function CaseHubPage() {
 
   async function handleStartOrContinue() {
     if (session) {
-      router.push(`/client/case/${projectId}/chat`);
+      router.push(`/client/case/chat?id=${projectId}`);
       return;
     }
     setStarting(true);
@@ -59,7 +67,7 @@ export default function CaseHubPage() {
     try {
       const started = await createChatSession({ projectId });
       setCachedChatSessionId(projectId, started.id);
-      router.push(`/client/case/${projectId}/chat`);
+      router.push(`/client/case/chat?id=${projectId}`);
     } catch {
       setError("Could not start the session. Is the backend running?");
       setStarting(false);

@@ -1,0 +1,99 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest
+
+      - name: Run tests
+        run: pytest tests/ -v
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA_EMAIL }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build and push cosmos-dev image
+        run: |
+          IMAGE="us-central1-docker.pkg.dev/cosmos-strategy/cosmos/cosmos-dev:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # Not the full backend stack - installing sentence-transformers'
+          # torch wheel on every deploy just to run a migration wastes
+          # minutes and disk on the runner for something this step never
+          # uses. But database.py's own migration does transitively reach
+          # backend/llm_providers/__init__.py (via framework_db.py's
+          # migrate_existing_projects, called unconditionally from
+          # database.py's init_db()), which eagerly imports all three
+          # provider SDKs at module load - so those three are still
+          # required even though nothing here calls an LLM.
+          pip install psycopg2-binary pgvector python-dotenv anthropic openai google-cloud-aiplatform
+          python backend/database.py
+          # Deliberately NOT setting active_llm_provider here on every
+          # deploy: that one-time seed (-> 'gemini') already happened by
+          # hand during the initial deployment. platform_settings.
+          # active_llm_provider is NOT NULL, so there's no reliable
+          # "never configured" condition to gate a recurring UPDATE on -
+          # doing it unconditionally would silently revert any deliberate
+          # admin choice made via PATCH /api/admin/settings on every future
+          # merge. Re-run manually if the DB is ever recreated from scratch.
+
+      - name: Deploy cosmos-dev
+        run: |
+          gcloud run deploy cosmos-dev \
+            --image "$IMAGE" \
+            --region us-central1 \
+            --service-account cosmos-backend-sa@cosmos-strategy.iam.gserviceaccount.com \
+            --set-secrets "DATABASE_URL=DATABASE_URL:latest,JWT_SECRET_KEY=JWT_SECRET_KEY:latest" \
+            --set-env-vars "GCP_PROJECT_ID=cosmos-strategy,GCP_LOCATION=us-central1,GCS_ARTIFACTS_BUCKET=cosmos-artifacts-dev,GCS_TRANSCRIBE_BUCKET=cosmos-transcribe-dev" \
+            --min-instances=0 \
+            --max-instances=2 \
+            --cpu=2 \
+            --memory=2Gi \
+            --cpu-throttling \
+            --allow-unauthenticated

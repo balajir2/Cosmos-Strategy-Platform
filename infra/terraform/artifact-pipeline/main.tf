@@ -120,6 +120,14 @@ resource "google_cloud_run_v2_service" "processor" {
     # plus parse/embed time; the default request timeout would cut audio off.
     timeout = "900s"
 
+    # Explicit, not the implicit Cloud Run default: this is unfunded,
+    # personal-account work. min=0 keeps true scale-to-zero; max=2 caps even
+    # a genuine event storm (the unset default ceiling is 100).
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 2
+    }
+
     containers {
       image   = var.processor_image
       command = ["uvicorn"]
@@ -132,6 +140,10 @@ resource "google_cloud_run_v2_service" "processor" {
           memory = "2Gi"
           cpu    = "2"
         }
+        # Default Cloud Run billing (CPU only during active request
+        # handling), never "always allocate CPU" - same cost reasoning as
+        # the scaling block above.
+        cpu_idle = true
       }
 
       env {
