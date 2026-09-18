@@ -24,6 +24,12 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # sentence-transformers pulls in torch, and pip's default wheel bundles
+          # the full CUDA runtime (multi-GB) even though this runner never touches
+          # a GPU. Installing the CPU-only build first satisfies that dependency
+          # before requirements.txt would otherwise pull the CUDA one - same fix
+          # as the Dockerfiles (Task 4b), applied here to stop it dominating CI time.
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
           pip install -r backend/requirements.txt
           pip install pytest
 
