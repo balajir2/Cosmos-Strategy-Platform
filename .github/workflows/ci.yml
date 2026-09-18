@@ -28,4 +28,13 @@ jobs:
           pip install pytest
 
       - name: Run tests
+        env:
+          # No secrets.DATABASE_URL exists in a fork's pull_request context
+          # (GitHub withholds repo secrets there) - test_database_connection_pool.py
+          # requires a real, reachable Postgres to validate actual psycopg2.pool
+          # behavior (a deadlock in a naive close()-override implementation was
+          # only caught by testing against a real connection; mocking it would
+          # have hidden that bug entirely). Every other test in the suite is
+          # fully mocked/dependency-overridden and doesn't need this.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: pytest tests/ -v
